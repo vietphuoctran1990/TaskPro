@@ -3,7 +3,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const base = process.env.GITHUB_ACTIONS ? '/TaskPro/' : '/'
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     tailwindcss(),
@@ -23,8 +26,8 @@ export default defineConfig({
         background_color: '#f8fafc',
         display: 'standalone',
         orientation: 'portrait-primary',
-        scope: '/',
-        start_url: '/',
+        scope: base,
+        start_url: base,
         categories: ['productivity', 'utilities'],
         icons: [
           { src: 'icon-72x72.png', sizes: '72x72', type: 'image/png' },
