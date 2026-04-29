@@ -1,19 +1,14 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import {
-  Calendar,
-  CheckSquare,
-  Clock,
-  Pencil,
-  Plus,
-  Tag,
-  Trash2,
-  X,
+  Calendar, CheckSquare, Clock, MessageSquare,
+  Pencil, Plus, Send, Timer, Trash2, X,
 } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { PriorityBadge, Badge } from '../ui/Badge'
+import SLABadge from '../sla/SLABadge'
 import { useApp } from '../../context/AppContext'
-import { cn, formatDate, isOverdue, isDueSoon } from '../../lib/utils'
+import { cn, formatDateTime, getDeadline, getTimeRemaining } from '../../lib/utils'
 import type { Task } from '../../types'
 
 interface TaskDetailProps {
@@ -22,57 +17,60 @@ interface TaskDetailProps {
   onEdit: (task: Task) => void
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done',
+}
+
 export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
   const { state, dispatch } = useApp()
   const [newSubtask, setNewSubtask] = useState('')
+  const [newComment, setNewComment] = useState('')
+  const [, tick] = useState(0)
+  const commentRef = useRef<HTMLTextAreaElement>(null)
+
+  // Refresh SLA countdown every 30s
+  useEffect(() => {
+    const id = setInterval(() => tick(n => n + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
 
   const project = task ? state.projects.find(p => p.id === task.projectId) : null
   const labels = task ? state.labels.filter(l => task.labels.includes(l.id)) : []
+  const deadline = task ? getDeadline(task) : null
+  const completedSub = task?.subtasks.filter(s => s.done).length ?? 0
+  const totalSub = task?.subtasks.length ?? 0
+  const progress = totalSub ? Math.round((completedSub / totalSub) * 100) : 0
 
-  const handleToggleSubtask = useCallback(
-    (subtaskId: string) => {
-      if (!task) return
-      dispatch({
-        type: 'UPDATE_TASK',
-        payload: {
-          id: task.id,
-          subtasks: task.subtasks.map(s =>
-            s.id === subtaskId ? { ...s, done: !s.done } : s
-          ),
-        },
-      })
-    },
-    [task, dispatch]
-  )
+  const handleToggleSub = useCallback((sid: string) => {
+    if (!task) return
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: { id: task.id, subtasks: task.subtasks.map(s => s.id === sid ? { ...s, done: !s.done } : s) },
+    })
+  }, [task, dispatch])
 
-  const handleAddSubtask = useCallback(() => {
+  const handleAddSub = useCallback(() => {
     if (!task || !newSubtask.trim()) return
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
         id: task.id,
-        subtasks: [
-          ...task.subtasks,
-          { id: Math.random().toString(36).slice(2), title: newSubtask.trim(), done: false },
-        ],
+        subtasks: [...task.subtasks, { id: Math.random().toString(36).slice(2), title: newSubtask.trim(), done: false }],
       },
     })
     setNewSubtask('')
   }, [task, newSubtask, dispatch])
 
-  const handleDeleteSubtask = useCallback(
-    (subtaskId: string) => {
-      if (!task) return
-      dispatch({
-        type: 'UPDATE_TASK',
-        payload: {
-          id: task.id,
-          subtasks: task.subtasks.filter(s => s.id !== subtaskId),
-        },
-      })
-    },
-    [task, dispatch]
-  )
+  const handleDeleteSub = useCallback((sid: string) => {
+    if (!task) return
+    dispatch({ type: 'UPDATE_TASK', payload: { id: task.id, subtasks: task.subtasks.filter(s => s.id !== sid) } })
+  }, [task, dispatch])
+
+  const handleAddComment = useCallback(() => {
+    if (!task || !newComment.trim()) return
+    dispatch({ type: 'ADD_COMMENT', payload: { taskId: task.id, comment: { text: newComment.trim() } } })
+    setNewComment('')
+  }, [task, newComment, dispatch])
 
   const handleDelete = useCallback(() => {
     if (!task) return
@@ -80,173 +78,185 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
     onClose()
   }, [task, dispatch, onClose])
 
-  const dueDateClass = task
-    ? isOverdue(task.dueDate)
-      ? 'text-red-500'
-      : isDueSoon(task.dueDate)
-      ? 'text-amber-500'
-      : 'text-slate-500 dark:text-slate-400'
-    : ''
-
-  const completedSubtasks = task?.subtasks.filter(s => s.done).length ?? 0
-  const totalSubtasks = task?.subtasks.length ?? 0
-  const progress = totalSubtasks ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0
-
   return (
     <Modal open={!!task} onClose={onClose} size="lg">
       {task && (
         <>
           {/* Header */}
-          <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-700">
+          <div className="px-6 py-4 border-b border-slate-200">
             <div className="flex items-start justify-between gap-3 mb-3">
               <h2 className={cn(
-                'text-lg font-semibold text-slate-900 dark:text-slate-100 leading-snug',
-                task.status === 'done' && 'line-through text-slate-400 dark:text-slate-500'
+                'text-lg font-semibold text-slate-900 leading-snug',
+                task.status === 'done' && 'line-through text-slate-400'
               )}>
                 {task.title}
               </h2>
               <div className="flex items-center gap-1 shrink-0">
-                <Button variant="ghost" size="icon" onClick={() => { onClose(); onEdit(task) }} aria-label="Edit">
-                  <Pencil size={15} />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleDelete} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Delete">
-                  <Trash2 size={15} />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
-                  <X size={15} />
-                </Button>
+                <Button variant="ghost" size="icon" onClick={() => { onClose(); onEdit(task) }}><Pencil size={14} /></Button>
+                <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-50" onClick={handleDelete}><Trash2 size={14} /></Button>
+                <Button variant="ghost" size="icon" onClick={onClose}><X size={14} /></Button>
               </div>
             </div>
 
-            {/* Meta row */}
-            <div className="flex flex-wrap gap-3 text-sm">
+            {/* Meta */}
+            <div className="flex flex-wrap gap-2">
               <PriorityBadge priority={task.priority} />
+              <SLABadge task={task} showTimer size="md" />
               {project && (
-                <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} />
+                <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: project.color }} />
                   {project.name}
                 </span>
               )}
-              <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-                <Clock size={13} />
-                {new Date(task.createdAt).toLocaleDateString()}
-              </span>
-              {task.dueDate && (
-                <span className={cn('flex items-center gap-1.5', dueDateClass)}>
-                  <Calendar size={13} />
-                  {isOverdue(task.dueDate) ? 'Overdue: ' : 'Due: '}
-                  {formatDate(task.dueDate)}
+              {task.estimatedHours && (
+                <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                  <Timer size={11} /> {task.estimatedHours}h est.
                 </span>
               )}
             </div>
           </div>
 
-          <div className="px-6 py-5 space-y-6 overflow-y-auto">
-            {/* Description */}
-            {task.description && (
-              <div>
-                <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Description</h3>
-                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                  {task.description}
-                </p>
-              </div>
-            )}
-
-            {/* Labels */}
-            {labels.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Tag size={11} /> Labels
-                </h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {labels.map(label => (
-                    <Badge key={label.id} color={label.color}>{label.name}</Badge>
-                  ))}
+          <div className="overflow-y-auto max-h-[60vh]">
+            {/* SLA timeline */}
+            {deadline && task.status !== 'done' && (
+              <div className="mx-6 mt-4 p-3 rounded-xl border border-slate-200 bg-slate-50">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                    <Clock size={12} /> SLA Deadline
+                  </span>
+                  <span className={cn(
+                    'font-semibold',
+                    deadline.getTime() < Date.now() ? 'text-red-600' : 'text-indigo-600'
+                  )}>
+                    {deadline.getTime() < Date.now()
+                      ? `Overdue by ${getTimeRemaining(deadline)}`
+                      : `${getTimeRemaining(deadline)} remaining`
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
+                  <Calendar size={11} />
+                  {formatDateTime(task.dueDate, task.dueTime)}
+                  {task.slaHours && <span className="text-slate-400">· {task.slaHours}h SLA window</span>}
                 </div>
               </div>
             )}
 
-            {/* Subtasks */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <CheckSquare size={11} /> Subtasks
-                </h3>
-                {totalSubtasks > 0 && (
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {completedSubtasks}/{totalSubtasks}
-                  </span>
-                )}
-              </div>
-
-              {totalSubtasks > 0 && (
-                <div className="w-full h-1 bg-slate-100 dark:bg-slate-700 rounded-full mb-3 overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
+            <div className="px-6 py-4 space-y-5">
+              {/* Description */}
+              {task.description && (
+                <div>
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Description</h3>
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{task.description}</p>
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                {task.subtasks.map(subtask => (
-                  <div key={subtask.id} className="flex items-center gap-2.5 group/sub">
-                    <button
-                      onClick={() => handleToggleSubtask(subtask.id)}
-                      className={cn(
-                        'shrink-0 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
-                        subtask.done
-                          ? 'bg-emerald-500 border-emerald-500'
-                          : 'border-slate-300 dark:border-slate-600 hover:border-emerald-400'
-                      )}
-                      aria-label={subtask.done ? 'Mark incomplete' : 'Mark complete'}
-                    >
-                      {subtask.done && (
-                        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
-                    <span className={cn(
-                      'flex-1 text-sm',
-                      subtask.done
-                        ? 'line-through text-slate-400 dark:text-slate-500'
-                        : 'text-slate-700 dark:text-slate-300'
-                    )}>
-                      {subtask.title}
-                    </span>
-                    <button
-                      onClick={() => handleDeleteSubtask(subtask.id)}
-                      className="opacity-0 group-hover/sub:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-all"
-                      aria-label="Delete subtask"
-                    >
-                      <X size={12} />
-                    </button>
+              {/* Labels */}
+              {labels.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Labels</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {labels.map(l => <Badge key={l.id} color={l.color}>{l.name}</Badge>)}
                   </div>
-                ))}
+                </div>
+              )}
+
+              {/* Subtasks */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckSquare size={11} /> Subtasks
+                  </h3>
+                  {totalSub > 0 && (
+                    <span className="text-xs text-slate-500">{completedSub}/{totalSub}</span>
+                  )}
+                </div>
+                {totalSub > 0 && (
+                  <div className="w-full h-1 bg-slate-100 rounded-full mb-3 overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+                  </div>
+                )}
+                <div className="space-y-1.5 mb-3">
+                  {task.subtasks.map(sub => (
+                    <div key={sub.id} className="flex items-center gap-2.5 group/sub">
+                      <button
+                        onClick={() => handleToggleSub(sub.id)}
+                        className={cn(
+                          'shrink-0 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
+                          sub.done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 hover:border-emerald-400'
+                        )}
+                      >
+                        {sub.done && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                      <span className={cn('flex-1 text-sm', sub.done && 'line-through text-slate-400')}>
+                        {sub.title}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteSub(sub.id)}
+                        className="opacity-0 group-hover/sub:opacity-100 text-slate-300 hover:text-red-500 transition-all"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text" placeholder="Add subtask…"
+                    value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddSub()}
+                    className="flex-1 h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <Button variant="ghost" size="icon" onClick={handleAddSub} disabled={!newSubtask.trim()}>
+                    <Plus size={14} />
+                  </Button>
+                </div>
               </div>
 
-              {/* Add subtask */}
-              <div className="flex gap-2 mt-3">
-                <input
-                  type="text"
-                  placeholder="Add subtask…"
-                  value={newSubtask}
-                  onChange={e => setNewSubtask(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAddSubtask()}
-                  className="flex-1 h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <Button variant="ghost" size="icon" onClick={handleAddSubtask} disabled={!newSubtask.trim()}>
-                  <Plus size={14} />
-                </Button>
+              {/* Comments */}
+              <div>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <MessageSquare size={11} /> Comments {task.comments.length > 0 && `(${task.comments.length})`}
+                </h3>
+                {task.comments.length > 0 && (
+                  <div className="space-y-2.5 mb-3">
+                    {task.comments.map(c => (
+                      <div key={c.id} className="bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
+                        <p className="text-sm text-slate-700 leading-relaxed">{c.text}</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {new Date(c.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <textarea
+                    ref={commentRef}
+                    placeholder="Add a comment…"
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleAddComment() }}
+                    rows={2}
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <Button variant="primary" size="icon" className="self-end" onClick={handleAddComment} disabled={!newComment.trim()}>
+                    <Send size={14} />
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Ctrl+Enter to submit</p>
               </div>
             </div>
           </div>
 
-          {/* Footer - status changer */}
-          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-b-2xl">
+          {/* Footer — status changer */}
+          <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-slate-500 dark:text-slate-400 mr-1">Move to:</span>
+              <span className="text-xs text-slate-500 mr-1">Move to:</span>
               {(['todo', 'in_progress', 'in_review', 'done'] as const).map(s => (
                 <button
                   key={s}
@@ -255,10 +265,10 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
                     'px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
                     task.status === s
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600'
                   )}
                 >
-                  {{ todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done' }[s]}
+                  {STATUS_LABELS[s]}
                 </button>
               ))}
             </div>

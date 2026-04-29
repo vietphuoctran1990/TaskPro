@@ -6,9 +6,11 @@ import {
   useMemo,
   type ReactNode,
 } from 'react'
-import type { AppState, Task, Project, Priority, Status } from '../types'
+import type {
+  AppState, Task, Project, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment,
+} from '../types'
 import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS } from '../data/defaults'
-import { generateId } from '../lib/utils'
+import { generateId, getSLAStatus, PRIORITY_ORDER, STATUS_ORDER, SLA_ORDER, getDeadline } from '../lib/utils'
 
 type Action =
   | { type: 'ADD_TASK'; payload: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> }
@@ -16,20 +18,41 @@ type Action =
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'MOVE_TASK'; payload: { id: string; status: Status } }
   | { type: 'REORDER_TASKS'; payload: Task[] }
+  | { type: 'ADD_COMMENT'; payload: { taskId: string; comment: Omit<Comment, 'id' | 'createdAt'> } }
   | { type: 'ADD_PROJECT'; payload: Omit<Project, 'id'> }
   | { type: 'SET_ACTIVE_PROJECT'; payload: string | null }
   | { type: 'SET_SEARCH'; payload: string }
   | { type: 'SET_FILTER_PRIORITY'; payload: Priority | 'all' }
   | { type: 'SET_FILTER_STATUS'; payload: Status | 'all' }
+  | { type: 'SET_FILTER_SLA'; payload: SLAStatus | 'all' }
+  | { type: 'SET_VIEW_MODE'; payload: ViewMode }
+  | { type: 'SET_SORT'; payload: { field: SortField; dir: SortDir } }
   | { type: 'TOGGLE_DARK_MODE' }
-  | { type: 'LOAD_STATE'; payload: AppState }
 
-const STORAGE_KEY = 'taskpro_state'
+const STORAGE_KEY = 'taskpro_v2_state'
 
 function getInitialState(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) return JSON.parse(saved)
+    if (saved) {
+      const parsed = JSON.parse(saved) as AppState
+      // ensure new fields exist on old tasks
+      return {
+        ...parsed,
+        tasks: parsed.tasks.map(t => ({
+          ...t,
+          comments:       t.comments       ?? [],
+          dueTime:        t.dueTime        ?? null,
+          slaHours:       t.slaHours       ?? null,
+          estimatedHours: t.estimatedHours ?? null,
+        })),
+        filterSLA: parsed.filterSLA ?? 'all',
+        viewMode: parsed.viewMode ?? 'kanban',
+        sortField: parsed.sortField ?? 'createdAt',
+        sortDir: parsed.sortDir ?? 'desc',
+        darkMode: false,
+      }
+    }
   } catch {}
   return {
     tasks: DEFAULT_TASKS,
@@ -39,7 +62,11 @@ function getInitialState(): AppState {
     searchQuery: '',
     filterPriority: 'all',
     filterStatus: 'all',
-    darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+    filterSLA: 'all',
+    viewMode: 'kanban',
+    sortField: 'createdAt',
+    sortDir: 'desc',
+    darkMode: false,
   }
 }
 
@@ -74,6 +101,22 @@ function reducer(state: AppState, action: Action): AppState {
       }
     case 'REORDER_TASKS':
       return { ...state, tasks: action.payload }
+    case 'ADD_COMMENT':
+      return {
+        ...state,
+        tasks: state.tasks.map(t =>
+          t.id === action.payload.taskId
+            ? {
+                ...t,
+                comments: [
+                  ...t.comments,
+                  { ...action.payload.comment, id: generateId(), createdAt: now },
+                ],
+                updatedAt: now,
+              }
+            : t
+        ),
+      }
     case 'ADD_PROJECT':
       return {
         ...state,
@@ -87,10 +130,14 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, filterPriority: action.payload }
     case 'SET_FILTER_STATUS':
       return { ...state, filterStatus: action.payload }
+    case 'SET_FILTER_SLA':
+      return { ...state, filterSLA: action.payload }
+    case 'SET_VIEW_MODE':
+      return { ...state, viewMode: action.payload }
+    case 'SET_SORT':
+      return { ...state, sortField: action.payload.field, sortDir: action.payload.dir }
     case 'TOGGLE_DARK_MODE':
       return { ...state, darkMode: !state.darkMode }
-    case 'LOAD_STATE':
-      return action.payload
     default:
       return state
   }
@@ -108,30 +155,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState)
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    } catch {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch {}
   }, [state])
 
   useEffect(() => {
-    if (state.darkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+    document.documentElement.classList.toggle('dark', state.darkMode)
   }, [state.darkMode])
 
   const filteredTasks = useMemo(() => {
     let tasks = state.tasks
+
     if (state.activeProjectId) {
       tasks = tasks.filter(t => t.projectId === state.activeProjectId)
     }
     if (state.searchQuery.trim()) {
       const q = state.searchQuery.toLowerCase()
-      tasks = tasks.filter(
-        t =>
-          t.title.toLowerCase().includes(q) ||
-          t.description.toLowerCase().includes(q)
+      tasks = tasks.filter(t =>
+        t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
       )
     }
     if (state.filterPriority !== 'all') {
@@ -140,8 +180,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (state.filterStatus !== 'all') {
       tasks = tasks.filter(t => t.status === state.filterStatus)
     }
+    if (state.filterSLA !== 'all') {
+      tasks = tasks.filter(t => getSLAStatus(t) === state.filterSLA)
+    }
+
+    // sort
+    tasks = [...tasks].sort((a, b) => {
+      const dir = state.sortDir === 'asc' ? 1 : -1
+      switch (state.sortField) {
+        case 'title':
+          return dir * a.title.localeCompare(b.title)
+        case 'priority':
+          return dir * (PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+        case 'status':
+          return dir * (STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+        case 'dueDate': {
+          const da = getDeadline(a)?.getTime() ?? Infinity
+          const db = getDeadline(b)?.getTime() ?? Infinity
+          return dir * (da - db)
+        }
+        case 'sla':
+          return dir * (SLA_ORDER[getSLAStatus(a)] - SLA_ORDER[getSLAStatus(b)])
+        case 'createdAt':
+        default:
+          return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      }
+    })
+
     return tasks
-  }, [state.tasks, state.activeProjectId, state.searchQuery, state.filterPriority, state.filterStatus])
+  }, [
+    state.tasks, state.activeProjectId, state.searchQuery,
+    state.filterPriority, state.filterStatus, state.filterSLA,
+    state.sortField, state.sortDir,
+  ])
 
   return (
     <AppContext.Provider value={{ state, dispatch, filteredTasks }}>

@@ -1,34 +1,54 @@
 @import "tailwindcss";
 
 @layer base {
-  *, *::before, *::after {
-    box-sizing: border-box;
-  }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
 
   body {
     margin: 0;
+    background: #f8fafc;
+    color: #0f172a;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  /* Dark mode overrides */
+  html.dark body { background: #0f172a; color: #f1f5f9; }
+  html.dark { color-scheme: dark; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  html.dark ::-webkit-scrollbar-thumb { background: #334155; }
+
+  /* Smooth transitions for SLA timer */
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
+  .sla-pulse { animation: pulse-soft 2s ease-in-out infinite; }
+
+  /* Calendar grid lines */
+  .calendar-cell:last-child { border-right: none; }
 }
 
 @layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
+  .scrollbar-thin { scrollbar-width: thin; }
+  .animate-in { animation: slideIn 0.2s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .slide-in-from-bottom-4 { animation: slideInBottom 0.25s ease-out; }
+  @keyframes slideInBottom {
+    from { opacity: 0; transform: translate(-50%, 16px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .slide-in-from-top-4 { animation: slideInTop 0.25s ease-out; }
+  @keyframes slideInTop {
+    from { opacity: 0; transform: translate(-50%, -16px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
   }
 }
