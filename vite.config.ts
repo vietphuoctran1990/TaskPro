@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const base = process.env.GITHUB_ACTIONS ? '/TaskPro/' : '/'
+// GitHub Pages deploys to /TaskPro/, Netlify and local use /
+const base = process.env.DEPLOY_TARGET === 'github-pages' ? '/TaskPro/' : '/'
 
 export default defineConfig({
   base,
