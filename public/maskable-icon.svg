@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full bleed background for maskable icon (safe zone = center 80%) -->
+  <rect width="512" height="512" fill="#6366f1"/>
+  <!-- Checkmark box, centered and slightly larger for maskable safe zone -->
+  <rect x="144" y="192" width="96" height="96" rx="18" fill="white"/>
+  <polyline points="164,240 184,264 224,216" fill="none" stroke="#6366f1" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="264" y="216" width="112" height="16" rx="8" fill="white"/>
+  <rect x="264" y="248" width="80" height="16" rx="8" fill="white" opacity="0.6"/>
+  <rect x="144" y="320" width="96" height="96" rx="18" fill="white" opacity="0.45"/>
+  <rect x="264" y="344" width="112" height="16" rx="8" fill="white" opacity="0.75"/>
+  <rect x="264" y="376" width="72" height="16" rx="8" fill="white" opacity="0.4"/>
+</svg>

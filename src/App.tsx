@@ -5,6 +5,10 @@ import Header from './components/layout/Header'
 import TaskBoard from './components/tasks/TaskBoard'
 import TaskForm from './components/tasks/TaskForm'
 import TaskDetail from './components/tasks/TaskDetail'
+import InstallBanner from './components/pwa/InstallBanner'
+import UpdateBanner from './components/pwa/UpdateBanner'
+import OfflineToast from './components/pwa/OfflineToast'
+import { usePWA } from './hooks/usePWA'
 import type { Status, Task } from './types'
 
 function AppShell() {
@@ -13,6 +17,9 @@ function AppShell() {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [viewingTask, setViewingTask] = useState<Task | null>(null)
   const [defaultStatus, setDefaultStatus] = useState<Status>('todo')
+  const [installDismissed, setInstallDismissed] = useState(false)
+
+  const { canInstall, isOnline, needRefresh, install, updateServiceWorker } = usePWA()
 
   const handleAddTask = useCallback((status: Status = 'todo') => {
     setDefaultStatus(status)
@@ -39,7 +46,7 @@ function AppShell() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex h-[100dvh] bg-slate-50 dark:bg-slate-950 overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex h-full">
         <Sidebar />
@@ -89,6 +96,20 @@ function AppShell() {
           handleEditTask(task)
         }}
       />
+
+      {/* PWA UI */}
+      {needRefresh && (
+        <UpdateBanner onUpdate={() => updateServiceWorker(true)} />
+      )}
+
+      {canInstall && !installDismissed && (
+        <InstallBanner
+          onInstall={install}
+          onDismiss={() => setInstallDismissed(true)}
+        />
+      )}
+
+      <OfflineToast isOnline={isOnline} />
     </div>
   )
 }
