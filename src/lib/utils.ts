@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import type { Task, SLAStatus } from '../types'
+import type { Task, SLAStatus, Recurrence } from '../types'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -22,7 +22,6 @@ export function formatDateTime(dateStr: string | null, timeStr: string | null): 
   return timeStr ? `${base} ${timeStr}` : base
 }
 
-/** Returns the SLA deadline as a Date (dueDate+dueTime wins; fallback to createdAt+slaHours) */
 export function getDeadline(task: Task): Date | null {
   if (task.dueDate) {
     const time = task.dueTime ?? '23:59'
@@ -68,6 +67,32 @@ export function isDueSoon(dateStr: string | null, timeStr?: string | null): bool
   const now = new Date()
   const diff = due.getTime() - now.getTime()
   return diff >= 0 && diff < 24 * 3600_000
+}
+
+/** Compute the next due date for a recurring task */
+export function nextRecurringDate(dueDate: string, recurrence: Recurrence): string {
+  const d = new Date(dueDate)
+  if (recurrence.type === 'daily')   d.setDate(d.getDate() + recurrence.interval)
+  if (recurrence.type === 'weekly')  d.setDate(d.getDate() + recurrence.interval * 7)
+  if (recurrence.type === 'monthly') d.setMonth(d.getMonth() + recurrence.interval)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Spawn the next instance of a recurring task (returns null if past endDate) */
+export function createNextRecurringTask(task: Task, now: string): Task | null {
+  if (!task.recurrence || !task.dueDate) return null
+  const nextDue = nextRecurringDate(task.dueDate, task.recurrence)
+  if (task.recurrence.endDate && nextDue > task.recurrence.endDate) return null
+  return {
+    ...task,
+    id: generateId(),
+    status: 'todo',
+    dueDate: nextDue,
+    comments: [],
+    subtasks: task.subtasks.map(s => ({ ...s, done: false })),
+    createdAt: now,
+    updatedAt: now,
+  }
 }
 
 export const PRIORITY_ORDER: Record<string, number> = {

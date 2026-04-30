@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp } from 'lucide-react'
+import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
@@ -9,9 +9,9 @@ import type { Project } from '../../types'
 
 const PROJECT_COLORS = ['#6366f1','#0ea5e9','#f59e0b','#22c55e','#ec4899','#ef4444','#8b5cf6','#14b8a6','#f97316','#06b6d4']
 
-interface SidebarProps { onClose?: () => void; mobile?: boolean }
+interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void }
 
-export default function Sidebar({ onClose, mobile }: SidebarProps) {
+export default function Sidebar({ onClose, mobile, onSync }: SidebarProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [projectsOpen, setProjectsOpen] = useState(true)
@@ -142,6 +142,11 @@ export default function Sidebar({ onClose, mobile }: SidebarProps) {
           <span className="flex items-center gap-1.5 text-slate-500"><TrendingUp size={12} /> {t.sidebar.inProgress}</span>
           <span className="font-semibold text-slate-700">{stats.inProg}</span>
         </div>
+        {onSync && (
+          <button onClick={onSync} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-colors border border-slate-200">
+            <RefreshCw size={12} /> {t.sidebar.syncBackup}
+          </button>
+        )}
       </div>
     </aside>
   )

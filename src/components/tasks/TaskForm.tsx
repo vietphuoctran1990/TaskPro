@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react'
-import { Calendar, Clock, Timer } from 'lucide-react'
+import { Calendar, Clock, Timer, Repeat } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { Input, Textarea } from '../ui/Input'
 import Select from '../ui/Select'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
-import type { Task, Priority, Status } from '../../types'
+import type { Task, Priority, Status, Recurrence } from '../../types'
 
 interface TaskFormProps {
   open: boolean
@@ -27,6 +27,9 @@ interface FormData {
   dueTime: string
   slaHours: string
   estimatedHours: string
+  recurrenceType: '' | 'daily' | 'weekly' | 'monthly'
+  recurrenceInterval: string
+  recurrenceEndDate: string
 }
 
 export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', defaultDate = '' }: TaskFormProps) {
@@ -43,16 +46,19 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   ]
 
   const [form, setForm] = useState<FormData>(() => ({
-    title:          task?.title ?? '',
-    description:    task?.description ?? '',
-    status:         task?.status ?? defaultStatus,
-    priority:       task?.priority ?? 'medium',
-    projectId:      task?.projectId ?? (state.projects[0]?.id ?? ''),
-    labels:         task?.labels ?? [],
-    dueDate:        task?.dueDate ?? defaultDate,
-    dueTime:        task?.dueTime ?? '',
-    slaHours:       task?.slaHours != null ? String(task.slaHours) : '',
-    estimatedHours: task?.estimatedHours != null ? String(task.estimatedHours) : '',
+    title:               task?.title          ?? '',
+    description:         task?.description    ?? '',
+    status:              task?.status         ?? defaultStatus,
+    priority:            task?.priority       ?? 'medium',
+    projectId:           task?.projectId      ?? (state.projects[0]?.id ?? ''),
+    labels:              task?.labels         ?? [],
+    dueDate:             task?.dueDate        ?? defaultDate,
+    dueTime:             task?.dueTime        ?? '',
+    slaHours:            task?.slaHours       != null ? String(task.slaHours) : '',
+    estimatedHours:      task?.estimatedHours != null ? String(task.estimatedHours) : '',
+    recurrenceType:      task?.recurrence?.type     ?? '',
+    recurrenceInterval:  task?.recurrence?.interval ? String(task.recurrence.interval) : '1',
+    recurrenceEndDate:   task?.recurrence?.endDate  ?? '',
   }))
   const [errors, setErrors] = useState<{ title?: string }>({})
   const [slaPreset, setSlaPreset] = useState(() => {
@@ -80,6 +86,16 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
 
   const handleSubmit = () => {
     if (!form.title.trim()) { setErrors({ title: t.form.titleRequired }); return }
+
+    let recurrence: Recurrence | null = null
+    if (form.recurrenceType) {
+      recurrence = {
+        type: form.recurrenceType,
+        interval: Math.max(1, Number(form.recurrenceInterval) || 1),
+        ...(form.recurrenceEndDate ? { endDate: form.recurrenceEndDate } : {}),
+      }
+    }
+
     const payload = {
       title:          form.title.trim(),
       description:    form.description.trim(),
@@ -93,6 +109,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
       estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : null,
       subtasks:       task?.subtasks ?? [],
       comments:       task?.comments ?? [],
+      recurrence,
     }
     if (task) {
       dispatch({ type: 'UPDATE_TASK', payload: { ...payload, id: task.id } })
@@ -102,10 +119,14 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     onClose()
   }
 
+  const recurrenceUnitLabel =
+    form.recurrenceType === 'daily'   ? t.recurrence.days :
+    form.recurrenceType === 'weekly'  ? t.recurrence.weeks :
+    form.recurrenceType === 'monthly' ? t.recurrence.months : ''
+
   return (
     <Modal open={open} onClose={onClose} title={task ? t.form.editTask : t.form.newTask} size="lg">
       <div className="px-6 py-5 space-y-4">
-        {/* Title */}
         <Input
           label={t.form.title} id="task-title" placeholder={t.form.titlePlaceholder}
           value={form.title} onChange={e => set('title', e.target.value)}
@@ -113,15 +134,11 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
         />
 
-        {/* Description */}
         <Textarea
-          label={t.form.description} id="task-desc"
-          placeholder={t.form.descPlaceholder}
-          value={form.description} onChange={e => set('description', e.target.value)}
-          rows={3}
+          label={t.form.description} id="task-desc" placeholder={t.form.descPlaceholder}
+          value={form.description} onChange={e => set('description', e.target.value)} rows={2}
         />
 
-        {/* Status + Priority */}
         <div className="grid grid-cols-2 gap-3">
           <Select label={t.form.status} id="task-status" value={form.status} onChange={e => set('status', e.target.value as Status)}>
             <option value="todo">{t.status.todo}</option>
@@ -137,7 +154,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
           </Select>
         </div>
 
-        {/* Project + Estimated hours */}
         <div className="grid grid-cols-2 gap-3">
           <Select label={t.form.project} id="task-project" value={form.projectId} onChange={e => set('projectId', e.target.value)}>
             {state.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -146,18 +162,13 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             <label className="text-sm font-medium text-slate-700">{t.form.estimatedHours}</label>
             <div className="relative">
               <Timer size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input
-                type="number" min="0" step="0.5"
-                placeholder={t.form.estPlaceholder}
-                value={form.estimatedHours}
-                onChange={e => set('estimatedHours', e.target.value)}
-                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <input type="number" min="0" step="0.5" placeholder={t.form.estPlaceholder}
+                value={form.estimatedHours} onChange={e => set('estimatedHours', e.target.value)}
+                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
         </div>
 
-        {/* Due date + Due time */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700">{t.form.dueDate}</label>
@@ -184,29 +195,58 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
           </label>
           <div className="flex gap-2 flex-wrap">
             {SLA_PRESETS.map(p => (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => handleSlaPreset(p.value)}
+              <button key={p.value} type="button" onClick={() => handleSlaPreset(p.value)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                   slaPreset === p.value
                     ? 'bg-indigo-600 text-white border-indigo-600'
                     : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-                }`}
-              >
+                }`}>
                 {p.label}
               </button>
             ))}
           </div>
           {slaPreset === 'custom' && (
             <div className="flex items-center gap-2 mt-1">
-              <input
-                type="number" min="1" placeholder={t.form.hours}
-                value={form.slaHours}
-                onChange={e => set('slaHours', e.target.value)}
-                className="h-9 w-28 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <input type="number" min="1" placeholder={t.form.hours}
+                value={form.slaHours} onChange={e => set('slaHours', e.target.value)}
+                className="h-9 w-28 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               <span className="text-sm text-slate-500">{t.form.hours}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Recurrence */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+            <Repeat size={13} className="text-slate-400" /> {t.recurrence.title}
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            {(['', 'daily', 'weekly', 'monthly'] as const).map(type => (
+              <button key={type} type="button"
+                onClick={() => set('recurrenceType', type)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  form.recurrenceType === type
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                }`}>
+                {type === ''        ? t.recurrence.none    :
+                 type === 'daily'   ? t.recurrence.daily   :
+                 type === 'weekly'  ? t.recurrence.weekly  :
+                                     t.recurrence.monthly}
+              </button>
+            ))}
+          </div>
+          {form.recurrenceType && (
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className="text-sm text-slate-500">{t.recurrence.every}</span>
+              <input type="number" min="1" max="99"
+                value={form.recurrenceInterval} onChange={e => set('recurrenceInterval', e.target.value)}
+                className="h-9 w-20 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <span className="text-sm text-slate-500">{recurrenceUnitLabel}</span>
+              <span className="text-slate-300">·</span>
+              <label className="text-sm text-slate-500">{t.recurrence.endDate}</label>
+              <input type="date" value={form.recurrenceEndDate} onChange={e => set('recurrenceEndDate', e.target.value)}
+                className="h-9 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           )}
         </div>
@@ -222,9 +262,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all border"
                   style={sel
                     ? { backgroundColor: `${label.color}18`, color: label.color, borderColor: label.color }
-                    : { backgroundColor: 'transparent', color: '#94a3b8', borderColor: '#e2e8f0' }
-                  }
-                >
+                    : { backgroundColor: 'transparent', color: '#94a3b8', borderColor: '#e2e8f0' }}>
                   {sel && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: label.color }} />}
                   {label.name}
                 </button>

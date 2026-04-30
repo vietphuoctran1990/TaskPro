@@ -7,8 +7,10 @@ import Header from './components/layout/Header'
 import TaskBoard from './components/tasks/TaskBoard'
 import ListView from './components/views/ListView'
 import CalendarView from './components/views/CalendarView'
+import DashboardView from './components/views/DashboardView'
 import TaskForm from './components/tasks/TaskForm'
 import TaskDetail from './components/tasks/TaskDetail'
+import SyncModal from './components/sync/SyncModal'
 import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
 import OfflineToast from './components/pwa/OfflineToast'
@@ -24,6 +26,7 @@ function AppShell() {
   const [defaultStatus, setDefaultStatus] = useState<Status>('todo')
   const [defaultDate, setDefaultDate] = useState('')
   const [installDismissed, setInstallDismissed] = useState(false)
+  const [syncOpen, setSyncOpen] = useState(false)
 
   const { canInstall, isOnline, needRefresh, install, updateServiceWorker } = usePWA()
 
@@ -47,7 +50,7 @@ function AppShell() {
     <div className="flex h-[100dvh] bg-slate-50 overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex h-full">
-        <Sidebar />
+        <Sidebar onSync={() => setSyncOpen(true)} />
       </div>
 
       {/* Mobile sidebar overlay */}
@@ -55,7 +58,7 @@ function AppShell() {
         <>
           <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
           <div className="fixed inset-y-0 left-0 z-50 w-64 lg:hidden">
-            <Sidebar mobile onClose={() => setSidebarOpen(false)} />
+            <Sidebar mobile onClose={() => setSidebarOpen(false)} onSync={() => { setSidebarOpen(false); setSyncOpen(true) }} />
           </div>
         </>
       )}
@@ -88,10 +91,17 @@ function AppShell() {
               onAddTask={(date) => handleAddTask('todo', date)}
             />
           )}
+          {state.viewMode === 'dashboard' && (
+            <DashboardView
+              onViewTask={handleViewTask}
+              onAddTask={() => handleAddTask()}
+            />
+          )}
         </main>
       </div>
 
       {/* Modals */}
+      <SyncModal open={syncOpen} onClose={() => setSyncOpen(false)} />
       <TaskForm
         open={formOpen}
         onClose={handleCloseForm}

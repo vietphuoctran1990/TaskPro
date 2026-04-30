@@ -3,12 +3,13 @@ export interface Translations {
   sidebar: {
     allTasks: string; projects: string; newProject: string; labels: string
     overallProgress: string; breached: string; critical: string; atRisk: string; inProgress: string
+    syncBackup: string
   }
   header: {
     newTask: string; search: string; allPriorities: string; allStatuses: string
     allSLA: string; clear: string; language: string; filters: string; tasks: string
   }
-  views: { kanban: string; list: string; calendar: string }
+  views: { dashboard: string; kanban: string; list: string; calendar: string }
   status: { todo: string; in_progress: string; in_review: string; done: string }
   priority: {
     low: string; medium: string; high: string; urgent: string; allPriorities: string
@@ -44,6 +45,27 @@ export interface Translations {
     more: (n: number) => string
     months: string[]
     days: string[]
+  }
+  dashboard: {
+    title: string; totalTasks: string; inProgress: string; completedToday: string
+    slaBreached: string; slaHealth: string; weeklyActivity: string
+    upcomingDeadlines: string; projectBreakdown: string; noDeadlines: string
+    onTrack: string; atRisk: string; critical: string
+    tasks: (n: number) => string
+    done: (n: number) => string
+  }
+  recurrence: {
+    title: string; none: string; daily: string; weekly: string; monthly: string
+    every: string; days: string; weeks: string; months: string
+    endDate: string; repeats: string
+  }
+  sync: {
+    title: string; exportTitle: string; exportDesc: string; exportBtn: string
+    importTitle: string; importDesc: string; importBtn: string
+    importReplace: string; importMerge: string
+    importSuccess: string; importError: string; confirmReplace: string
+    codeTitle: string; codeDesc: string; copyCode: string; pasteCode: string
+    copied: string; codePlaceholder: string; applyCode: string
   }
   notifications: {
     title: string; enable: string; denied: string; noUpcoming: string

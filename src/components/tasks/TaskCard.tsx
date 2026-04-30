@@ -1,7 +1,7 @@
 import { memo, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Calendar, CheckSquare, GripVertical, MessageSquare, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Calendar, CheckSquare, GripVertical, MessageSquare, MoreHorizontal, Pencil, Repeat, Trash2 } from 'lucide-react'
 import { cn, formatDateTime, getDeadline, getSLAStatus } from '../../lib/utils'
 import { PriorityBadge, Badge } from '../ui/Badge'
 import SLABadge from '../sla/SLABadge'
@@ -107,7 +107,14 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView }: TaskCardProps)
 
         {/* Footer row */}
         <div className="flex items-center justify-between mt-2">
-          <PriorityBadge priority={task.priority} />
+          <div className="flex items-center gap-1.5">
+            <PriorityBadge priority={task.priority} />
+            {task.recurrence && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full border border-indigo-100">
+                <Repeat size={9} />
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2.5">
             {task.subtasks.length > 0 && (
               <span className={cn(

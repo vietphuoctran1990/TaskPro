@@ -1,4 +1,4 @@
-import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar } from 'lucide-react'
+import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
@@ -13,7 +13,7 @@ interface HeaderProps {
 }
 
 const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
-  kanban: LayoutDashboard, list: List, calendar: Calendar,
+  dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar,
 }
 
 export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
@@ -21,7 +21,7 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
   const t = useT()
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const views: ViewMode[] = ['kanban', 'list', 'calendar']
+  const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar']
   const project = state.projects.find(p => p.id === state.activeProjectId)
   const taskCount = state.tasks.filter(tk =>
     state.activeProjectId ? tk.projectId === state.activeProjectId : true
@@ -47,19 +47,19 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
           <span className="text-xs text-slate-400 shrink-0">{taskCount} {t.header.tasks}</span>
         </div>
 
-        {/* View switcher */}
+        {/* View switcher — desktop */}
         <div className="hidden sm:flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
           {views.map(v => {
             const Icon = VIEW_ICONS[v]
             return (
               <button key={v} onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
                   state.viewMode === v ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 )}
               >
                 <Icon size={13} />
-                {t.views[v]}
+                <span className="hidden md:inline">{t.views[v]}</span>
               </button>
             )
           })}
@@ -70,7 +70,7 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
           <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="search" placeholder={t.header.search} value={state.searchQuery}
             onChange={e => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
-            className="h-8 pl-8 pr-3 w-44 rounded-lg border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+            className="h-8 pl-8 pr-3 w-40 rounded-lg border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
           />
         </div>
 
@@ -81,15 +81,12 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
           {hasFilters && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
         </Button>
 
-        {/* Notification bell */}
         <NotificationBell />
 
-        {/* Dark mode */}
         <Button variant="ghost" size="icon" onClick={() => dispatch({ type: 'TOGGLE_DARK_MODE' })}>
           {state.darkMode ? <Sun size={15} /> : <Moon size={15} />}
         </Button>
 
-        {/* Language toggle */}
         <button
           onClick={() => dispatch({ type: 'SET_LANGUAGE', payload: state.language === 'vi' ? 'en' : 'vi' })}
           className="hidden sm:inline-flex items-center justify-center h-8 px-2.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors bg-white"
@@ -97,7 +94,6 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
           {t.header.language}
         </button>
 
-        {/* New task */}
         <Button variant="primary" size="sm" onClick={onAddTask}>
           <Plus size={14} /> <span className="hidden sm:inline">{t.header.newTask}</span>
         </Button>
@@ -109,9 +105,9 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
           const Icon = VIEW_ICONS[v]
           return (
             <button key={v} onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
-              className={cn('flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
+              className={cn('flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors',
                 state.viewMode === v ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500')}>
-              <Icon size={12} /> {t.views[v]}
+              <Icon size={12} />
             </button>
           )
         })}
@@ -129,7 +125,6 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
             <option value="medium">{t.priority.mediumIcon}</option>
             <option value="low">{t.priority.lowIcon}</option>
           </select>
-
           <select value={state.filterStatus}
             onChange={e => dispatch({ type: 'SET_FILTER_STATUS', payload: e.target.value as Status | 'all' })}
             className="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
@@ -139,7 +134,6 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
             <option value="in_review">{t.status.in_review}</option>
             <option value="done">{t.status.done}</option>
           </select>
-
           <select value={state.filterSLA}
             onChange={e => dispatch({ type: 'SET_FILTER_SLA', payload: e.target.value as SLAStatus | 'all' })}
             className="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
@@ -150,7 +144,6 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
             <option value="on_track">🟢 {t.sla.on_track}</option>
             <option value="none">— {t.sla.none}</option>
           </select>
-
           {hasFilters && (
             <Button variant="ghost" size="sm" className="text-red-500 hover:bg-red-50"
               onClick={() => {

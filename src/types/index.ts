@@ -1,6 +1,6 @@
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type Status = 'todo' | 'in_progress' | 'in_review' | 'done'
-export type ViewMode = 'kanban' | 'list' | 'calendar'
+export type ViewMode = 'dashboard' | 'kanban' | 'list' | 'calendar'
 export type SortField = 'title' | 'priority' | 'status' | 'dueDate' | 'sla' | 'createdAt'
 export type SortDir = 'asc' | 'desc'
 
@@ -22,6 +22,12 @@ export interface Comment {
   createdAt: string
 }
 
+export interface Recurrence {
+  type: 'daily' | 'weekly' | 'monthly'
+  interval: number        // every N days/weeks/months
+  endDate?: string        // "YYYY-MM-DD" optional
+}
+
 export interface Task {
   id: string
   title: string
@@ -35,6 +41,7 @@ export interface Task {
   dueTime: string | null        // "HH:MM" — specific SLA time
   slaHours: number | null       // max resolution time (hours from creation)
   estimatedHours: number | null // estimated effort
+  recurrence: Recurrence | null
   createdAt: string
   updatedAt: string
   projectId: string
@@ -61,7 +68,7 @@ export interface AppState {
   sortDir: SortDir
   darkMode: boolean
   language: 'en' | 'vi'
-  notifBefore: number[]   // minutes before deadline to notify: 15, 30, 60
+  notifBefore: number[]
 }
 
 export type SLAStatus = 'on_track' | 'at_risk' | 'critical' | 'breached' | 'completed' | 'none'
