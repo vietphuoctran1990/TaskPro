@@ -50,6 +50,7 @@ export interface Translations {
     dueIn60: string; dueIn30: string; dueIn15: string; overdue: string; dueSoon: string
     notifTitle: (label: string) => string; markDone: string; viewTask: string
     permissionGranted: string; upcomingCount: (n: number) => string
+    notifyBefore: string; min15: string; min30: string; hour1: string
   }
   pwa: {
     installTitle: string; installDesc: string; install: string; installing: string

@@ -6,6 +6,8 @@ import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import { useNotifications } from '../../hooks/useNotifications'
 
+const NOTIF_OPTIONS = [15, 30, 60] as const
+
 export default function NotificationBell() {
   const { state, dispatch } = useApp()
   const t = useT()
@@ -18,11 +20,11 @@ export default function NotificationBell() {
     tasks: state.tasks,
     t,
     enabled: permission === 'granted',
+    notifBefore: state.notifBefore,
   })
 
   const alerts = getUpcomingAlerts()
 
-  // Critical/breached count for badge
   const urgentCount = state.tasks.filter(task => {
     if (task.status === 'done') return false
     const deadline = getDeadline(task)
@@ -36,13 +38,21 @@ export default function NotificationBell() {
     setPermission(perm)
   }, [requestPermission])
 
-  // Sync permission state if it changes externally
   useEffect(() => {
     if (!('Notification' in window)) return
-    const check = () => setPermission(Notification.permission)
-    const id = setInterval(check, 3000)
+    const id = setInterval(() => setPermission(Notification.permission), 3000)
     return () => clearInterval(id)
   }, [])
+
+  const toggleNotifBefore = (minutes: number) => {
+    const next = state.notifBefore.includes(minutes)
+      ? state.notifBefore.filter(m => m !== minutes)
+      : [...state.notifBefore, minutes]
+    dispatch({ type: 'SET_NOTIF_BEFORE', payload: next })
+  }
+
+  const labelFor = (m: number) =>
+    m === 15 ? t.notifications.min15 : m === 30 ? t.notifications.min30 : t.notifications.hour1
 
   return (
     <div className="relative">
@@ -95,9 +105,9 @@ export default function NotificationBell() {
             )}
 
             {/* Alert list */}
-            <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
+            <div className="max-h-56 overflow-y-auto divide-y divide-slate-50">
               {alerts.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-8 text-slate-400">
+                <div className="flex flex-col items-center gap-2 py-6 text-slate-400">
                   <CheckCircle2 size={24} className="text-emerald-400" />
                   <p className="text-xs">{t.notifications.noUpcoming}</p>
                 </div>
@@ -120,10 +130,7 @@ export default function NotificationBell() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-800 truncate">{task.title}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={cn(
-                            'text-xs font-medium',
-                            overdue ? 'text-red-600' : 'text-amber-600'
-                          )}>
+                          <span className={cn('text-xs font-medium', overdue ? 'text-red-600' : 'text-amber-600')}>
                             {label}
                           </span>
                           {deadline && (
@@ -135,9 +142,7 @@ export default function NotificationBell() {
                       </div>
                       <button
                         className="shrink-0 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
-                        onClick={() => {
-                          dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'done' } })
-                        }}
+                        onClick={() => dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'done' } })}
                         title={t.notifications.markDone}
                       >
                         <CheckCircle2 size={14} />
@@ -148,9 +153,33 @@ export default function NotificationBell() {
               )}
             </div>
 
+            {/* Notify-before settings */}
+            <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/60">
+              <p className="text-xs text-slate-500 font-medium mb-2">{t.notifications.notifyBefore}:</p>
+              <div className="flex gap-2">
+                {NOTIF_OPTIONS.map(m => {
+                  const active = state.notifBefore.includes(m)
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => toggleNotifBefore(m)}
+                      className={cn(
+                        'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                        active
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                      )}
+                    >
+                      {labelFor(m)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* Footer */}
             {permission === 'granted' && (
-              <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50 flex items-center gap-1.5 text-xs text-slate-400">
+              <div className="px-4 py-2 border-t border-slate-100 flex items-center gap-1.5 text-xs text-slate-400">
                 <Clock size={11} />
                 Checked every 60s
               </div>

@@ -144,6 +144,10 @@ export const en: Translations = {
     viewTask: 'View task',
     permissionGranted: 'Notifications enabled!',
     upcomingCount: (n: number) => `${n} upcoming deadline${n !== 1 ? 's' : ''}`,
+    notifyBefore: 'Remind before',
+    min15: '15 min',
+    min30: '30 min',
+    hour1: '1 hour',
   },
   pwa: {
     installTitle: 'Install TaskPro',

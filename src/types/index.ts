@@ -61,6 +61,7 @@ export interface AppState {
   sortDir: SortDir
   darkMode: boolean
   language: 'en' | 'vi'
+  notifBefore: number[]   // minutes before deadline to notify: 15, 30, 60
 }
 
 export type SLAStatus = 'on_track' | 'at_risk' | 'critical' | 'breached' | 'completed' | 'none'

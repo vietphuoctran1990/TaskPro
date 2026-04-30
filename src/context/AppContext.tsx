@@ -29,6 +29,7 @@ type Action =
   | { type: 'SET_SORT'; payload: { field: SortField; dir: SortDir } }
   | { type: 'TOGGLE_DARK_MODE' }
   | { type: 'SET_LANGUAGE'; payload: 'en' | 'vi' }
+  | { type: 'SET_NOTIF_BEFORE'; payload: number[] }
 
 const STORAGE_KEY = 'taskpro_v2_state'
 
@@ -53,6 +54,7 @@ function getInitialState(): AppState {
         sortDir: parsed.sortDir ?? 'desc',
         darkMode: false,
         language: parsed.language ?? 'vi',
+        notifBefore: parsed.notifBefore ?? [15, 30, 60],
       }
     }
   } catch {}
@@ -70,6 +72,7 @@ function getInitialState(): AppState {
     sortDir: 'desc',
     darkMode: false,
     language: 'vi',
+    notifBefore: [15, 30, 60],
   }
 }
 
@@ -143,6 +146,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, darkMode: !state.darkMode }
     case 'SET_LANGUAGE':
       return { ...state, language: action.payload }
+    case 'SET_NOTIF_BEFORE':
+      return { ...state, notifBefore: action.payload }
     default:
       return state
   }

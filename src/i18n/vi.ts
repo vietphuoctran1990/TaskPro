@@ -144,6 +144,10 @@ export const vi: Translations = {
     viewTask: 'Xem công việc',
     permissionGranted: 'Đã bật thông báo!',
     upcomingCount: (n: number) => `${n} deadline sắp đến`,
+    notifyBefore: 'Nhắc trước',
+    min15: '15 phút',
+    min30: '30 phút',
+    hour1: '1 giờ',
   },
   pwa: {
     installTitle: 'Cài đặt TaskPro',
