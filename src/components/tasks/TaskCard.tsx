@@ -8,6 +8,7 @@ import SLABadge from '../sla/SLABadge'
 import Button from '../ui/Button'
 import type { Task } from '../../types'
 import { useApp } from '../../context/AppContext'
+import { useT } from '../../i18n'
 
 interface TaskCardProps {
   task: Task
@@ -24,6 +25,7 @@ const PRIORITY_ACCENT: Record<string, string> = {
 
 const TaskCard = memo(function TaskCard({ task, onEdit, onView }: TaskCardProps) {
   const { state, dispatch } = useApp()
+  const t = useT()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
@@ -68,11 +70,11 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView }: TaskCardProps)
               <div className="absolute right-0 top-7 z-20 w-36 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
                 <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit(task) }}>
-                  <Pencil size={13} /> Edit
+                  <Pencil size={13} /> {t.detail.edit}
                 </button>
                 <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); dispatch({ type: 'DELETE_TASK', payload: task.id }) }}>
-                  <Trash2 size={13} /> Delete
+                  <Trash2 size={13} /> {t.detail.delete}
                 </button>
               </div>
             </>

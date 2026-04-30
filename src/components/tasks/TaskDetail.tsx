@@ -8,6 +8,7 @@ import Button from '../ui/Button'
 import { PriorityBadge, Badge } from '../ui/Badge'
 import SLABadge from '../sla/SLABadge'
 import { useApp } from '../../context/AppContext'
+import { useT } from '../../i18n'
 import { cn, formatDateTime, getDeadline, getTimeRemaining } from '../../lib/utils'
 import type { Task } from '../../types'
 
@@ -17,18 +18,14 @@ interface TaskDetailProps {
   onEdit: (task: Task) => void
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done',
-}
-
 export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
   const { state, dispatch } = useApp()
+  const t = useT()
   const [newSubtask, setNewSubtask] = useState('')
   const [newComment, setNewComment] = useState('')
   const [, tick] = useState(0)
   const commentRef = useRef<HTMLTextAreaElement>(null)
 
-  // Refresh SLA countdown every 30s
   useEffect(() => {
     const id = setInterval(() => tick(n => n + 1), 30_000)
     return () => clearInterval(id)
@@ -78,6 +75,8 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
     onClose()
   }, [task, dispatch, onClose])
 
+  const statusKeys = ['todo', 'in_progress', 'in_review', 'done'] as const
+
   return (
     <Modal open={!!task} onClose={onClose} size="lg">
       {task && (
@@ -110,7 +109,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
               )}
               {task.estimatedHours && (
                 <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-                  <Timer size={11} /> {task.estimatedHours}h est.
+                  <Timer size={11} /> {task.estimatedHours}h {t.detail.estimated}
                 </span>
               )}
             </div>
@@ -122,22 +121,22 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
               <div className="mx-6 mt-4 p-3 rounded-xl border border-slate-200 bg-slate-50">
                 <div className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-1.5 font-medium text-slate-600">
-                    <Clock size={12} /> SLA Deadline
+                    <Clock size={12} /> {t.detail.slaDeadline}
                   </span>
                   <span className={cn(
                     'font-semibold',
                     deadline.getTime() < Date.now() ? 'text-red-600' : 'text-indigo-600'
                   )}>
                     {deadline.getTime() < Date.now()
-                      ? `Overdue by ${getTimeRemaining(deadline)}`
-                      : `${getTimeRemaining(deadline)} remaining`
+                      ? `${t.detail.overdueBy} ${getTimeRemaining(deadline)}`
+                      : `${getTimeRemaining(deadline)} ${t.detail.remaining}`
                     }
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
                   <Calendar size={11} />
                   {formatDateTime(task.dueDate, task.dueTime)}
-                  {task.slaHours && <span className="text-slate-400">· {task.slaHours}h SLA window</span>}
+                  {task.slaHours && <span className="text-slate-400">· {task.slaHours}h {t.detail.slaWindow}</span>}
                 </div>
               </div>
             )}
@@ -146,7 +145,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
               {/* Description */}
               {task.description && (
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Description</h3>
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t.detail.description}</h3>
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{task.description}</p>
                 </div>
               )}
@@ -154,7 +153,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
               {/* Labels */}
               {labels.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Labels</h3>
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t.detail.labels}</h3>
                   <div className="flex flex-wrap gap-1.5">
                     {labels.map(l => <Badge key={l.id} color={l.color}>{l.name}</Badge>)}
                   </div>
@@ -165,7 +164,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <CheckSquare size={11} /> Subtasks
+                    <CheckSquare size={11} /> {t.detail.subtasks}
                   </h3>
                   {totalSub > 0 && (
                     <span className="text-xs text-slate-500">{completedSub}/{totalSub}</span>
@@ -206,7 +205,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
                 </div>
                 <div className="flex gap-2">
                   <input
-                    type="text" placeholder="Add subtask…"
+                    type="text" placeholder={t.detail.addSubtask}
                     value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAddSub()}
                     className="flex-1 h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -220,7 +219,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
               {/* Comments */}
               <div>
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <MessageSquare size={11} /> Comments {task.comments.length > 0 && `(${task.comments.length})`}
+                  <MessageSquare size={11} /> {t.detail.comments} {task.comments.length > 0 && `(${task.comments.length})`}
                 </h3>
                 {task.comments.length > 0 && (
                   <div className="space-y-2.5 mb-3">
@@ -228,7 +227,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
                       <div key={c.id} className="bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
                         <p className="text-sm text-slate-700 leading-relaxed">{c.text}</p>
                         <p className="text-xs text-slate-400 mt-1">
-                          {new Date(c.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {new Date(c.createdAt).toLocaleString(state.language === 'vi' ? 'vi-VN' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     ))}
@@ -237,7 +236,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
                 <div className="flex gap-2">
                   <textarea
                     ref={commentRef}
-                    placeholder="Add a comment…"
+                    placeholder={t.detail.addComment}
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleAddComment() }}
@@ -248,7 +247,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
                     <Send size={14} />
                   </Button>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">Ctrl+Enter to submit</p>
+                <p className="text-xs text-slate-400 mt-1">{t.detail.ctrlEnter}</p>
               </div>
             </div>
           </div>
@@ -256,8 +255,8 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
           {/* Footer — status changer */}
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-slate-500 mr-1">Move to:</span>
-              {(['todo', 'in_progress', 'in_review', 'done'] as const).map(s => (
+              <span className="text-xs text-slate-500 mr-1">{t.detail.moveTo}</span>
+              {statusKeys.map(s => (
                 <button
                   key={s}
                   onClick={() => dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: s } })}
@@ -268,7 +267,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
                       : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600'
                   )}
                 >
-                  {STATUS_LABELS[s]}
+                  {t.status[s]}
                 </button>
               ))}
             </div>

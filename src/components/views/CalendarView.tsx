@@ -2,10 +2,9 @@ import { memo, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
+import { useT } from '../../i18n'
 import type { Task } from '../../types'
 import Button from '../ui/Button'
-
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const SLA_DOT: Record<string, string> = {
   breached: 'bg-red-500',
@@ -30,6 +29,7 @@ interface CalendarViewProps {
 
 const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: CalendarViewProps) {
   const { state } = useApp()
+  const t = useT()
   const today = new Date()
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
 
@@ -55,11 +55,10 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
     return cells
   }, [year, month])
 
-  // Map tasks to date strings
   const tasksByDate = useMemo(() => {
     const map = new Map<string, Task[]>()
     const source = state.activeProjectId
-      ? state.tasks.filter(t => t.projectId === state.activeProjectId)
+      ? state.tasks.filter(tk => tk.projectId === state.activeProjectId)
       : state.tasks
     source.forEach(task => {
       if (task.dueDate) {
@@ -77,17 +76,16 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
 
   const dateKey = (d: Date) => d.toISOString().slice(0, 10)
 
-  const monthLabel = cursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const monthLabel = `${t.calendar.months[month]} ${year}`
 
-  // SLA summary counts
   const slaStats = useMemo(() => {
     const tasks = state.activeProjectId
-      ? state.tasks.filter(t => t.projectId === state.activeProjectId)
+      ? state.tasks.filter(tk => tk.projectId === state.activeProjectId)
       : state.tasks
     return {
-      breached: tasks.filter(t => getSLAStatus(t) === 'breached').length,
-      critical: tasks.filter(t => getSLAStatus(t) === 'critical').length,
-      at_risk:  tasks.filter(t => getSLAStatus(t) === 'at_risk').length,
+      breached: tasks.filter(tk => getSLAStatus(tk) === 'breached').length,
+      critical: tasks.filter(tk => getSLAStatus(tk) === 'critical').length,
+      at_risk:  tasks.filter(tk => getSLAStatus(tk) === 'at_risk').length,
     }
   }, [state.tasks, state.activeProjectId])
 
@@ -99,19 +97,19 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
           {slaStats.breached > 0 && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              {slaStats.breached} SLA Breached
+              {slaStats.breached} {t.sla.slaBreached}
             </span>
           )}
           {slaStats.critical > 0 && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              {slaStats.critical} Critical
+              {slaStats.critical} {t.calendar.critical}
             </span>
           )}
           {slaStats.at_risk > 0 && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              {slaStats.at_risk} At Risk
+              {slaStats.at_risk} {t.calendar.atRisk}
             </span>
           )}
         </div>
@@ -131,7 +129,7 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
               size="sm"
               onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
             >
-              Today
+              {t.calendar.today}
             </Button>
             <Button variant="ghost" size="icon" onClick={() => setCursor(new Date(year, month + 1, 1))}>
               <ChevronRight size={16} />
@@ -141,7 +139,7 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
 
         {/* Day headers */}
         <div className="grid grid-cols-7 border-b border-slate-200">
-          {DAYS.map(d => (
+          {t.calendar.days.map(d => (
             <div key={d} className="px-2 py-2.5 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">
               {d}
             </div>
@@ -152,7 +150,7 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
         <div className="grid grid-cols-7">
           {days.map((cell, i) => {
             const key = dateKey(cell.date)
-            const tasks = tasksByDate.get(key) ?? []
+            const cellTasks = tasksByDate.get(key) ?? []
             const todayCell = isToday(cell.date)
             const isPast = cell.date < today && !todayCell
 
@@ -164,7 +162,7 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
                   !cell.current && 'bg-slate-50/60',
                   cell.current && 'hover:bg-slate-50/80 cursor-pointer'
                 )}
-                onClick={() => cell.current && tasks.length === 0 && onAddTask(key)}
+                onClick={() => cell.current && cellTasks.length === 0 && onAddTask(key)}
               >
                 {/* Date number */}
                 <div className="flex items-center justify-between mb-1">
@@ -180,7 +178,7 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
                   )}>
                     {cell.date.getDate()}
                   </span>
-                  {cell.current && tasks.length === 0 && (
+                  {cell.current && cellTasks.length === 0 && (
                     <button
                       onClick={e => { e.stopPropagation(); onAddTask(key) }}
                       className="opacity-0 hover:opacity-100 text-slate-300 hover:text-indigo-500 transition-opacity group-hover:opacity-100"
@@ -193,7 +191,7 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
 
                 {/* Tasks */}
                 <div className="space-y-0.5">
-                  {tasks.slice(0, 3).map(task => {
+                  {cellTasks.slice(0, 3).map(task => {
                     const sla = getSLAStatus(task)
                     return (
                       <button
@@ -215,12 +213,12 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
                       </button>
                     )
                   })}
-                  {tasks.length > 3 && (
+                  {cellTasks.length > 3 && (
                     <button
                       className="w-full text-left px-1.5 py-0.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
-                      onClick={e => { e.stopPropagation(); onViewTask(tasks[3]) }}
+                      onClick={e => { e.stopPropagation(); onViewTask(cellTasks[3]) }}
                     >
-                      +{tasks.length - 3} more
+                      {t.calendar.more(cellTasks.length - 3)}
                     </button>
                   )}
                 </div>
@@ -231,7 +229,12 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
 
         {/* Legend */}
         <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex flex-wrap gap-4 text-xs text-slate-500">
-          {Object.entries({ 'Breached': 'bg-red-500', 'Critical': 'bg-orange-500', 'At Risk': 'bg-amber-400', 'On Track': 'bg-emerald-500' }).map(([label, cls]) => (
+          {([
+            [t.calendar.breached, 'bg-red-500'],
+            [t.calendar.critical, 'bg-orange-500'],
+            [t.calendar.atRisk,   'bg-amber-400'],
+            [t.calendar.onTrack,  'bg-emerald-500'],
+          ] as [string, string][]).map(([label, cls]) => (
             <span key={label} className="flex items-center gap-1.5">
               <span className={cn('w-2 h-2 rounded-full', cls)} /> {label}
             </span>

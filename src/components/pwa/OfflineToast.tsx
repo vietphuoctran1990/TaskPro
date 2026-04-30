@@ -1,12 +1,14 @@
 import { WifiOff, Wifi } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { cn } from '../../lib/utils'
+import { useT } from '../../i18n'
 
 interface OfflineToastProps {
   isOnline: boolean
 }
 
 export default function OfflineToast({ isOnline }: OfflineToastProps) {
+  const t = useT()
   const [visible, setVisible] = useState(false)
   const [wasOffline, setWasOffline] = useState(false)
   const [showReconnected, setShowReconnected] = useState(false)
@@ -19,8 +21,8 @@ export default function OfflineToast({ isOnline }: OfflineToastProps) {
     } else if (wasOffline) {
       setVisible(false)
       setShowReconnected(true)
-      const t = setTimeout(() => setShowReconnected(false), 3000)
-      return () => clearTimeout(t)
+      const id = setTimeout(() => setShowReconnected(false), 3000)
+      return () => clearTimeout(id)
     }
   }, [isOnline, wasOffline])
 
@@ -37,12 +39,12 @@ export default function OfflineToast({ isOnline }: OfflineToastProps) {
         {showReconnected ? (
           <>
             <Wifi size={15} />
-            Back online
+            {t.pwa.backOnline}
           </>
         ) : (
           <>
             <WifiOff size={15} />
-            You're offline — changes saved locally
+            {t.pwa.offline}
           </>
         )}
       </div>

@@ -28,6 +28,7 @@ type Action =
   | { type: 'SET_VIEW_MODE'; payload: ViewMode }
   | { type: 'SET_SORT'; payload: { field: SortField; dir: SortDir } }
   | { type: 'TOGGLE_DARK_MODE' }
+  | { type: 'SET_LANGUAGE'; payload: 'en' | 'vi' }
 
 const STORAGE_KEY = 'taskpro_v2_state'
 
@@ -51,6 +52,7 @@ function getInitialState(): AppState {
         sortField: parsed.sortField ?? 'createdAt',
         sortDir: parsed.sortDir ?? 'desc',
         darkMode: false,
+        language: parsed.language ?? 'vi',
       }
     }
   } catch {}
@@ -67,6 +69,7 @@ function getInitialState(): AppState {
     sortField: 'createdAt',
     sortDir: 'desc',
     darkMode: false,
+    language: 'vi',
   }
 }
 
@@ -138,6 +141,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, sortField: action.payload.field, sortDir: action.payload.dir }
     case 'TOGGLE_DARK_MODE':
       return { ...state, darkMode: !state.darkMode }
+    case 'SET_LANGUAGE':
+      return { ...state, language: action.payload }
     default:
       return state
   }

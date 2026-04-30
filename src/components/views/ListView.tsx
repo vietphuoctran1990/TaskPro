@@ -8,11 +8,9 @@ import { PriorityBadge } from '../ui/Badge'
 import SLABadge from '../sla/SLABadge'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
+import { useT } from '../../i18n'
 import type { SortField, Task } from '../../types'
 
-const STATUS_LABEL: Record<string, string> = {
-  todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done',
-}
 const STATUS_DOT: Record<string, string> = {
   todo: 'bg-slate-400', in_progress: 'bg-blue-500', in_review: 'bg-violet-500', done: 'bg-emerald-500',
 }
@@ -54,6 +52,7 @@ function SortHeader({ field, label, currentField, currentDir, onSort, className 
 
 const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: ListViewProps) {
   const { state, dispatch, filteredTasks } = useApp()
+  const t = useT()
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
 
   const handleSort = (field: SortField) => {
@@ -72,12 +71,12 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: L
         <table className="w-full min-w-[800px]">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <SortHeader field="title"     label="Task"       currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} className="pl-5 w-80" />
-              <SortHeader field="status"    label="Status"     currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
-              <SortHeader field="priority"  label="Priority"   currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
-              <SortHeader field="sla"       label="SLA"        currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
-              <SortHeader field="dueDate"   label="Deadline"   currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">Project</th>
+              <SortHeader field="title"    label={t.list.task}     currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} className="pl-5 w-80" />
+              <SortHeader field="status"   label={t.list.status}   currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
+              <SortHeader field="priority" label={t.list.priority} currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
+              <SortHeader field="sla"      label={t.list.sla}      currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
+              <SortHeader field="dueDate"  label={t.list.deadline} currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t.list.project}</th>
               <th className="px-4 py-3 w-10" />
             </tr>
           </thead>
@@ -85,8 +84,8 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: L
             {filteredTasks.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-16 text-center">
-                  <p className="text-slate-400 text-sm mb-3">No tasks found</p>
-                  <Button variant="primary" size="sm" onClick={onAddTask}>+ New Task</Button>
+                  <p className="text-slate-400 text-sm mb-3">{t.list.noTasks}</p>
+                  <Button variant="primary" size="sm" onClick={onAddTask}>+ {t.header.newTask}</Button>
                 </td>
               </tr>
             ) : (
@@ -117,7 +116,6 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: L
                               payload: { id: task.id, status: done ? 'todo' : 'done' },
                             })
                           }}
-                          aria-label={done ? 'Mark incomplete' : 'Mark complete'}
                         >
                           {done && (
                             <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +144,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: L
                     <td className="px-4 py-3.5">
                       <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
                         <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[task.status])} />
-                        {STATUS_LABEL[task.status]}
+                        {t.status[task.status]}
                       </span>
                     </td>
 
@@ -201,13 +199,13 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: L
                                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                                 onClick={() => { setMenuOpenId(null); onEditTask(task) }}
                               >
-                                <Pencil size={13} /> Edit
+                                <Pencil size={13} /> {t.detail.edit}
                               </button>
                               <button
                                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                                 onClick={() => { setMenuOpenId(null); dispatch({ type: 'DELETE_TASK', payload: task.id }) }}
                               >
-                                <Trash2 size={13} /> Delete
+                                <Trash2 size={13} /> {t.detail.delete}
                               </button>
                             </div>
                           </>
@@ -224,9 +222,9 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: L
 
       {filteredTasks.length > 0 && (
         <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 text-xs text-slate-400">
-          {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
+          {t.list.tasks(filteredTasks.length)}
           {' · '}
-          {filteredTasks.filter(t => t.status === 'done').length} completed
+          {t.list.completed(filteredTasks.filter(tk => tk.status === 'done').length)}
         </div>
       )}
     </div>

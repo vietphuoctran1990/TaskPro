@@ -60,6 +60,7 @@ export interface AppState {
   sortField: SortField
   sortDir: SortDir
   darkMode: boolean
+  language: 'en' | 'vi'
 }
 
 export type SLAStatus = 'on_track' | 'at_risk' | 'critical' | 'breached' | 'completed' | 'none'

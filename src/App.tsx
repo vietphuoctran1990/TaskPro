@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { AppProvider } from './context/AppContext'
 import { useApp } from './context/AppContext'
+import { I18nProvider } from './i18n'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
 import TaskBoard from './components/tasks/TaskBoard'
@@ -117,7 +118,9 @@ function AppShell() {
 export default function App() {
   return (
     <AppProvider>
-      <AppShell />
+      <I18nProvider>
+        <AppShell />
+      </I18nProvider>
     </AppProvider>
   )
 }

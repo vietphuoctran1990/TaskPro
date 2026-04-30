@@ -1,6 +1,7 @@
 import { Download, X } from 'lucide-react'
 import { useState } from 'react'
 import Button from '../ui/Button'
+import { useT } from '../../i18n'
 
 interface InstallBannerProps {
   onInstall: () => Promise<boolean>
@@ -8,6 +9,7 @@ interface InstallBannerProps {
 }
 
 export default function InstallBanner({ onInstall, onDismiss }: InstallBannerProps) {
+  const t = useT()
   const [installing, setInstalling] = useState(false)
 
   const handleInstall = async () => {
@@ -24,10 +26,10 @@ export default function InstallBanner({ onInstall, onDismiss }: InstallBannerPro
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Install TaskPro
+            {t.pwa.installTitle}
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Add to your home screen for the best experience.
+            {t.pwa.installDesc}
           </p>
           <div className="flex gap-2 mt-2.5">
             <Button
@@ -37,10 +39,10 @@ export default function InstallBanner({ onInstall, onDismiss }: InstallBannerPro
               disabled={installing}
             >
               <Download size={13} />
-              {installing ? 'Installing…' : 'Install'}
+              {installing ? t.pwa.installing : t.pwa.install}
             </Button>
             <Button variant="ghost" size="sm" onClick={onDismiss}>
-              Not now
+              {t.pwa.notNow}
             </Button>
           </div>
         </div>

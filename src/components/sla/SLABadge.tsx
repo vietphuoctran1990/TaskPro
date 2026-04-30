@@ -1,20 +1,8 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Clock, Zap } from 'lucide-react'
 import { cn, getDeadline, getSLAStatus, getTimeRemaining } from '../../lib/utils'
+import { useT } from '../../i18n'
 import type { Task, SLAStatus } from '../../types'
-
-const CONFIG: Record<SLAStatus, {
-  label: string
-  className: string
-  icon: React.ElementType
-}> = {
-  on_track:  { label: 'On Track',  className: 'bg-emerald-50 text-emerald-700 border-emerald-200',  icon: CheckCircle2 },
-  at_risk:   { label: 'At Risk',   className: 'bg-amber-50 text-amber-700 border-amber-200',         icon: AlertTriangle },
-  critical:  { label: 'Critical',  className: 'bg-orange-50 text-orange-700 border-orange-200',      icon: Zap },
-  breached:  { label: 'Breached',  className: 'bg-red-50 text-red-700 border-red-200',               icon: AlertTriangle },
-  completed: { label: 'Completed', className: 'bg-slate-50 text-slate-500 border-slate-200',         icon: CheckCircle2 },
-  none:      { label: 'No SLA',    className: 'bg-slate-50 text-slate-400 border-slate-200',         icon: Clock },
-}
 
 interface SLABadgeProps {
   task: Task
@@ -23,6 +11,7 @@ interface SLABadgeProps {
 }
 
 export default function SLABadge({ task, showTimer = false, size = 'sm' }: SLABadgeProps) {
+  const t = useT()
   const [, tick] = useState(0)
 
   useEffect(() => {
@@ -32,9 +21,19 @@ export default function SLABadge({ task, showTimer = false, size = 'sm' }: SLABa
 
   const status = getSLAStatus(task)
   const deadline = getDeadline(task)
+  const overdue = deadline && deadline.getTime() < Date.now()
+
+  const CONFIG: Record<SLAStatus, { label: string; className: string; icon: React.ElementType }> = {
+    on_track:  { label: t.sla.on_track,  className: 'bg-emerald-50 text-emerald-700 border-emerald-200',  icon: CheckCircle2 },
+    at_risk:   { label: t.sla.at_risk,   className: 'bg-amber-50 text-amber-700 border-amber-200',         icon: AlertTriangle },
+    critical:  { label: t.sla.critical,  className: 'bg-orange-50 text-orange-700 border-orange-200',      icon: Zap },
+    breached:  { label: t.sla.breached,  className: 'bg-red-50 text-red-700 border-red-200',               icon: AlertTriangle },
+    completed: { label: t.sla.completed, className: 'bg-slate-50 text-slate-500 border-slate-200',         icon: CheckCircle2 },
+    none:      { label: t.sla.none,      className: 'bg-slate-50 text-slate-400 border-slate-200',         icon: Clock },
+  }
+
   const cfg = CONFIG[status]
   const Icon = cfg.icon
-  const overdue = deadline && deadline.getTime() < Date.now()
 
   return (
     <span
