@@ -30,34 +30,35 @@ const ALL_THRESHOLDS: Threshold[] = [
   { key: 'due', label: t => t.notifications.overdue, minutes:  0 },
 ]
 
+const HEARTBEAT_MS = 30_000   // ping SW every 30 s to keep it warm + reschedule
+const WINDOW_MS    = 3 * 60 * 60_000  // schedule at most 3 hours ahead
+
 export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }: Options) {
   const notifiedRef   = useRef(new Set<string>())
   const mainTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const swRegRef      = useRef<ServiceWorkerRegistration | null>(null)
   const [swReady, setSwReady] = useState(false)
 
-  // ── Get SW registration ────────────────────────────────────────────────────
+  // ── Get SW registration once ───────────────────────────────────────────────
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
-    navigator.serviceWorker.ready.then(reg => {
-      swRegRef.current = reg
-      setSwReady(true)
-    })
+    navigator.serviceWorker.ready.then(reg => { swRegRef.current = reg; setSwReady(true) })
   }, [])
 
-  // ── Listen for MARK_DONE from notification action button ───────────────────
+  // ── Listen for SW → client messages ───────────────────────────────────────
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
-    const handler = (event: MessageEvent<{ type: string; taskId?: string }>) => {
-      if (event.data?.type === 'MARK_DONE' && event.data.taskId) {
-        onMarkDone(event.data.taskId)
-      }
+    const handler = (event: MessageEvent<{ type: string; taskId?: string; key?: string }>) => {
+      const { type, taskId, key } = event.data ?? {}
+      if (type === 'MARK_DONE' && taskId) onMarkDone(taskId)
+      // SW fired a notification — sync so main thread doesn't re-fire it
+      if (type === 'NOTIFIED' && key) notifiedRef.current.add(key)
     }
     navigator.serviceWorker.addEventListener('message', handler)
     return () => navigator.serviceWorker.removeEventListener('message', handler)
   }, [onMarkDone])
 
-  // ── Show a notification right now ─────────────────────────────────────────
+  // ── Show notification via SW registration (better mobile support) ──────────
   const showNow = useCallback((
     notifKey: string, taskId: string, title: string, body: string, requireInteraction: boolean
   ) => {
@@ -78,65 +79,80 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
     }
   }, [])
 
-  // ── Core scheduling effect ─────────────────────────────────────────────────
-  // Re-runs when tasks change, prefs change, SW becomes ready, or enabled toggles.
-  // Uses exact setTimeout per notification — no polling window drift.
-  useEffect(() => {
-    // Clear previous main-thread timers
-    mainTimersRef.current.forEach(id => clearTimeout(id))
-    mainTimersRef.current.clear()
-
-    if (!enabled || Notification.permission !== 'granted') return
-
+  // ── Build the schedule payload (shared between heartbeat and main effect) ──
+  const buildSchedules = useCallback(() => {
     const activeThresholds = ALL_THRESHOLDS.filter(
       th => th.minutes === 0 || notifBefore.includes(th.minutes)
     )
-
-    tasks.filter(task => task.status !== 'done').forEach(task => {
-      const deadline = getDeadline(task)
-      if (!deadline) return
-
-      // Format deadline time for notification body (e.g. "14:30")
-      const timeStr = deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-
-      activeThresholds.forEach(({ key, label, minutes }) => {
-        const notifKey = `${task.id}-${key}`
-        if (notifiedRef.current.has(notifKey)) return
-
-        const fireAt  = deadline.getTime() - minutes * 60_000
-        const delayMs = fireAt - Date.now()
-
-        // title = task name (scannable on notification shade)
-        // body  = timing phrase + deadline clock (e.g. "Còn 15 phút · 14:30")
-        const notifTitle = task.title
-        const notifBody  = `${label(t)} · ${timeStr}`
-
-        if (delayMs <= 0 && delayMs > -30 * 60_000) {
-          notifiedRef.current.add(notifKey)
-          showNow(notifKey, task.id, notifTitle, notifBody, key === 'due')
-
-        } else if (delayMs > 0 && delayMs < 3 * 60 * 60_000) {
-          mainTimersRef.current.set(notifKey, setTimeout(() => {
-            if (notifiedRef.current.has(notifKey)) return
-            notifiedRef.current.add(notifKey)
-            showNow(notifKey, task.id, notifTitle, notifBody, key === 'due')
-          }, delayMs))
-
-          swRegRef.current?.active?.postMessage({
-            type: 'SCHEDULE_NOTIFICATION',
-            payload: { key: notifKey, taskId: task.id, title: notifTitle, body: notifBody, fireAt, requireInteraction: key === 'due' },
-          })
-        }
+    return tasks
+      .filter(task => task.status !== 'done')
+      .flatMap(task => {
+        const deadline = getDeadline(task)
+        if (!deadline) return []
+        const timeStr = deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        return activeThresholds.flatMap(({ key, label, minutes }) => {
+          const notifKey = `${task.id}-${key}`
+          if (notifiedRef.current.has(notifKey)) return []
+          const fireAt  = deadline.getTime() - minutes * 60_000
+          const delayMs = fireAt - Date.now()
+          // Include anything not too far in the past and within 3h future
+          if (delayMs < -5 * 60_000 || delayMs > WINDOW_MS) return []
+          return [{ key: notifKey, taskId: task.id, title: task.title,
+                    body: `${label(t)} · ${timeStr}`, fireAt,
+                    requireInteraction: key === 'due' }]
+        })
       })
+  }, [tasks, notifBefore, t])
+
+  // ── Heartbeat: ping SW every 30 s with full schedule ──────────────────────
+  // This wakes the SW if it was killed and re-registers any missed timers.
+  // The SW fires overdue notifications immediately on receipt.
+  useEffect(() => {
+    if (!enabled || !swReady) return
+
+    const send = () => {
+      const reg = swRegRef.current
+      if (!reg?.active || Notification.permission !== 'granted') return
+      reg.active.postMessage({
+        type: 'RESCHEDULE_ALL',
+        payload: { schedules: buildSchedules() },
+      })
+    }
+
+    send()  // immediate send on mount / dependency change
+    const id = setInterval(send, HEARTBEAT_MS)
+    return () => clearInterval(id)
+  }, [tasks, enabled, notifBefore, t, swReady, buildSchedules])
+
+  // ── Main-thread exact-time scheduling (foreground precision) ──────────────
+  // Runs when app is in foreground; fires at the exact millisecond.
+  useEffect(() => {
+    mainTimersRef.current.forEach(id => clearTimeout(id))
+    mainTimersRef.current.clear()
+    if (!enabled || Notification.permission !== 'granted') return
+
+    buildSchedules().forEach(({ key: notifKey, taskId, title, body, fireAt, requireInteraction }) => {
+      const delayMs = fireAt - Date.now()
+      if (delayMs <= 0) {
+        // Already in window — show immediately
+        notifiedRef.current.add(notifKey)
+        showNow(notifKey, taskId, title, body, requireInteraction)
+      } else {
+        mainTimersRef.current.set(notifKey, setTimeout(() => {
+          if (notifiedRef.current.has(notifKey)) return
+          notifiedRef.current.add(notifKey)
+          showNow(notifKey, taskId, title, body, requireInteraction)
+        }, delayMs))
+      }
     })
 
     return () => {
       mainTimersRef.current.forEach(id => clearTimeout(id))
       mainTimersRef.current.clear()
     }
-  }, [tasks, enabled, notifBefore, t, swReady, showNow])
+  }, [tasks, enabled, notifBefore, t, swReady, buildSchedules, showNow])
 
-  // ── Cancel SW timers when tasks are marked done ───────────────────────────
+  // ── Cancel SW timers for completed tasks ──────────────────────────────────
   useEffect(() => {
     const reg = swRegRef.current
     if (!reg?.active) return
