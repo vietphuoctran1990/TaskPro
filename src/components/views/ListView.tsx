@@ -1,7 +1,7 @@
 import { memo, useState } from 'react'
 import {
   ChevronDown, ChevronUp, ChevronsUpDown,
-  MoreHorizontal, Pencil, Trash2, CheckSquare, Calendar,
+  MoreHorizontal, Pencil, Timer, Trash2, CheckSquare, Calendar,
 } from 'lucide-react'
 import { cn, formatDateTime, getDeadline } from '../../lib/utils'
 import { PriorityBadge } from '../ui/Badge'
@@ -19,6 +19,7 @@ interface ListViewProps {
   onEditTask: (task: Task) => void
   onViewTask: (task: Task) => void
   onAddTask: () => void
+  onFocusTask?: (task: Task) => void
 }
 
 interface SortHeaderProps {
@@ -50,7 +51,7 @@ function SortHeader({ field, label, currentField, currentDir, onSort, className 
   )
 }
 
-function TaskMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+function TaskMenu({ onEdit, onDelete, onFocus }: { onEdit: () => void; onDelete: () => void; onFocus?: () => void }) {
   const t = useT()
   const [open, setOpen] = useState(false)
   return (
@@ -66,6 +67,12 @@ function TaskMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => vo
               onClick={() => { setOpen(false); onEdit() }}>
               <Pencil size={13} /> {t.detail.edit}
             </button>
+            {onFocus && (
+              <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50"
+                onClick={() => { setOpen(false); onFocus() }}>
+                <Timer size={13} /> {t.pomodoro.focus}
+              </button>
+            )}
             <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
               onClick={() => { setOpen(false); onDelete() }}>
               <Trash2 size={13} /> {t.detail.delete}
@@ -77,7 +84,7 @@ function TaskMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => vo
   )
 }
 
-const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: ListViewProps) {
+const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onFocusTask }: ListViewProps) {
   const { state, dispatch, filteredTasks } = useApp()
   const t = useT()
 
@@ -141,6 +148,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: L
                 <TaskMenu
                   onEdit={() => onEditTask(task)}
                   onDelete={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+                  onFocus={task.status !== 'done' && onFocusTask ? () => onFocusTask(task) : undefined}
                 />
               </div>
 
@@ -260,6 +268,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask }: L
                     <TaskMenu
                       onEdit={() => onEditTask(task)}
                       onDelete={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+                      onFocus={task.status !== 'done' && onFocusTask ? () => onFocusTask(task) : undefined}
                     />
                   </td>
                 </tr>

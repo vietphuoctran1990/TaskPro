@@ -67,6 +67,13 @@ export interface Translations {
     codeTitle: string; codeDesc: string; copyCode: string; pasteCode: string
     copied: string; codePlaceholder: string; applyCode: string
   }
+  pomodoro: {
+    focus: string; work: string; shortBreak: string; longBreak: string
+    start: string; pause: string; reset: string; done: string
+    nextShortBreak: string; nextLongBreak: string; nextWork: string
+    session: (n: number) => string
+    min25: string; min50: string
+  }
   notifications: {
     title: string; enable: string; denied: string; noUpcoming: string
     dueIn60: string; dueIn30: string; dueIn15: string; overdue: string; dueSoon: string

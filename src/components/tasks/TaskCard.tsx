@@ -1,7 +1,7 @@
 import { memo, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Calendar, CheckSquare, GripVertical, MessageSquare, MoreHorizontal, Pencil, Repeat, Trash2 } from 'lucide-react'
+import { Calendar, CheckSquare, GripVertical, MessageSquare, MoreHorizontal, Pencil, Repeat, Timer, Trash2 } from 'lucide-react'
 import { cn, formatDateTime, getDeadline, getSLAStatus } from '../../lib/utils'
 import { PriorityBadge, Badge } from '../ui/Badge'
 import SLABadge from '../sla/SLABadge'
@@ -14,6 +14,7 @@ interface TaskCardProps {
   task: Task
   onEdit: (task: Task) => void
   onView: (task: Task) => void
+  onFocus?: (task: Task) => void
 }
 
 const PRIORITY_ACCENT: Record<string, string> = {
@@ -23,7 +24,7 @@ const PRIORITY_ACCENT: Record<string, string> = {
   low:    'border-t-slate-200',
 }
 
-const TaskCard = memo(function TaskCard({ task, onEdit, onView }: TaskCardProps) {
+const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskCardProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -72,6 +73,12 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView }: TaskCardProps)
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit(task) }}>
                   <Pencil size={13} /> {t.detail.edit}
                 </button>
+                {onFocus && task.status !== 'done' && (
+                  <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    onClick={e => { e.stopPropagation(); setMenuOpen(false); onFocus(task) }}>
+                    <Timer size={13} /> {t.pomodoro.focus}
+                  </button>
+                )}
                 <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); dispatch({ type: 'DELETE_TASK', payload: task.id }) }}>
                   <Trash2 size={13} /> {t.detail.delete}

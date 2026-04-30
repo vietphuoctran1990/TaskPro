@@ -64,6 +64,13 @@ export const en: Translations = {
     tasks: (n) => `${n} task${n !== 1 ? 's' : ''}`,
     done: (n) => `${n} done`,
   },
+  pomodoro: {
+    focus: 'Focus Mode', work: 'Focus', shortBreak: 'Short Break', longBreak: 'Long Break',
+    start: 'Start', pause: 'Pause', reset: 'Reset', done: 'Done',
+    nextShortBreak: 'Short break next', nextLongBreak: 'Long break next', nextWork: 'Focus next',
+    session: (n) => `Session ${n}`,
+    min25: '25 min', min50: '50 min',
+  },
   recurrence: {
     title: 'Repeat', none: 'None', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly',
     every: 'Every', days: 'day(s)', weeks: 'week(s)', months: 'month(s)',

@@ -66,6 +66,13 @@ export const vi: Translations = {
     tasks: (n) => `${n} công việc`,
     done: (n) => `${n} hoàn thành`,
   },
+  pomodoro: {
+    focus: 'Chế độ Tập trung', work: 'Tập trung', shortBreak: 'Nghỉ ngắn', longBreak: 'Nghỉ dài',
+    start: 'Bắt đầu', pause: 'Tạm dừng', reset: 'Đặt lại', done: 'Hoàn thành',
+    nextShortBreak: 'Nghỉ ngắn tiếp theo', nextLongBreak: 'Nghỉ dài tiếp theo', nextWork: 'Tập trung tiếp theo',
+    session: (n) => `Phiên ${n}`,
+    min25: '25 phút', min50: '50 phút',
+  },
   recurrence: {
     title: 'Lặp lại', none: 'Không', daily: 'Hàng ngày', weekly: 'Hàng tuần', monthly: 'Hàng tháng',
     every: 'Mỗi', days: 'ngày', weeks: 'tuần', months: 'tháng',

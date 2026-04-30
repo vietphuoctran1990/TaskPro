@@ -20,6 +20,7 @@ interface TaskColumnProps {
   onAddTask: (status: Status) => void
   onEditTask: (task: Task) => void
   onViewTask: (task: Task) => void
+  onFocusTask?: (task: Task) => void
 }
 
 const TaskColumn = memo(function TaskColumn({
@@ -28,6 +29,7 @@ const TaskColumn = memo(function TaskColumn({
   onAddTask,
   onEditTask,
   onViewTask,
+  onFocusTask,
 }: TaskColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
@@ -75,6 +77,7 @@ const TaskColumn = memo(function TaskColumn({
               task={task}
               onEdit={onEditTask}
               onView={onViewTask}
+              onFocus={onFocusTask}
             />
           ))}
         </SortableContext>

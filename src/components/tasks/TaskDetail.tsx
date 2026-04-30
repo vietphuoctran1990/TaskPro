@@ -16,9 +16,10 @@ interface TaskDetailProps {
   task: Task | null
   onClose: () => void
   onEdit: (task: Task) => void
+  onFocus?: (task: Task) => void
 }
 
-export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
+export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetailProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [newSubtask, setNewSubtask] = useState('')
@@ -252,7 +253,7 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
             </div>
           </div>
 
-          {/* Footer — status changer */}
+          {/* Footer — status changer + focus */}
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-slate-500 mr-1">{t.detail.moveTo}</span>
@@ -270,6 +271,14 @@ export default function TaskDetail({ task, onClose, onEdit }: TaskDetailProps) {
                   {t.status[s]}
                 </button>
               ))}
+              {onFocus && task.status !== 'done' && (
+                <button
+                  onClick={() => { onClose(); onFocus(task) }}
+                  className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                >
+                  <Timer size={11} /> {t.pomodoro.focus}
+                </button>
+              )}
             </div>
           </div>
         </>

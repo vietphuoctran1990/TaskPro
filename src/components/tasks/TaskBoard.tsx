@@ -27,9 +27,10 @@ interface TaskBoardProps {
   onAddTask: (status: Status) => void
   onEditTask: (task: Task) => void
   onViewTask: (task: Task) => void
+  onFocusTask?: (task: Task) => void
 }
 
-export default function TaskBoard({ onAddTask, onEditTask, onViewTask }: TaskBoardProps) {
+export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTask }: TaskBoardProps) {
   const { filteredTasks, dispatch } = useApp()
   const [activeTask, setActiveTask] = useState<Task | null>(null)
 
@@ -122,6 +123,7 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask }: TaskBoa
             onAddTask={onAddTask}
             onEditTask={onEditTask}
             onViewTask={onViewTask}
+            onFocusTask={onFocusTask}
           />
         ))}
       </div>

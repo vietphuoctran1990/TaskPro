@@ -11,6 +11,7 @@ import DashboardView from './components/views/DashboardView'
 import TaskForm from './components/tasks/TaskForm'
 import TaskDetail from './components/tasks/TaskDetail'
 import SyncModal from './components/sync/SyncModal'
+import PomodoroModal from './components/focus/PomodoroModal'
 import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
 import OfflineToast from './components/pwa/OfflineToast'
@@ -18,7 +19,7 @@ import { usePWA } from './hooks/usePWA'
 import type { Status, Task } from './types'
 
 function AppShell() {
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
@@ -27,6 +28,12 @@ function AppShell() {
   const [defaultDate, setDefaultDate] = useState('')
   const [installDismissed, setInstallDismissed] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
+  const [focusTask, setFocusTask] = useState<Task | null>(null)
+
+  const handleFocusTask = useCallback((task: Task) => {
+    setViewingTask(null)
+    setFocusTask(task)
+  }, [])
 
   const { canInstall, isOnline, needRefresh, install, updateServiceWorker } = usePWA()
 
@@ -76,6 +83,7 @@ function AppShell() {
               onAddTask={handleAddTask}
               onEditTask={handleEditTask}
               onViewTask={handleViewTask}
+              onFocusTask={handleFocusTask}
             />
           )}
           {state.viewMode === 'list' && (
@@ -83,6 +91,7 @@ function AppShell() {
               onEditTask={handleEditTask}
               onViewTask={handleViewTask}
               onAddTask={() => handleAddTask()}
+              onFocusTask={handleFocusTask}
             />
           )}
           {state.viewMode === 'calendar' && (
@@ -113,7 +122,18 @@ function AppShell() {
         task={viewingTask}
         onClose={handleCloseDetail}
         onEdit={task => { handleCloseDetail(); handleEditTask(task) }}
+        onFocus={handleFocusTask}
       />
+      {focusTask && (
+        <PomodoroModal
+          task={focusTask}
+          onClose={() => setFocusTask(null)}
+          onDone={() => {
+            dispatch({ type: 'MOVE_TASK', payload: { id: focusTask.id, status: 'done' } })
+            setFocusTask(null)
+          }}
+        />
+      )}
 
       {/* PWA UI */}
       {needRefresh && <UpdateBanner onUpdate={() => updateServiceWorker(true)} />}

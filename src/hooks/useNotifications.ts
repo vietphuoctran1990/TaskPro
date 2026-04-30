@@ -96,6 +96,9 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
       const deadline = getDeadline(task)
       if (!deadline) return
 
+      // Format deadline time for notification body (e.g. "14:30")
+      const timeStr = deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
       activeThresholds.forEach(({ key, label, minutes }) => {
         const notifKey = `${task.id}-${key}`
         if (notifiedRef.current.has(notifKey)) return
@@ -103,23 +106,25 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
         const fireAt  = deadline.getTime() - minutes * 60_000
         const delayMs = fireAt - Date.now()
 
+        // title = task name (scannable on notification shade)
+        // body  = timing phrase + deadline clock (e.g. "Còn 15 phút · 14:30")
+        const notifTitle = task.title
+        const notifBody  = `${label(t)} · ${timeStr}`
+
         if (delayMs <= 0 && delayMs > -30 * 60_000) {
-          // Already inside the window — show immediately
           notifiedRef.current.add(notifKey)
-          showNow(notifKey, task.id, label(t), task.title, key === 'due')
+          showNow(notifKey, task.id, notifTitle, notifBody, key === 'due')
 
         } else if (delayMs > 0 && delayMs < 3 * 60 * 60_000) {
-          // Future — schedule via main thread (precise)
           mainTimersRef.current.set(notifKey, setTimeout(() => {
             if (notifiedRef.current.has(notifKey)) return
             notifiedRef.current.add(notifKey)
-            showNow(notifKey, task.id, label(t), task.title, key === 'due')
+            showNow(notifKey, task.id, notifTitle, notifBody, key === 'due')
           }, delayMs))
 
-          // Also schedule via SW for when app is backgrounded/minimised
           swRegRef.current?.active?.postMessage({
             type: 'SCHEDULE_NOTIFICATION',
-            payload: { key: notifKey, taskId: task.id, title: label(t), body: task.title, fireAt, requireInteraction: key === 'due' },
+            payload: { key: notifKey, taskId: task.id, title: notifTitle, body: notifBody, fireAt, requireInteraction: key === 'due' },
           })
         }
       })
