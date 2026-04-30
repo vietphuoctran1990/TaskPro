@@ -48,6 +48,11 @@ function schedule(p: SchedulePayload) {
 self.addEventListener('message', (event: ExtendableMessageEvent) => {
   const msg = event.data as { type: string; payload: SchedulePayload & { key: string } } | null
   if (!msg) return
+  // Required for vite-plugin-pwa update flow (registerType: 'prompt')
+  if (msg.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+    return
+  }
   if (msg.type === 'SCHEDULE_NOTIFICATION') {
     schedule(msg.payload)
   } else if (msg.type === 'CANCEL_NOTIFICATION') {
