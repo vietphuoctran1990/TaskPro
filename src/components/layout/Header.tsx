@@ -33,7 +33,7 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
   return (
     <header className="bg-white border-b border-slate-200 px-4 py-0 shrink-0">
       {/* Top row */}
-      <div className="flex items-center gap-2.5 h-14">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 h-14">
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={onOpenSidebar}>
           <Menu size={18} />
         </Button>
@@ -99,7 +99,7 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
 
         {/* New task */}
         <Button variant="primary" size="sm" onClick={onAddTask}>
-          <Plus size={14} /> {t.header.newTask}
+          <Plus size={14} /> <span className="hidden sm:inline">{t.header.newTask}</span>
         </Button>
       </div>
 
