@@ -21,6 +21,7 @@ export default function NotificationBell() {
     t,
     enabled: permission === 'granted',
     notifBefore: state.notifBefore,
+    onMarkDone: (taskId) => dispatch({ type: 'MOVE_TASK', payload: { id: taskId, status: 'done' } }),
   })
 
   const alerts = getUpcomingAlerts()
