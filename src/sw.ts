@@ -12,7 +12,7 @@ declare global {
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
-// ------- Notification scheduling -------
+// ------- Types -------
 
 interface SchedulePayload {
   key: string
@@ -23,14 +23,54 @@ interface SchedulePayload {
   requireInteraction: boolean
 }
 
+// ------- In-memory state (reset each SW lifetime) -------
+
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
-// Track keys already fired this SW lifetime to avoid re-showing after RESCHEDULE_ALL
+// Keys already fired this SW lifetime — prevents duplicates after RESCHEDULE_ALL
 const fired = new Set<string>()
+
+// ------- IndexedDB persistence -------
+// Schedules are saved here so Periodic Background Sync can fire them
+// even after the browser kills and restarts the SW.
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('taskpro-sw', 1)
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains('schedules')) {
+        req.result.createObjectStore('schedules', { keyPath: 'key' })
+      }
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+function saveSchedulesToDB(schedules: SchedulePayload[]): Promise<void> {
+  return openDB().then(db => new Promise<void>((resolve, reject) => {
+    const tx = db.transaction('schedules', 'readwrite')
+    const store = tx.objectStore('schedules')
+    store.clear()
+    schedules.forEach(s => store.put(s))
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })).catch(() => {})
+}
+
+function loadSchedulesFromDB(): Promise<SchedulePayload[]> {
+  return openDB().then(db => new Promise<SchedulePayload[]>((resolve, reject) => {
+    const req = db.transaction('schedules', 'readonly').objectStore('schedules').getAll()
+    req.onsuccess = () => resolve(req.result as SchedulePayload[])
+    req.onerror = () => reject(req.error)
+  })).catch(() => [])
+}
+
+// ------- Notification helpers -------
 
 function showNotif(p: SchedulePayload) {
   fired.add(p.key)
   timers.delete(p.key)
-  // Notify open clients so they sync notifiedRef
+  // Tell open clients so they sync notifiedRef and don't re-fire
   self.clients
     .matchAll({ includeUncontrolled: true, type: 'window' })
     .then(clients => clients.forEach(c => c.postMessage({ type: 'NOTIFIED', key: p.key, taskId: p.taskId })))
@@ -51,13 +91,31 @@ function scheduleOne(p: SchedulePayload) {
   if (fired.has(p.key)) return
   if (timers.has(p.key)) clearTimeout(timers.get(p.key))
   const delay = p.fireAt - Date.now()
-  if (delay <= -5 * 60_000) return           // more than 5 min overdue — skip to avoid spam
+  if (delay <= -5 * 60_000) return           // more than 5 min overdue — skip spam
   if (delay <= 0) {
-    showNotif(p)                              // SW was asleep — fire immediately now
+    showNotif(p)                              // SW was asleep — fire immediately
   } else if (delay < 3 * 60 * 60_000) {
     timers.set(p.key, setTimeout(() => showNotif(p), delay))
   }
 }
+
+// Load IDB and fire anything currently due.
+// Used by Periodic Background Sync (app closed) and SW wake-up.
+async function fireFromIDB(): Promise<void> {
+  const schedules = await loadSchedulesFromDB()
+  schedules.forEach(scheduleOne)
+}
+
+// ------- Periodic Background Sync -------
+// Wakes the SW on a schedule even when the app is fully closed.
+// Requires: PWA installed on home screen + Android Chrome 80+.
+
+self.addEventListener('periodicsync', (event: Event) => {
+  const e = event as ExtendableEvent & { tag: string }
+  if (e.tag === 'task-notifications') {
+    e.waitUntil(fireFromIDB())
+  }
+})
 
 // ------- Message handler -------
 
@@ -70,16 +128,16 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
     return
   }
 
-  // Full reschedule from client heartbeat (every 30s).
-  // Handles: SW-was-killed recovery, missed notifications, preference changes.
+  // Full reschedule from client heartbeat (every 30 s).
+  // Also persists to IDB so Periodic Background Sync can read them after SW restarts.
   if (msg.type === 'RESCHEDULE_ALL') {
     const schedules = (msg.payload as { schedules: SchedulePayload[] }).schedules
     const incoming  = new Set(schedules.map(s => s.key))
-    // Clear timers for removed/done tasks
     for (const [k, timer] of timers) {
       if (!incoming.has(k)) { clearTimeout(timer); timers.delete(k) }
     }
     schedules.forEach(scheduleOne)
+    saveSchedulesToDB(schedules)
     return
   }
 

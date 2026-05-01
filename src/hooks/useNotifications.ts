@@ -42,7 +42,17 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
   // ── Get SW registration once ───────────────────────────────────────────────
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
-    navigator.serviceWorker.ready.then(reg => { swRegRef.current = reg; setSwReady(true) })
+    navigator.serviceWorker.ready.then(reg => {
+      swRegRef.current = reg
+      setSwReady(true)
+      // Register Periodic Background Sync so the SW can fire notifications
+      // even when the app is fully closed (Android Chrome, installed PWA).
+      if ('periodicSync' in reg) {
+        ;(reg as ServiceWorkerRegistration & { periodicSync: { register(tag: string, opts: { minInterval: number }): Promise<void> } })
+          .periodicSync.register('task-notifications', { minInterval: 15 * 60 * 1000 })
+          .catch(() => {})
+      }
+    })
   }, [])
 
   // ── Listen for SW → client messages ───────────────────────────────────────
