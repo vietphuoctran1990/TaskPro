@@ -5,6 +5,11 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
+  VITE_VAPID_PUBLIC_KEY = "BISAgARXQkWD0G6lgiZ_ygj_5crrflt8tqsnK35V1ULh5iS3-5PRV_-cX8n_dC3uThxx3J6hQvlz-oq2MiQmbLY"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
 [[headers]]
   for = "/assets/*"

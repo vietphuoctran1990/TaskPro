@@ -30,8 +30,83 @@ const ALL_THRESHOLDS: Threshold[] = [
   { key: 'due', label: t => t.notifications.overdue, minutes:  0 },
 ]
 
-const HEARTBEAT_MS = 30_000   // ping SW every 30 s to keep it warm + reschedule
-const WINDOW_MS    = 3 * 60 * 60_000  // schedule at most 3 hours ahead
+const HEARTBEAT_MS = 30_000
+const WINDOW_MS    = 3 * 60 * 60_000
+
+// VAPID public key for Web Push subscription (must match server's VAPID_PUBLIC_KEY env var)
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding  = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64   = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData  = atob(base64)
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
+}
+
+function getDeviceId(): string {
+  let id = localStorage.getItem('taskpro-device-id')
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem('taskpro-device-id', id) }
+  return id
+}
+
+async function syncSubscriptionToServer(reg: ServiceWorkerRegistration) {
+  if (!VAPID_PUBLIC_KEY) return
+  try {
+    let sub = await reg.pushManager.getSubscription()
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
+      })
+    }
+    await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON(), deviceId: getDeviceId() }),
+    })
+  } catch {}
+}
+
+interface ScheduleItem {
+  key: string; taskId: string; title: string; body: string; fireAt: number; requireInteraction: boolean
+}
+
+async function syncSchedulesToServer(schedules: ScheduleItem[]) {
+  if (!VAPID_PUBLIC_KEY) return
+  try {
+    await fetch('/api/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: getDeviceId(), schedules }),
+    })
+  } catch {}
+}
+
+function buildSchedulesFor(
+  tasks: Task[], notifBefore: number[], t: Translations,
+  notifiedRef: { current: Set<string> }
+): ScheduleItem[] {
+  const activeThresholds = ALL_THRESHOLDS.filter(
+    th => th.minutes === 0 || notifBefore.includes(th.minutes)
+  )
+  return tasks
+    .filter(task => task.status !== 'done')
+    .flatMap(task => {
+      const deadline = getDeadline(task)
+      if (!deadline) return []
+      const timeStr = deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      return activeThresholds.flatMap(({ key, label, minutes }) => {
+        const notifKey = `${task.id}-${key}`
+        if (notifiedRef.current.has(notifKey)) return []
+        const fireAt  = deadline.getTime() - minutes * 60_000
+        const delayMs = fireAt - Date.now()
+        if (delayMs < -5 * 60_000 || delayMs > WINDOW_MS) return []
+        return [{ key: notifKey, taskId: task.id, title: task.title,
+                  body: `${label(t)} · ${timeStr}`, fireAt,
+                  requireInteraction: key === 'due' }]
+      })
+    })
+}
 
 export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }: Options) {
   const notifiedRef   = useRef(new Set<string>())
@@ -39,14 +114,19 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
   const swRegRef      = useRef<ServiceWorkerRegistration | null>(null)
   const [swReady, setSwReady] = useState(false)
 
-  // ── Get SW registration once ───────────────────────────────────────────────
+  // ── Get SW registration + set up Web Push subscription ────────────────────
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
     navigator.serviceWorker.ready.then(reg => {
       swRegRef.current = reg
       setSwReady(true)
-      // Register Periodic Background Sync so the SW can fire notifications
-      // even when the app is fully closed (Android Chrome, installed PWA).
+
+      // Subscribe to Web Push so server can push when app is closed
+      if (Notification.permission === 'granted') {
+        syncSubscriptionToServer(reg)
+      }
+
+      // Periodic Background Sync as additional fallback (Android Chrome, installed PWA)
       if ('periodicSync' in reg) {
         ;(reg as ServiceWorkerRegistration & { periodicSync: { register(tag: string, opts: { minInterval: number }): Promise<void> } })
           .periodicSync.register('task-notifications', { minInterval: 15 * 60 * 1000 })
@@ -61,7 +141,6 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
     const handler = (event: MessageEvent<{ type: string; taskId?: string; key?: string }>) => {
       const { type, taskId, key } = event.data ?? {}
       if (type === 'MARK_DONE' && taskId) onMarkDone(taskId)
-      // SW fired a notification — sync so main thread doesn't re-fire it
       if (type === 'NOTIFIED' && key) notifiedRef.current.add(key)
     }
     navigator.serviceWorker.addEventListener('message', handler)
@@ -89,53 +168,31 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
     }
   }, [])
 
-  // ── Build the schedule payload (shared between heartbeat and main effect) ──
-  const buildSchedules = useCallback(() => {
-    const activeThresholds = ALL_THRESHOLDS.filter(
-      th => th.minutes === 0 || notifBefore.includes(th.minutes)
-    )
-    return tasks
-      .filter(task => task.status !== 'done')
-      .flatMap(task => {
-        const deadline = getDeadline(task)
-        if (!deadline) return []
-        const timeStr = deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        return activeThresholds.flatMap(({ key, label, minutes }) => {
-          const notifKey = `${task.id}-${key}`
-          if (notifiedRef.current.has(notifKey)) return []
-          const fireAt  = deadline.getTime() - minutes * 60_000
-          const delayMs = fireAt - Date.now()
-          // Include anything not too far in the past and within 3h future
-          if (delayMs < -5 * 60_000 || delayMs > WINDOW_MS) return []
-          return [{ key: notifKey, taskId: task.id, title: task.title,
-                    body: `${label(t)} · ${timeStr}`, fireAt,
-                    requireInteraction: key === 'due' }]
-        })
-      })
-  }, [tasks, notifBefore, t])
+  // ── Build the schedule payload ─────────────────────────────────────────────
+  const buildSchedules = useCallback(
+    () => buildSchedulesFor(tasks, notifBefore, t, notifiedRef),
+    [tasks, notifBefore, t]
+  )
 
-  // ── Heartbeat: ping SW every 30 s with full schedule ──────────────────────
-  // This wakes the SW if it was killed and re-registers any missed timers.
-  // The SW fires overdue notifications immediately on receipt.
+  // ── Heartbeat: ping SW every 30 s + sync server schedule ─────────────────
   useEffect(() => {
     if (!enabled || !swReady) return
 
     const send = () => {
       const reg = swRegRef.current
       if (!reg?.active || Notification.permission !== 'granted') return
-      reg.active.postMessage({
-        type: 'RESCHEDULE_ALL',
-        payload: { schedules: buildSchedules() },
-      })
+      const schedules = buildSchedules()
+      reg.active.postMessage({ type: 'RESCHEDULE_ALL', payload: { schedules } })
+      // Sync to server so the cron job can push when the app is closed
+      syncSchedulesToServer(schedules)
     }
 
-    send()  // immediate send on mount / dependency change
+    send()
     const id = setInterval(send, HEARTBEAT_MS)
     return () => clearInterval(id)
   }, [tasks, enabled, notifBefore, t, swReady, buildSchedules])
 
   // ── Main-thread exact-time scheduling (foreground precision) ──────────────
-  // Runs when app is in foreground; fires at the exact millisecond.
   useEffect(() => {
     mainTimersRef.current.forEach(id => clearTimeout(id))
     mainTimersRef.current.clear()
@@ -144,7 +201,6 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
     buildSchedules().forEach(({ key: notifKey, taskId, title, body, fireAt, requireInteraction }) => {
       const delayMs = fireAt - Date.now()
       if (delayMs <= 0) {
-        // Already in window — show immediately
         notifiedRef.current.add(notifKey)
         showNow(notifKey, taskId, title, body, requireInteraction)
       } else {
@@ -174,6 +230,16 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
     })
   }, [tasks, notifBefore])
 
+  // ── Re-subscribe to Web Push when permission changes ──────────────────────
+  const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
+    if (!('Notification' in window)) return 'denied'
+    const perm = await Notification.requestPermission()
+    if (perm === 'granted' && swRegRef.current) {
+      await syncSubscriptionToServer(swRegRef.current)
+    }
+    return perm
+  }, [])
+
   // ── Upcoming alerts for dropdown ──────────────────────────────────────────
   const getUpcomingAlerts = useCallback((): NotifAlert[] => {
     return tasks
@@ -192,11 +258,6 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
       })
       .sort((a, b) => a.minutesLeft - b.minutesLeft)
   }, [tasks, t])
-
-  const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
-    if (!('Notification' in window)) return 'denied'
-    return await Notification.requestPermission()
-  }, [])
 
   return { requestPermission, getUpcomingAlerts }
 }

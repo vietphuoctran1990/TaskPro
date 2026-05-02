@@ -154,6 +154,30 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
   }
 })
 
+// ------- Web Push handler (server → SW, works when app is closed) -------
+
+self.addEventListener('push', (event: PushEvent) => {
+  if (!event.data) return
+  try {
+    const d = event.data.json() as {
+      title: string; body: string; tag: string
+      taskId: string; requireInteraction: boolean
+    }
+    event.waitUntil(
+      self.registration.showNotification(d.title, {
+        body:                d.body,
+        icon:                '/icon-192x192.png',
+        badge:               '/icon-72x72.png',
+        tag:                 d.tag,
+        requireInteraction:  d.requireInteraction,
+        data:                { key: d.tag, taskId: d.taskId },
+        // @ts-expect-error actions is valid in SW context
+        actions:             [{ action: 'done', title: '✓ Done' }],
+      })
+    )
+  } catch {}
+})
+
 // ------- Notification click -------
 
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
