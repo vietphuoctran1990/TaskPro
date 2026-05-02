@@ -1,5 +1,11 @@
 export interface Translations {
   app: { name: string }
+  auth: {
+    signIn: string; createAccount: string; email: string; password: string
+    passwordHint: string; noAccount: string; hasAccount: string; goToSignIn: string
+    checkEmail: string; requiredFields: string; syncedAt: (d: string) => string
+    syncing: string; notSynced: string; myAccount: string; signOut: string; syncNow: string
+  }
   sidebar: {
     allTasks: string; projects: string; newProject: string; labels: string
     overallProgress: string; breached: string; critical: string; atRisk: string; inProgress: string

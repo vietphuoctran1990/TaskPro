@@ -1,22 +1,81 @@
-import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3 } from 'lucide-react'
+import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
 import { useT } from '../../i18n'
 import Button from '../ui/Button'
 import NotificationBell from './NotificationBell'
+import { supabase } from '../../lib/supabase'
 import type { Priority, Status, ViewMode, SLAStatus } from '../../types'
 
 interface HeaderProps {
   onAddTask: () => void
   onOpenSidebar: () => void
+  onOpenAuth: () => void
 }
 
 const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
   dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar,
 }
 
-export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
+function UserMenu({ onOpenAuth }: { onOpenAuth: () => void }) {
+  const { user, syncing, lastSynced, signOut, syncNow } = useAuth()
+  const t = useT()
+  const [open, setOpen] = useState(false)
+
+  if (!supabase) return null  // Auth not configured — hide button
+
+  if (!user) {
+    return (
+      <button onClick={onOpenAuth}
+        className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors bg-white">
+        <User size={13} />{t.auth.signIn}
+      </button>
+    )
+  }
+
+  const initials = (user.email ?? 'U').slice(0, 2).toUpperCase()
+  const syncLabel = syncing
+    ? t.auth.syncing
+    : lastSynced
+      ? t.auth.syncedAt(lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+      : t.auth.notSynced
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 h-8 px-2 rounded-lg hover:bg-slate-100 transition-colors">
+        <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">
+          {initials}
+        </span>
+        {syncing && <Loader2 size={11} className="animate-spin text-slate-400" />}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-10 z-20 w-52 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+            <div className="px-3 py-2.5 border-b border-slate-100">
+              <p className="text-xs font-semibold text-slate-700 truncate">{user.email}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{syncLabel}</p>
+            </div>
+            <button onClick={() => { syncNow(); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+              <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+              {t.auth.syncNow}
+            </button>
+            <button onClick={() => { signOut(); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+              <LogOut size={13} />{t.auth.signOut}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+export default function Header({ onAddTask, onOpenSidebar, onOpenAuth }: HeaderProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -93,6 +152,8 @@ export default function Header({ onAddTask, onOpenSidebar }: HeaderProps) {
         >
           {t.header.language}
         </button>
+
+        <UserMenu onOpenAuth={onOpenAuth} />
 
         <Button variant="primary" size="sm" onClick={onAddTask}>
           <Plus size={14} /> <span className="hidden sm:inline">{t.header.newTask}</span>

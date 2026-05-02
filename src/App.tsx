@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
-import { AppProvider } from './context/AppContext'
-import { useApp } from './context/AppContext'
+import { AppProvider, useApp } from './context/AppContext'
+import { AuthProvider } from './context/AuthContext'
 import { I18nProvider } from './i18n'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
@@ -12,6 +12,7 @@ import TaskForm from './components/tasks/TaskForm'
 import TaskDetail from './components/tasks/TaskDetail'
 import SyncModal from './components/sync/SyncModal'
 import ManageModal from './components/settings/ManageModal'
+import AuthModal from './components/auth/AuthModal'
 import PomodoroModal from './components/focus/PomodoroModal'
 import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
@@ -28,7 +29,8 @@ function AppShell() {
   const [defaultStatus, setDefaultStatus] = useState<Status>('todo')
   const [defaultDate, setDefaultDate] = useState('')
   const [installDismissed, setInstallDismissed] = useState(false)
-  const [syncOpen, setSyncOpen] = useState(false)
+  const [syncOpen, setSyncOpen]   = useState(false)
+  const [authOpen, setAuthOpen]   = useState(false)
   const [manageTab, setManageTab] = useState<'projects' | 'labels'>('projects')
   const [manageOpen, setManageOpen] = useState(false)
   const [focusTask, setFocusTask] = useState<Task | null>(null)
@@ -86,6 +88,7 @@ function AppShell() {
         <Header
           onAddTask={() => handleAddTask()}
           onOpenSidebar={() => setSidebarOpen(true)}
+          onOpenAuth={() => setAuthOpen(true)}
         />
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">
@@ -121,6 +124,7 @@ function AppShell() {
       </div>
 
       {/* Modals */}
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
       <ManageModal open={manageOpen} onClose={() => setManageOpen(false)} initialTab={manageTab} />
       <SyncModal open={syncOpen} onClose={() => setSyncOpen(false)} />
       <TaskForm
@@ -160,9 +164,11 @@ function AppShell() {
 export default function App() {
   return (
     <AppProvider>
-      <I18nProvider>
-        <AppShell />
-      </I18nProvider>
+      <AuthProvider>
+        <I18nProvider>
+          <AppShell />
+        </I18nProvider>
+      </AuthProvider>
     </AppProvider>
   )
 }

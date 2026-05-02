@@ -2,6 +2,15 @@ import type { Translations } from './types'
 
 export const vi: Translations = {
   app: { name: 'TaskPro' },
+  auth: {
+    signIn: 'Đăng nhập', createAccount: 'Tạo tài khoản', email: 'Email', password: 'Mật khẩu',
+    passwordHint: 'Ít nhất 6 ký tự', noAccount: 'Chưa có tài khoản?',
+    hasAccount: 'Đã có tài khoản?', goToSignIn: 'Đến trang đăng nhập',
+    checkEmail: 'Kiểm tra email để xác nhận tài khoản.',
+    requiredFields: 'Vui lòng điền đầy đủ thông tin.',
+    syncedAt: (d) => `Đã đồng bộ ${d}`, syncing: 'Đang đồng bộ…', notSynced: 'Chưa đồng bộ',
+    myAccount: 'Tài khoản', signOut: 'Đăng xuất', syncNow: 'Đồng bộ ngay',
+  },
   sidebar: {
     allTasks: 'Tất cả công việc', projects: 'Dự án', newProject: 'Dự án mới',
     labels: 'Nhãn', overallProgress: 'Tiến độ tổng thể',

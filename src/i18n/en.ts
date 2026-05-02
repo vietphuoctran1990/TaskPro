@@ -2,6 +2,15 @@ import type { Translations } from './types'
 
 export const en: Translations = {
   app: { name: 'TaskPro' },
+  auth: {
+    signIn: 'Sign in', createAccount: 'Create account', email: 'Email', password: 'Password',
+    passwordHint: 'At least 6 characters', noAccount: "Don't have an account?",
+    hasAccount: 'Already have an account?', goToSignIn: 'Go to sign in',
+    checkEmail: 'Check your email to confirm your account.',
+    requiredFields: 'Please fill in all fields.',
+    syncedAt: (d) => `Synced ${d}`, syncing: 'Syncing…', notSynced: 'Not synced',
+    myAccount: 'My account', signOut: 'Sign out', syncNow: 'Sync now',
+  },
   sidebar: {
     allTasks: 'All Tasks', projects: 'Projects', newProject: 'New project',
     labels: 'Labels', overallProgress: 'Overall progress',
