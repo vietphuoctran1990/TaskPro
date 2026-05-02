@@ -56,17 +56,28 @@ export default async () => {
 
             await store.set(firedKey, '1')
 
-            await webpush.sendNotification(
-              subscription,
-              JSON.stringify({
-                title:              s.title,
-                body:               s.body,
-                tag:                s.key,
-                taskId:             s.taskId,
-                requireInteraction: s.requireInteraction,
-              })
-            )
-            console.log(`[notify] sent push "${s.title}" → device ${deviceId}`)
+            try {
+              await webpush.sendNotification(
+                subscription,
+                JSON.stringify({
+                  title:              s.title,
+                  body:               s.body,
+                  tag:                s.key,
+                  taskId:             s.taskId,
+                  requireInteraction: s.requireInteraction,
+                })
+              )
+              console.log(`[notify] sent push "${s.title}" → device ${deviceId}`)
+            } catch (err) {
+              const status = (err as { statusCode?: number })?.statusCode
+              if (status === 404 || status === 410) {
+                // Subscription expired/invalid — remove it so we stop trying
+                await store.delete(key)
+                console.warn(`[notify] removed dead subscription for device ${deviceId} (${status})`)
+              } else {
+                console.error(`[notify] push failed for device ${deviceId}:`, err)
+              }
+            }
           })
         )
       })

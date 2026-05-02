@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { Bell, BellOff, CheckCircle2, Clock, X } from 'lucide-react'
+import { Bell, BellOff, CheckCircle2, Clock, X, Send } from 'lucide-react'
 import { cn, getDeadline, getTimeRemaining } from '../../lib/utils'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
@@ -38,6 +38,27 @@ export default function NotificationBell() {
     const perm = await requestPermission()
     setPermission(perm)
   }, [requestPermission])
+
+  const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle')
+  const handleTestPush = useCallback(async () => {
+    setTestStatus('sending')
+    try {
+      const deviceId = localStorage.getItem('taskpro-device-id')
+      if (!deviceId) { setTestStatus('fail'); return }
+      const res = await fetch('/api/test-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.ok) setTestStatus('ok')
+      else { console.error('[test-push] failed:', data); setTestStatus('fail') }
+    } catch (err) {
+      console.error('[test-push] error:', err)
+      setTestStatus('fail')
+    }
+    setTimeout(() => setTestStatus('idle'), 4000)
+  }, [])
 
   useEffect(() => {
     if (!('Notification' in window)) return
@@ -180,9 +201,28 @@ export default function NotificationBell() {
 
             {/* Footer */}
             {permission === 'granted' && (
-              <div className="px-4 py-2 border-t border-slate-100 flex items-center gap-1.5 text-xs text-slate-400">
-                <Clock size={11} />
-                Checked every 60s
+              <div className="px-4 py-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <Clock size={11} />
+                  Checked every 60s
+                </div>
+                <button
+                  onClick={handleTestPush}
+                  disabled={testStatus === 'sending'}
+                  className={cn(
+                    'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors',
+                    testStatus === 'ok'   && 'bg-emerald-50 text-emerald-600 border-emerald-200',
+                    testStatus === 'fail' && 'bg-red-50 text-red-600 border-red-200',
+                    testStatus === 'idle' && 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600',
+                    testStatus === 'sending' && 'bg-white text-slate-400 border-slate-200',
+                  )}
+                >
+                  <Send size={10} />
+                  {testStatus === 'sending' ? '…'
+                    : testStatus === 'ok'   ? 'Sent ✓'
+                    : testStatus === 'fail' ? 'Failed'
+                    : 'Test push'}
+                </button>
               </div>
             )}
           </div>

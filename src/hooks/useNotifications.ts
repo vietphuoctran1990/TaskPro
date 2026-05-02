@@ -31,7 +31,7 @@ const ALL_THRESHOLDS: Threshold[] = [
 ]
 
 const HEARTBEAT_MS = 30_000
-const WINDOW_MS    = 3 * 60 * 60_000
+const PAST_GRACE_MS = 5 * 60_000  // ignore schedules >5 min in the past
 
 // VAPID public key for Web Push subscription (must match server's VAPID_PUBLIC_KEY env var)
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
@@ -108,7 +108,7 @@ function buildSchedulesFor(
         if (notifiedRef.current.has(notifKey)) return []
         const fireAt  = deadline.getTime() - minutes * 60_000
         const delayMs = fireAt - Date.now()
-        if (delayMs < -5 * 60_000 || delayMs > WINDOW_MS) return []
+        if (delayMs < -PAST_GRACE_MS) return []
         return [{ key: notifKey, taskId: task.id, title: task.title,
                   body: `${label(t)} · ${timeStr}`, fireAt,
                   requireInteraction: key === 'due' }]
