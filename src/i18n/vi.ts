@@ -6,7 +6,14 @@ export const vi: Translations = {
     allTasks: 'Tất cả công việc', projects: 'Dự án', newProject: 'Dự án mới',
     labels: 'Nhãn', overallProgress: 'Tiến độ tổng thể',
     breached: 'Vi phạm SLA', critical: 'Nguy cấp', atRisk: 'Có nguy cơ',
-    inProgress: 'Đang thực hiện', syncBackup: 'Đồng bộ & Sao lưu',
+    inProgress: 'Đang thực hiện', syncBackup: 'Đồng bộ & Sao lưu', manage: 'Quản lý',
+  },
+  manage: {
+    title: 'Quản lý Dự án & Nhãn', projects: 'Dự án', labels: 'Nhãn',
+    projectName: 'Tên dự án', labelName: 'Tên nhãn', description: 'Mô tả', color: 'Màu sắc',
+    addProject: 'Thêm dự án', addLabel: 'Thêm nhãn', save: 'Lưu', cancel: 'Hủy',
+    delete: 'Xóa', edit: 'Sửa', confirmDelete: 'Xóa?', noProjects: 'Chưa có dự án',
+    noLabels: 'Chưa có nhãn', taskCount: (n) => `${n} công việc`,
   },
   header: {
     newTask: 'Tạo công việc', search: 'Tìm kiếm…', allPriorities: 'Tất cả mức độ',

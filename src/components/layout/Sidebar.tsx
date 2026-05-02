@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw } from 'lucide-react'
+import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2 } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
@@ -9,9 +9,9 @@ import type { Project } from '../../types'
 
 const PROJECT_COLORS = ['#6366f1','#0ea5e9','#f59e0b','#22c55e','#ec4899','#ef4444','#8b5cf6','#14b8a6','#f97316','#06b6d4']
 
-interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void }
+interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void; onManage?: (tab: 'projects' | 'labels') => void }
 
-export default function Sidebar({ onClose, mobile, onSync }: SidebarProps) {
+export default function Sidebar({ onClose, mobile, onSync, onManage }: SidebarProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [projectsOpen, setProjectsOpen] = useState(true)
@@ -63,12 +63,21 @@ export default function Sidebar({ onClose, mobile, onSync }: SidebarProps) {
 
         {/* Projects */}
         <div className="pt-3">
-          <button className="w-full flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-600 transition-colors"
-            onClick={() => setProjectsOpen(v => !v)}>
-            <FolderOpen size={12} />
-            <span className="flex-1 text-left">{t.sidebar.projects}</span>
-            <ChevronDown size={12} className={cn('transition-transform', !projectsOpen && '-rotate-90')} />
-          </button>
+          <div className="flex items-center">
+            <button className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-600 transition-colors"
+              onClick={() => setProjectsOpen(v => !v)}>
+              <FolderOpen size={12} />
+              <span className="flex-1 text-left">{t.sidebar.projects}</span>
+              <ChevronDown size={12} className={cn('transition-transform', !projectsOpen && '-rotate-90')} />
+            </button>
+            {onManage && (
+              <button onClick={() => onManage('projects')}
+                className="p-1 mr-1 rounded text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                title={t.sidebar.manage}>
+                <Settings2 size={12} />
+              </button>
+            )}
+          </div>
           {projectsOpen && (
             <div className="mt-1 space-y-0.5">
               {state.projects.map(p => (
@@ -104,15 +113,26 @@ export default function Sidebar({ onClose, mobile, onSync }: SidebarProps) {
 
         {/* Labels */}
         <div className="pt-3">
-          <div className="flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            <Tag size={12} /><span>{t.sidebar.labels}</span>
+          <div className="flex items-center">
+            <div className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <Tag size={12} /><span>{t.sidebar.labels}</span>
+            </div>
+            {onManage && (
+              <button onClick={() => onManage('labels')}
+                className="p-1 mr-1 rounded text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                title={t.sidebar.manage}>
+                <Settings2 size={12} />
+              </button>
+            )}
           </div>
           <div className="mt-1.5 px-3 flex flex-wrap gap-1.5">
             {state.labels.map(label => (
-              <span key={label.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+              <button key={label.id}
+                onClick={() => onManage?.('labels')}
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-opacity hover:opacity-80"
                 style={{ backgroundColor: `${label.color}18`, color: label.color }}>
                 {label.name}
-              </span>
+              </button>
             ))}
           </div>
         </div>

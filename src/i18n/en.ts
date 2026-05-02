@@ -6,7 +6,14 @@ export const en: Translations = {
     allTasks: 'All Tasks', projects: 'Projects', newProject: 'New project',
     labels: 'Labels', overallProgress: 'Overall progress',
     breached: 'Breached', critical: 'Critical', atRisk: 'At Risk',
-    inProgress: 'In progress', syncBackup: 'Sync & Backup',
+    inProgress: 'In progress', syncBackup: 'Sync & Backup', manage: 'Manage',
+  },
+  manage: {
+    title: 'Manage Projects & Labels', projects: 'Projects', labels: 'Labels',
+    projectName: 'Project name', labelName: 'Label name', description: 'Description', color: 'Color',
+    addProject: 'Add project', addLabel: 'Add label', save: 'Save', cancel: 'Cancel',
+    delete: 'Delete', edit: 'Edit', confirmDelete: 'Delete?', noProjects: 'No projects yet',
+    noLabels: 'No labels yet', taskCount: (n) => `${n} task${n !== 1 ? 's' : ''}`,
   },
   header: {
     newTask: 'New Task', search: 'Search…', allPriorities: 'All priorities',

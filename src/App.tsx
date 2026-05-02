@@ -11,6 +11,7 @@ import DashboardView from './components/views/DashboardView'
 import TaskForm from './components/tasks/TaskForm'
 import TaskDetail from './components/tasks/TaskDetail'
 import SyncModal from './components/sync/SyncModal'
+import ManageModal from './components/settings/ManageModal'
 import PomodoroModal from './components/focus/PomodoroModal'
 import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
@@ -28,7 +29,15 @@ function AppShell() {
   const [defaultDate, setDefaultDate] = useState('')
   const [installDismissed, setInstallDismissed] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
+  const [manageTab, setManageTab] = useState<'projects' | 'labels'>('projects')
+  const [manageOpen, setManageOpen] = useState(false)
   const [focusTask, setFocusTask] = useState<Task | null>(null)
+
+  const handleManage = useCallback((tab: 'projects' | 'labels') => {
+    setManageTab(tab)
+    setManageOpen(true)
+    setSidebarOpen(false)
+  }, [])
 
   const handleFocusTask = useCallback((task: Task) => {
     setViewingTask(null)
@@ -57,7 +66,7 @@ function AppShell() {
     <div className="flex h-[100dvh] bg-slate-50 overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex h-full">
-        <Sidebar onSync={() => setSyncOpen(true)} />
+        <Sidebar onSync={() => setSyncOpen(true)} onManage={handleManage} />
       </div>
 
       {/* Mobile sidebar overlay */}
@@ -65,7 +74,9 @@ function AppShell() {
         <>
           <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
           <div className="fixed inset-y-0 left-0 z-50 w-64 lg:hidden">
-            <Sidebar mobile onClose={() => setSidebarOpen(false)} onSync={() => { setSidebarOpen(false); setSyncOpen(true) }} />
+            <Sidebar mobile onClose={() => setSidebarOpen(false)}
+              onSync={() => { setSidebarOpen(false); setSyncOpen(true) }}
+              onManage={handleManage} />
           </div>
         </>
       )}
@@ -110,6 +121,7 @@ function AppShell() {
       </div>
 
       {/* Modals */}
+      <ManageModal open={manageOpen} onClose={() => setManageOpen(false)} initialTab={manageTab} />
       <SyncModal open={syncOpen} onClose={() => setSyncOpen(false)} />
       <TaskForm
         open={formOpen}

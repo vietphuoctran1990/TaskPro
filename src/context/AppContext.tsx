@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import type {
-  AppState, Task, Project, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment,
+  AppState, Task, Project, Label, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment,
 } from '../types'
 import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS } from '../data/defaults'
 import {
@@ -23,6 +23,11 @@ type Action =
   | { type: 'REORDER_TASKS';   payload: Task[] }
   | { type: 'ADD_COMMENT';     payload: { taskId: string; comment: Omit<Comment, 'id' | 'createdAt'> } }
   | { type: 'ADD_PROJECT';     payload: Omit<Project, 'id'> }
+  | { type: 'UPDATE_PROJECT';  payload: Project }
+  | { type: 'DELETE_PROJECT';  payload: string }
+  | { type: 'ADD_LABEL';       payload: Omit<Label, 'id'> }
+  | { type: 'UPDATE_LABEL';    payload: Label }
+  | { type: 'DELETE_LABEL';    payload: string }
   | { type: 'SET_ACTIVE_PROJECT'; payload: string | null }
   | { type: 'SET_SEARCH';      payload: string }
   | { type: 'SET_FILTER_PRIORITY'; payload: Priority | 'all' }
@@ -122,6 +127,25 @@ function reducer(state: AppState, action: Action): AppState {
       }
     case 'ADD_PROJECT':
       return { ...state, projects: [...state.projects, { ...action.payload, id: generateId() }] }
+    case 'UPDATE_PROJECT':
+      return { ...state, projects: state.projects.map(p => p.id === action.payload.id ? action.payload : p) }
+    case 'DELETE_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.filter(p => p.id !== action.payload),
+        tasks: state.tasks.map(t => t.projectId === action.payload ? { ...t, projectId: '' } : t),
+        activeProjectId: state.activeProjectId === action.payload ? null : state.activeProjectId,
+      }
+    case 'ADD_LABEL':
+      return { ...state, labels: [...state.labels, { ...action.payload, id: generateId() }] }
+    case 'UPDATE_LABEL':
+      return { ...state, labels: state.labels.map(l => l.id === action.payload.id ? action.payload : l) }
+    case 'DELETE_LABEL':
+      return {
+        ...state,
+        labels: state.labels.filter(l => l.id !== action.payload),
+        tasks: state.tasks.map(t => ({ ...t, labels: t.labels.filter(lid => lid !== action.payload) })),
+      }
     case 'SET_ACTIVE_PROJECT':  return { ...state, activeProjectId: action.payload }
     case 'SET_SEARCH':          return { ...state, searchQuery: action.payload }
     case 'SET_FILTER_PRIORITY': return { ...state, filterPriority: action.payload }

@@ -3,7 +3,14 @@ export interface Translations {
   sidebar: {
     allTasks: string; projects: string; newProject: string; labels: string
     overallProgress: string; breached: string; critical: string; atRisk: string; inProgress: string
-    syncBackup: string
+    syncBackup: string; manage: string
+  }
+  manage: {
+    title: string; projects: string; labels: string
+    projectName: string; labelName: string; description: string; color: string
+    addProject: string; addLabel: string; save: string; cancel: string; delete: string; edit: string
+    confirmDelete: string; noProjects: string; noLabels: string
+    taskCount: (n: number) => string
   }
   header: {
     newTask: string; search: string; allPriorities: string; allStatuses: string
