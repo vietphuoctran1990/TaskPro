@@ -1,24 +1,34 @@
-import type { Handler } from '@netlify/functions'
 import { getStore } from '@netlify/blobs'
+import type { Config, Context } from '@netlify/functions'
 
-export const handler: Handler = async (event) => {
-  const headers = {
+function cors() {
+  return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   }
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' }
-  if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: 'Method Not Allowed' }
+}
+
+export default async (req: Request, context: Context) => {
+  void context
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors() })
+  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: cors() })
 
   try {
-    const { subscription, deviceId } = JSON.parse(event.body || '{}')
-    if (!subscription || !deviceId) return { statusCode: 400, headers, body: 'Missing fields' }
+    const { subscription, deviceId } = await req.json()
+    if (!subscription || !deviceId) return new Response('Missing fields', { status: 400, headers: cors() })
 
     const store = getStore('push-data')
     await store.set(`sub:${deviceId}`, JSON.stringify(subscription))
+    console.log(`[subscribe] stored subscription for device ${deviceId}`)
 
-    return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) }
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { ...cors(), 'Content-Type': 'application/json' },
+    })
   } catch (err) {
-    return { statusCode: 500, headers, body: String(err) }
+    console.error('[subscribe] error:', err)
+    return new Response(String(err), { status: 500, headers: cors() })
   }
 }
+
+export const config: Config = { path: '/api/subscribe' }

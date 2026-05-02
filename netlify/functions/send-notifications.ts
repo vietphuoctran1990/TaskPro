@@ -1,5 +1,5 @@
-import { schedule } from '@netlify/functions'
 import { getStore } from '@netlify/blobs'
+import type { Config } from '@netlify/functions'
 import webpush from 'web-push'
 
 interface SchedulePayload {
@@ -11,14 +11,14 @@ interface SchedulePayload {
   requireInteraction: boolean
 }
 
-const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || ''
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || ''
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT     || 'mailto:admin@taskpro.app'
+const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  ?? ''
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? ''
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT     ?? 'mailto:admin@taskpro.app'
 
-export default schedule('* * * * *', async () => {
+export default async () => {
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
-    console.error('VAPID keys not configured')
-    return
+    console.error('[notify] VAPID keys not set — skipping')
+    return new Response('VAPID not configured', { status: 500 })
   }
 
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
@@ -28,53 +28,51 @@ export default schedule('* * * * *', async () => {
 
   try {
     const { blobs } = await store.list({ prefix: 'sub:' })
+    console.log(`[notify] checking ${blobs.length} device(s)`)
 
     await Promise.allSettled(
       blobs.map(async ({ key }) => {
-        const deviceId  = key.replace(/^sub:/, '')
+        const deviceId = key.replace(/^sub:/, '')
         const [subJson, schedJson] = await Promise.all([
           store.get(key),
           store.get(`sched:${deviceId}`),
         ])
         if (!subJson || !schedJson) return
 
-        const subscription: webpush.PushSubscription = JSON.parse(subJson)
-        const schedules: SchedulePayload[]            = JSON.parse(schedJson)
+        const subscription = JSON.parse(subJson) as webpush.PushSubscription
+        const schedules    = JSON.parse(schedJson) as SchedulePayload[]
 
-        // Fire notifications due within ±60 s window (cron precision)
         const due = schedules.filter(s => {
           const delay = s.fireAt - now
           return delay <= 60_000 && delay > -5 * 60_000
         })
+        if (due.length === 0) return
 
         await Promise.allSettled(
           due.map(async (s) => {
-            // Check fired flag to avoid duplicates across cron runs
-            const firedKey = `fired:${deviceId}:${s.key}`
+            const firedKey     = `fired:${deviceId}:${s.key}`
             const alreadyFired = await store.get(firedKey)
             if (alreadyFired) return
 
-            // Mark fired FIRST to prevent parallel duplicates
             await store.set(firedKey, '1')
 
             await webpush.sendNotification(
               subscription,
               JSON.stringify({
-                title:               s.title,
-                body:                s.body,
-                tag:                 s.key,
-                taskId:              s.taskId,
-                requireInteraction:  s.requireInteraction,
+                title:              s.title,
+                body:               s.body,
+                tag:                s.key,
+                taskId:             s.taskId,
+                requireInteraction: s.requireInteraction,
               })
             )
-
-            console.log(`Sent push for ${s.key} to device ${deviceId}`)
+            console.log(`[notify] sent push "${s.title}" → device ${deviceId}`)
           })
         )
       })
     )
   } catch (err) {
-    console.error('send-notifications error:', err)
+    console.error('[notify] error:', err)
   }
 
   // Clean up fired flags older than 2 hours
@@ -89,4 +87,8 @@ export default schedule('* * * * *', async () => {
       })
     )
   } catch {}
-})
+
+  return new Response('OK')
+}
+
+export const config: Config = { schedule: '* * * * *' }
