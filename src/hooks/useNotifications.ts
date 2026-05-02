@@ -50,21 +50,27 @@ function getDeviceId(): string {
 }
 
 async function syncSubscriptionToServer(reg: ServiceWorkerRegistration) {
-  if (!VAPID_PUBLIC_KEY) return
+  if (!VAPID_PUBLIC_KEY) {
+    console.warn('[push] VITE_VAPID_PUBLIC_KEY not set — push disabled')
+    return
+  }
   try {
+    // Always re-subscribe (refreshes expired subscriptions)
     let sub = await reg.pushManager.getSubscription()
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
-      })
-    }
-    await fetch('/api/subscribe', {
+    if (sub) await sub.unsubscribe()
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
+    })
+    const res = await fetch('/api/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscription: sub.toJSON(), deviceId: getDeviceId() }),
     })
-  } catch {}
+    console.log('[push] subscription synced, status:', res.status)
+  } catch (err) {
+    console.error('[push] subscribe failed:', err)
+  }
 }
 
 interface ScheduleItem {
@@ -72,14 +78,16 @@ interface ScheduleItem {
 }
 
 async function syncSchedulesToServer(schedules: ScheduleItem[]) {
-  if (!VAPID_PUBLIC_KEY) return
   try {
-    await fetch('/api/schedule', {
+    const res = await fetch('/api/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceId: getDeviceId(), schedules }),
     })
-  } catch {}
+    if (!res.ok) console.warn('[push] schedule sync failed:', res.status)
+  } catch (err) {
+    console.warn('[push] schedule sync error:', err)
+  }
 }
 
 function buildSchedulesFor(
@@ -114,18 +122,12 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
   const swRegRef      = useRef<ServiceWorkerRegistration | null>(null)
   const [swReady, setSwReady] = useState(false)
 
-  // ── Get SW registration + set up Web Push subscription ────────────────────
+  // ── Get SW registration ───────────────────────────────────────────────────
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
     navigator.serviceWorker.ready.then(reg => {
       swRegRef.current = reg
       setSwReady(true)
-
-      // Subscribe to Web Push so server can push when app is closed
-      if (Notification.permission === 'granted') {
-        syncSubscriptionToServer(reg)
-      }
-
       // Periodic Background Sync as additional fallback (Android Chrome, installed PWA)
       if ('periodicSync' in reg) {
         ;(reg as ServiceWorkerRegistration & { periodicSync: { register(tag: string, opts: { minInterval: number }): Promise<void> } })
@@ -134,6 +136,15 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
       }
     })
   }, [])
+
+  // ── Subscribe to Web Push whenever permission is granted ──────────────────
+  // Runs when swReady or enabled changes so we don't miss the subscription.
+  useEffect(() => {
+    if (!swReady || !enabled) return
+    if (Notification.permission === 'granted' && swRegRef.current) {
+      syncSubscriptionToServer(swRegRef.current)
+    }
+  }, [swReady, enabled])
 
   // ── Listen for SW → client messages ───────────────────────────────────────
   useEffect(() => {
