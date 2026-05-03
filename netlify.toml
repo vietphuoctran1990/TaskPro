@@ -6,6 +6,8 @@
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
   VITE_VAPID_PUBLIC_KEY = "BISAgARXQkWD0G6lgiZ_ygj_5crrflt8tqsnK35V1ULh5iS3-5PRV_-cX8n_dC3uThxx3J6hQvlz-oq2MiQmbLY"
+  VITE_SUPABASE_URL = "https://scixtscuoyhjsnpzvbvm.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "sb_publishable_aoAEihnFjLkRISPgC7dI3Q_ULkybnEo"
 
 [functions]
   directory = "netlify/functions"
