@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { Bell, BellOff, CheckCircle2, Clock, X, Send } from 'lucide-react'
+import { Bell, BellOff, CheckCircle2, X, Send } from 'lucide-react'
 import { cn, getDeadline, getTimeRemaining } from '../../lib/utils'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
@@ -58,6 +58,31 @@ export default function NotificationBell() {
       setTestStatus('fail')
     }
     setTimeout(() => setTestStatus('idle'), 4000)
+  }, [])
+
+  const handleDebug = useCallback(async () => {
+    const deviceId = localStorage.getItem('taskpro-device-id')
+    if (!deviceId) { alert('No deviceId found'); return }
+    try {
+      const res = await fetch('/api/debug-schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId }),
+      })
+      const data = await res.json()
+      const lines = [
+        `deviceId: ${deviceId.slice(0, 8)}…`,
+        `subscription on server: ${data.hasSubscription ? '✓ YES' : '✗ NO'}`,
+        `schedules on server: ${data.scheduleCount}`,
+        '',
+        ...(data.schedules ?? []).map((s: { title: string; inMinutes: number }) =>
+          `• ${s.title} → ${s.inMinutes >= 0 ? `in ${s.inMinutes}min` : `${-s.inMinutes}min ago`}`
+        ),
+      ]
+      alert(lines.join('\n'))
+    } catch (err) {
+      alert('Debug failed: ' + String(err))
+    }
   }, [])
 
   useEffect(() => {
@@ -202,10 +227,12 @@ export default function NotificationBell() {
             {/* Footer */}
             {permission === 'granted' && (
               <div className="px-4 py-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs text-slate-400">
-                <div className="flex items-center gap-1.5">
-                  <Clock size={11} />
-                  Checked every 60s
-                </div>
+                <button
+                  onClick={handleDebug}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700 transition-colors"
+                >
+                  Check server
+                </button>
                 <button
                   onClick={handleTestPush}
                   disabled={testStatus === 'sending'}

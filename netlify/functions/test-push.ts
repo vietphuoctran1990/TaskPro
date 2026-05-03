@@ -46,7 +46,8 @@ export default async (req: Request, context: Context) => {
         tag:                `test-${Date.now()}`,
         taskId:             '',
         requireInteraction: false,
-      })
+      }),
+      { urgency: 'high', TTL: 60 }
     )
 
     return new Response(JSON.stringify({ ok: true }), {

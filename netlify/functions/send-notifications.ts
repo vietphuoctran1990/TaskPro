@@ -65,7 +65,11 @@ export default async () => {
                   tag:                s.key,
                   taskId:             s.taskId,
                   requireInteraction: s.requireInteraction,
-                })
+                }),
+                {
+                  urgency: 'high',  // wake Android from Doze mode immediately
+                  TTL: 4 * 60 * 60, // retry for 4h if device offline
+                }
               )
               console.log(`[notify] sent push "${s.title}" → device ${deviceId}`)
             } catch (err) {
