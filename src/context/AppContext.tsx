@@ -22,10 +22,10 @@ type Action =
   | { type: 'MOVE_TASK';       payload: { id: string; status: Status } }
   | { type: 'REORDER_TASKS';   payload: Task[] }
   | { type: 'ADD_COMMENT';     payload: { taskId: string; comment: Omit<Comment, 'id' | 'createdAt'> } }
-  | { type: 'ADD_PROJECT';     payload: Omit<Project, 'id'> }
+  | { type: 'ADD_PROJECT';     payload: Omit<Project, 'id'> & { id?: string } }
   | { type: 'UPDATE_PROJECT';  payload: Project }
   | { type: 'DELETE_PROJECT';  payload: string }
-  | { type: 'ADD_LABEL';       payload: Omit<Label, 'id'> }
+  | { type: 'ADD_LABEL';       payload: Omit<Label, 'id'> & { id?: string } }
   | { type: 'UPDATE_LABEL';    payload: Label }
   | { type: 'DELETE_LABEL';    payload: string }
   | { type: 'SET_ACTIVE_PROJECT'; payload: string | null }
@@ -126,7 +126,7 @@ function reducer(state: AppState, action: Action): AppState {
         ),
       }
     case 'ADD_PROJECT':
-      return { ...state, projects: [...state.projects, { ...action.payload, id: generateId() }] }
+      return { ...state, projects: [...state.projects, { ...action.payload, id: action.payload.id ?? generateId() }] }
     case 'UPDATE_PROJECT':
       return { ...state, projects: state.projects.map(p => p.id === action.payload.id ? action.payload : p) }
     case 'DELETE_PROJECT':
@@ -137,7 +137,7 @@ function reducer(state: AppState, action: Action): AppState {
         activeProjectId: state.activeProjectId === action.payload ? null : state.activeProjectId,
       }
     case 'ADD_LABEL':
-      return { ...state, labels: [...state.labels, { ...action.payload, id: generateId() }] }
+      return { ...state, labels: [...state.labels, { ...action.payload, id: action.payload.id ?? generateId() }] }
     case 'UPDATE_LABEL':
       return { ...state, labels: state.labels.map(l => l.id === action.payload.id ? action.payload : l) }
     case 'DELETE_LABEL':

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Calendar, Clock, Timer, Repeat } from 'lucide-react'
+import { Calendar, Clock, Timer, Repeat, Plus, Check, X } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { Input, Textarea } from '../ui/Input'
@@ -30,6 +30,71 @@ interface FormData {
   recurrenceType: '' | 'daily' | 'weekly' | 'monthly'
   recurrenceInterval: string
   recurrenceEndDate: string
+}
+
+const PRESET_COLORS = [
+  '#6366f1','#8b5cf6','#ec4899','#ef4444','#f97316',
+  '#eab308','#22c55e','#14b8a6','#3b82f6','#64748b',
+]
+
+function InlineCreate({
+  placeholder,
+  onAdd,
+  onCancel,
+}: {
+  placeholder: string
+  onAdd: (name: string, color: string) => void
+  onCancel: () => void
+}) {
+  const [name, setName]   = useState('')
+  const [color, setColor] = useState(PRESET_COLORS[0])
+
+  const handleAdd = () => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    onAdd(trimmed, color)
+  }
+
+  return (
+    <div className="mt-2 p-3 rounded-xl border border-indigo-200 bg-indigo-50/60 space-y-2.5">
+      <input
+        autoFocus
+        type="text"
+        placeholder={placeholder}
+        value={name}
+        onChange={e => setName(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') onCancel() }}
+        className="h-8 w-full px-2.5 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {PRESET_COLORS.map(c => (
+          <button
+            key={c} type="button"
+            onClick={() => setColor(c)}
+            className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center"
+            style={{ backgroundColor: c, borderColor: color === c ? '#fff' : c, outline: color === c ? `2px solid ${c}` : 'none' }}
+          >
+            {color === c && <Check size={10} className="text-white" strokeWidth={3} />}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button" onClick={handleAdd}
+          className="flex-1 h-7 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors disabled:opacity-40"
+          disabled={!name.trim()}
+        >
+          Thêm
+        </button>
+        <button
+          type="button" onClick={onCancel}
+          className="h-7 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50 transition-colors"
+        >
+          <X size={12} />
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', defaultDate = '' }: TaskFormProps) {
@@ -66,6 +131,8 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     const match = SLA_PRESETS.find(p => p.value === String(task.slaHours))
     return match ? match.value : 'custom'
   })
+  const [addingProject, setAddingProject] = useState(false)
+  const [addingLabel,   setAddingLabel]   = useState(false)
 
   const set = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -82,6 +149,20 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   const handleSlaPreset = (val: string) => {
     setSlaPreset(val)
     if (val !== 'custom') set('slaHours', val)
+  }
+
+  const handleAddProject = (name: string, color: string) => {
+    const id = crypto.randomUUID()
+    dispatch({ type: 'ADD_PROJECT', payload: { id, name, color, description: '' } })
+    set('projectId', id)
+    setAddingProject(false)
+  }
+
+  const handleAddLabel = (name: string, color: string) => {
+    const id = crypto.randomUUID()
+    dispatch({ type: 'ADD_LABEL', payload: { id, name, color } })
+    setForm(prev => ({ ...prev, labels: [...prev.labels, id] }))
+    setAddingLabel(false)
   }
 
   const handleSubmit = () => {
@@ -154,10 +235,34 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
           </Select>
         </div>
 
+        {/* Project row */}
         <div className="grid grid-cols-2 gap-3">
-          <Select label={t.form.project} id="task-project" value={form.projectId} onChange={e => set('projectId', e.target.value)}>
-            {state.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </Select>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-slate-700">{t.form.project}</label>
+              <button
+                type="button"
+                onClick={() => { setAddingProject(v => !v); setAddingLabel(false) }}
+                className="flex items-center gap-0.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                <Plus size={12} /> {t.manage.addProject}
+              </button>
+            </div>
+            <select
+              id="task-project" value={form.projectId} onChange={e => set('projectId', e.target.value)}
+              className="h-9 w-full px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {state.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            {addingProject && (
+              <InlineCreate
+                placeholder={t.manage.projectName}
+                onAdd={handleAddProject}
+                onCancel={() => setAddingProject(false)}
+              />
+            )}
+          </div>
+
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700">{t.form.estimatedHours}</label>
             <div className="relative">
@@ -253,7 +358,16 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
 
         {/* Labels */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">{t.form.labels}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-slate-700">{t.form.labels}</span>
+            <button
+              type="button"
+              onClick={() => { setAddingLabel(v => !v); setAddingProject(false) }}
+              className="flex items-center gap-0.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              <Plus size={12} /> {t.manage.addLabel}
+            </button>
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {state.labels.map(label => {
               const sel = form.labels.includes(label.id)
@@ -269,6 +383,13 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
               )
             })}
           </div>
+          {addingLabel && (
+            <InlineCreate
+              placeholder={t.manage.labelName}
+              onAdd={handleAddLabel}
+              onCancel={() => setAddingLabel(false)}
+            />
+          )}
         </div>
       </div>
 
