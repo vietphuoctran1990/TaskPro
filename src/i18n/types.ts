@@ -7,7 +7,8 @@ export interface Translations {
     syncing: string; notSynced: string; myAccount: string; signOut: string; syncNow: string
   }
   sidebar: {
-    allTasks: string; projects: string; newProject: string; labels: string
+    allTasks: string; today: string; tomorrow: string; upcoming: string
+    projects: string; newProject: string; labels: string
     overallProgress: string; breached: string; critical: string; atRisk: string; inProgress: string
     syncBackup: string; manage: string
   }

@@ -12,7 +12,8 @@ export const vi: Translations = {
     myAccount: 'Tài khoản', signOut: 'Đăng xuất', syncNow: 'Đồng bộ ngay',
   },
   sidebar: {
-    allTasks: 'Tất cả công việc', projects: 'Dự án', newProject: 'Dự án mới',
+    allTasks: 'Tất cả công việc', today: 'Hôm nay', tomorrow: 'Ngày mai', upcoming: 'Sắp tới',
+    projects: 'Dự án', newProject: 'Dự án mới',
     labels: 'Nhãn', overallProgress: 'Tiến độ tổng thể',
     breached: 'Vi phạm SLA', critical: 'Nguy cấp', atRisk: 'Có nguy cơ',
     inProgress: 'Đang thực hiện', syncBackup: 'Đồng bộ & Sao lưu', manage: 'Quản lý',

@@ -55,6 +55,8 @@ export interface Project {
   notes: string
 }
 
+export type DateFilter = 'all' | 'today' | 'tomorrow' | 'upcoming'
+
 export interface AppState {
   tasks: Task[]
   projects: Project[]
@@ -64,6 +66,7 @@ export interface AppState {
   filterPriority: Priority | 'all'
   filterStatus: Status | 'all'
   filterSLA: SLAStatus | 'all'
+  dateFilter: DateFilter
   viewMode: ViewMode
   sortField: SortField
   sortDir: SortDir

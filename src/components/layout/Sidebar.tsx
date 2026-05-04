@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText } from 'lucide-react'
+import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText, Sun, Sunset, Calendar } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
@@ -21,6 +21,8 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
 
   const stats = useMemo(() => {
     const tasks = state.tasks
+    const todayStr    = new Date().toISOString().slice(0, 10)
+    const tomorrowStr = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
     return {
       total:    tasks.length,
       done:     tasks.filter(t => t.status === 'done').length,
@@ -28,6 +30,9 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
       breached: tasks.filter(t => getSLAStatus(t) === 'breached').length,
       critical: tasks.filter(t => getSLAStatus(t) === 'critical').length,
       atRisk:   tasks.filter(t => getSLAStatus(t) === 'at_risk').length,
+      today:    tasks.filter(t => t.dueDate === todayStr).length,
+      tomorrow: tasks.filter(t => t.dueDate === tomorrowStr).length,
+      upcoming: tasks.filter(t => t.dueDate != null && t.dueDate > todayStr).length,
     }
   }, [state.tasks])
 
@@ -53,13 +58,40 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {/* All Tasks */}
         <button
-          onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); onClose?.() }}
+          onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'all' }); onClose?.() }}
           className={cn('w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-            state.activeProjectId === null ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100')}>
+            state.activeProjectId === null && state.dateFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100')}>
           <LayoutDashboard size={15} />
           <span className="flex-1 text-left">{t.sidebar.allTasks}</span>
           <span className="text-xs opacity-50">{stats.total}</span>
         </button>
+        {/* Date filter sub-items */}
+        <div className="ml-3 pl-3 border-l border-slate-100 space-y-0.5">
+          <button
+            onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'today' }); onClose?.() }}
+            className={cn('w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
+              state.activeProjectId === null && state.dateFilter === 'today' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700')}>
+            <Sun size={13} />
+            <span className="flex-1 text-left">{t.sidebar.today}</span>
+            <span className="text-xs opacity-50">{stats.today}</span>
+          </button>
+          <button
+            onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'tomorrow' }); onClose?.() }}
+            className={cn('w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
+              state.activeProjectId === null && state.dateFilter === 'tomorrow' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700')}>
+            <Sunset size={13} />
+            <span className="flex-1 text-left">{t.sidebar.tomorrow}</span>
+            <span className="text-xs opacity-50">{stats.tomorrow}</span>
+          </button>
+          <button
+            onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'upcoming' }); onClose?.() }}
+            className={cn('w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
+              state.activeProjectId === null && state.dateFilter === 'upcoming' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700')}>
+            <Calendar size={13} />
+            <span className="flex-1 text-left">{t.sidebar.upcoming}</span>
+            <span className="text-xs opacity-50">{stats.upcoming}</span>
+          </button>
+        </div>
 
         {/* Projects */}
         <div className="pt-3">
@@ -84,7 +116,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
                 <ProjectItem key={p.id} project={p}
                   active={state.activeProjectId === p.id}
                   count={state.tasks.filter(tk => tk.projectId === p.id).length}
-                  onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: p.id }); onClose?.() }}
+                  onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: p.id }); dispatch({ type: 'SET_DATE_FILTER', payload: 'all' }); onClose?.() }}
                   onNotes={onNotes ? () => onNotes(p) : undefined} />
               ))}
               {addingProject ? (

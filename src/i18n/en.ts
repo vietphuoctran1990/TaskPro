@@ -12,7 +12,8 @@ export const en: Translations = {
     myAccount: 'My account', signOut: 'Sign out', syncNow: 'Sync now',
   },
   sidebar: {
-    allTasks: 'All Tasks', projects: 'Projects', newProject: 'New project',
+    allTasks: 'All Tasks', today: 'Today', tomorrow: 'Tomorrow', upcoming: 'Upcoming',
+    projects: 'Projects', newProject: 'New project',
     labels: 'Labels', overallProgress: 'Overall progress',
     breached: 'Breached', critical: 'Critical', atRisk: 'At Risk',
     inProgress: 'In progress', syncBackup: 'Sync & Backup', manage: 'Manage',

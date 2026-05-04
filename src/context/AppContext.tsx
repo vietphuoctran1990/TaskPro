@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import type {
-  AppState, Task, Project, Label, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment,
+  AppState, Task, Project, Label, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment, DateFilter,
 } from '../types'
 import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS } from '../data/defaults'
 import {
@@ -33,6 +33,7 @@ type Action =
   | { type: 'SET_FILTER_PRIORITY'; payload: Priority | 'all' }
   | { type: 'SET_FILTER_STATUS';   payload: Status | 'all' }
   | { type: 'SET_FILTER_SLA';      payload: SLAStatus | 'all' }
+  | { type: 'SET_DATE_FILTER';     payload: DateFilter }
   | { type: 'SET_VIEW_MODE';   payload: ViewMode }
   | { type: 'SET_SORT';        payload: { field: SortField; dir: SortDir } }
   | { type: 'TOGGLE_DARK_MODE' }
@@ -58,6 +59,7 @@ function getInitialState(): AppState {
           recurrence:     t.recurrence     ?? null,
         })),
         filterSLA:   parsed.filterSLA   ?? 'all',
+        dateFilter:  parsed.dateFilter  ?? 'all',
         viewMode:    parsed.viewMode    ?? 'kanban',
         sortField:   parsed.sortField   ?? 'createdAt',
         sortDir:     parsed.sortDir     ?? 'desc',
@@ -76,6 +78,7 @@ function getInitialState(): AppState {
     filterPriority: 'all',
     filterStatus: 'all',
     filterSLA: 'all',
+    dateFilter: 'all',
     viewMode: 'kanban',
     sortField: 'createdAt',
     sortDir: 'desc',
@@ -151,6 +154,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_FILTER_PRIORITY': return { ...state, filterPriority: action.payload }
     case 'SET_FILTER_STATUS':   return { ...state, filterStatus: action.payload }
     case 'SET_FILTER_SLA':      return { ...state, filterSLA: action.payload }
+    case 'SET_DATE_FILTER':     return { ...state, dateFilter: action.payload }
     case 'SET_VIEW_MODE':       return { ...state, viewMode: action.payload }
     case 'SET_SORT':            return { ...state, sortField: action.payload.field, sortDir: action.payload.dir }
     case 'TOGGLE_DARK_MODE':    return { ...state, darkMode: !state.darkMode }
@@ -206,6 +210,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (state.filterPriority !== 'all') tasks = tasks.filter(t => t.priority === state.filterPriority)
     if (state.filterStatus   !== 'all') tasks = tasks.filter(t => t.status   === state.filterStatus)
     if (state.filterSLA      !== 'all') tasks = tasks.filter(t => getSLAStatus(t) === state.filterSLA)
+    if (state.dateFilter     !== 'all') {
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const tomorrowStr = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+      if (state.dateFilter === 'today') {
+        tasks = tasks.filter(t => t.dueDate === todayStr)
+      } else if (state.dateFilter === 'tomorrow') {
+        tasks = tasks.filter(t => t.dueDate === tomorrowStr)
+      } else if (state.dateFilter === 'upcoming') {
+        tasks = tasks.filter(t => t.dueDate != null && t.dueDate > todayStr)
+      }
+    }
 
     return [...tasks].sort((a, b) => {
       const dir = state.sortDir === 'asc' ? 1 : -1
@@ -223,7 +238,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     })
   }, [state.tasks, state.activeProjectId, state.searchQuery,
-      state.filterPriority, state.filterStatus, state.filterSLA,
+      state.filterPriority, state.filterStatus, state.filterSLA, state.dateFilter,
       state.sortField, state.sortDir])
 
   return (
