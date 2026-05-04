@@ -230,6 +230,45 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
         />
 
+        {/* Subtasks */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-700">{t.detail.subtasks}</span>
+          {form.subtasks.length > 0 && (
+            <div className="space-y-1">
+              {form.subtasks.map(s => (
+                <div key={s.id} className="flex items-center gap-2 group">
+                  <button type="button" onClick={() => toggleSubtask(s.id)}
+                    className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      s.done ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 hover:border-indigo-400'
+                    }`}>
+                    {s.done && <Check size={10} className="text-white" strokeWidth={3} />}
+                  </button>
+                  <span className={`flex-1 text-sm ${s.done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                    {s.title}
+                  </span>
+                  <button type="button" onClick={() => removeSubtask(s.id)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500 transition-all">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text" value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
+              placeholder={t.detail.addSubtask}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }}
+              className="flex-1 h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button type="button" onClick={addSubtask}
+              disabled={!newSubtask.trim()}
+              className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 transition-colors">
+              <Plus size={13} />
+            </button>
+          </div>
+        </div>
+
         <Textarea
           label={t.form.description} id="task-desc" placeholder={t.form.descPlaceholder}
           value={form.description} onChange={e => set('description', e.target.value)} rows={2}
@@ -405,51 +444,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
               onCancel={() => setAddingLabel(false)}
             />
           )}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
-        <Button variant="ghost" onClick={onClose}>{t.form.cancel}</Button>
-        <Button variant="primary" onClick={handleSubmit}>
-          {task ? t.form.save : t.form.create}
-        </Button>
-        {/* Subtasks */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">{t.detail.subtasks}</span>
-          {form.subtasks.length > 0 && (
-            <div className="space-y-1">
-              {form.subtasks.map(s => (
-                <div key={s.id} className="flex items-center gap-2 group">
-                  <button type="button" onClick={() => toggleSubtask(s.id)}
-                    className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      s.done ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 hover:border-indigo-400'
-                    }`}>
-                    {s.done && <Check size={10} className="text-white" strokeWidth={3} />}
-                  </button>
-                  <span className={`flex-1 text-sm ${s.done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
-                    {s.title}
-                  </span>
-                  <button type="button" onClick={() => removeSubtask(s.id)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500 transition-all">
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <input
-              type="text" value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
-              placeholder={t.detail.addSubtask}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }}
-              className="flex-1 h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button type="button" onClick={addSubtask}
-              disabled={!newSubtask.trim()}
-              className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 transition-colors">
-              <Plus size={13} />
-            </button>
-          </div>
         </div>
       </div>
 
