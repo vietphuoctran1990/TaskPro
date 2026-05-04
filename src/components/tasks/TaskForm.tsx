@@ -221,7 +221,19 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     form.recurrenceType === 'monthly' ? t.recurrence.months : ''
 
   return (
-    <Modal open={open} onClose={onClose} title={task ? t.form.editTask : t.form.newTask} size="lg">
+    <Modal
+      open={open} onClose={onClose}
+      title={task ? t.form.editTask : t.form.newTask}
+      size="lg"
+      footer={
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+          <Button variant="ghost" onClick={onClose}>{t.form.cancel}</Button>
+          <Button variant="primary" onClick={handleSubmit}>
+            {task ? t.form.save : t.form.create}
+          </Button>
+        </div>
+      }
+    >
       <div className="px-6 py-5 space-y-4">
         <Input
           label={t.form.title} id="task-title" placeholder={t.form.titlePlaceholder}
@@ -445,13 +457,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             />
           )}
         </div>
-      </div>
-
-      <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
-        <Button variant="ghost" onClick={onClose}>{t.form.cancel}</Button>
-        <Button variant="primary" onClick={handleSubmit}>
-          {task ? t.form.save : t.form.create}
-        </Button>
       </div>
     </Modal>
   )
