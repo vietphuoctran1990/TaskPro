@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   Calendar, CheckSquare, Clock, MessageSquare,
-  Pencil, Plus, Send, Timer, Trash2, X,
+  Pencil, Plus, Send, Timer, Trash2, X, ExternalLink,
 } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
@@ -10,6 +10,7 @@ import SLABadge from '../sla/SLABadge'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import { cn, formatDateTime, getDeadline, getTimeRemaining } from '../../lib/utils'
+import { googleCalendarUrl } from '../../lib/ical'
 import type { Task } from '../../types'
 
 interface TaskDetailProps {
@@ -134,10 +135,18 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                     }
                   </span>
                 </div>
-                <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
-                  <Calendar size={11} />
-                  {formatDateTime(task.dueDate, task.dueTime)}
-                  {task.slaHours && <span className="text-slate-400">· {task.slaHours}h {t.detail.slaWindow}</span>}
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <Calendar size={11} />
+                    {formatDateTime(task.dueDate, task.dueTime)}
+                    {task.slaHours && <span className="text-slate-400">· {task.slaHours}h {t.detail.slaWindow}</span>}
+                  </div>
+                  {task.dueDate && (
+                    <a href={googleCalendarUrl(task)} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[11px] text-indigo-500 hover:text-indigo-700 transition-colors font-medium">
+                      <ExternalLink size={10} /> Google Calendar
+                    </a>
+                  )}
                 </div>
               </div>
             )}

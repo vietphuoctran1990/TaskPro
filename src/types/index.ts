@@ -52,6 +52,7 @@ export interface Project {
   name: string
   color: string
   description: string
+  notes: string
 }
 
 export interface AppState {

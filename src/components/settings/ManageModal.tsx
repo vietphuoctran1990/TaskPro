@@ -199,7 +199,7 @@ function AddProjectForm({ onDone }: { onDone: () => void }) {
 
   const submit = () => {
     if (!name.trim()) return
-    dispatch({ type: 'ADD_PROJECT', payload: { name: name.trim(), description: desc.trim(), color } })
+    dispatch({ type: 'ADD_PROJECT', payload: { name: name.trim(), description: desc.trim(), color, notes: '' } })
     setName(''); setDesc(''); setColor(COLORS[0]); onDone()
   }
 

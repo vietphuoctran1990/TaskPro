@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2 } from 'lucide-react'
+import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
@@ -9,9 +9,9 @@ import type { Project } from '../../types'
 
 const PROJECT_COLORS = ['#6366f1','#0ea5e9','#f59e0b','#22c55e','#ec4899','#ef4444','#8b5cf6','#14b8a6','#f97316','#06b6d4']
 
-interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void; onManage?: (tab: 'projects' | 'labels') => void }
+interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void; onManage?: (tab: 'projects' | 'labels') => void; onNotes?: (project: Project) => void }
 
-export default function Sidebar({ onClose, mobile, onSync, onManage }: SidebarProps) {
+export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: SidebarProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [projectsOpen, setProjectsOpen] = useState(true)
@@ -33,7 +33,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage }: SidebarPr
 
   const handleAddProject = () => {
     if (!newName.trim()) return
-    dispatch({ type: 'ADD_PROJECT', payload: { name: newName.trim(), color: newColor, description: '' } })
+    dispatch({ type: 'ADD_PROJECT', payload: { name: newName.trim(), color: newColor, description: '', notes: '' } })
     setNewName(''); setNewColor(PROJECT_COLORS[0]); setAddingProject(false)
   }
 
@@ -84,7 +84,8 @@ export default function Sidebar({ onClose, mobile, onSync, onManage }: SidebarPr
                 <ProjectItem key={p.id} project={p}
                   active={state.activeProjectId === p.id}
                   count={state.tasks.filter(tk => tk.projectId === p.id).length}
-                  onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: p.id }); onClose?.() }} />
+                  onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: p.id }); onClose?.() }}
+                  onNotes={onNotes ? () => onNotes(p) : undefined} />
               ))}
               {addingProject ? (
                 <div className="px-2 pt-2 pb-1 space-y-2">
@@ -172,14 +173,26 @@ export default function Sidebar({ onClose, mobile, onSync, onManage }: SidebarPr
   )
 }
 
-function ProjectItem({ project, active, count, onClick }: { project: Project; active: boolean; count: number; onClick: () => void }) {
+function ProjectItem({ project, active, count, onClick, onNotes }: { project: Project; active: boolean; count: number; onClick: () => void; onNotes?: () => void }) {
   return (
-    <button onClick={onClick} className={cn('w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+    <div className={cn('group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
       active ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-100')}>
-      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
-      <span className="flex-1 text-left truncate">{project.name}</span>
-      <span className="text-xs opacity-50">{count}</span>
-    </button>
+      <button onClick={onClick} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
+        <span className="flex-1 truncate">{project.name}</span>
+        <span className="text-xs opacity-50">{count}</span>
+      </button>
+      {onNotes && (
+        <button onClick={e => { e.stopPropagation(); onNotes() }}
+          title="Ghi chú dự án"
+          className={cn(
+            'shrink-0 p-0.5 rounded transition-colors opacity-0 group-hover:opacity-100',
+            project.notes ? 'text-indigo-400 opacity-100' : 'text-slate-300 hover:text-indigo-500'
+          )}>
+          <FileText size={12} />
+        </button>
+      )}
+    </div>
   )
 }
 

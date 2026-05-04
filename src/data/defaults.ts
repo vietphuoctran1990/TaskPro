@@ -1,10 +1,10 @@
 import type { Project, Label, Task } from '../types'
 
 export const DEFAULT_PROJECTS: Project[] = [
-  { id: 'p1', name: 'Product Design', color: '#6366f1', description: 'UI/UX design tasks' },
-  { id: 'p2', name: 'Engineering', color: '#0ea5e9', description: 'Development tasks' },
-  { id: 'p3', name: 'Marketing', color: '#f59e0b', description: 'Marketing campaigns' },
-  { id: 'p4', name: 'Support', color: '#ef4444', description: 'Customer support tickets' },
+  { id: 'p1', name: 'Product Design', color: '#6366f1', description: 'UI/UX design tasks', notes: '' },
+  { id: 'p2', name: 'Engineering', color: '#0ea5e9', description: 'Development tasks', notes: '' },
+  { id: 'p3', name: 'Marketing', color: '#f59e0b', description: 'Marketing campaigns', notes: '' },
+  { id: 'p4', name: 'Support', color: '#ef4444', description: 'Customer support tickets', notes: '' },
 ]
 
 export const DEFAULT_LABELS: Label[] = [

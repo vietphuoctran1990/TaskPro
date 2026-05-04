@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react'
-import { Calendar, Clock, Timer, Repeat, Plus, Check, X } from 'lucide-react'
+import { Calendar, Clock, Timer, Repeat, Plus, Check, X, Trash2 } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { Input, Textarea } from '../ui/Input'
 import Select from '../ui/Select'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
-import type { Task, Priority, Status, Recurrence } from '../../types'
+import type { Task, Priority, Status, Recurrence, Subtask } from '../../types'
 
 interface TaskFormProps {
   open: boolean
@@ -30,6 +30,7 @@ interface FormData {
   recurrenceType: '' | 'daily' | 'weekly' | 'monthly'
   recurrenceInterval: string
   recurrenceEndDate: string
+  subtasks: Subtask[]
 }
 
 const PRESET_COLORS = [
@@ -124,6 +125,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     recurrenceType:      task?.recurrence?.type     ?? '',
     recurrenceInterval:  task?.recurrence?.interval ? String(task.recurrence.interval) : '1',
     recurrenceEndDate:   task?.recurrence?.endDate  ?? '',
+    subtasks:            task?.subtasks ?? [],
   }))
   const [errors, setErrors] = useState<{ title?: string }>({})
   const [slaPreset, setSlaPreset] = useState(() => {
@@ -133,6 +135,19 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   })
   const [addingProject, setAddingProject] = useState(false)
   const [addingLabel,   setAddingLabel]   = useState(false)
+  const [newSubtask,    setNewSubtask]    = useState('')
+
+  const addSubtask = () => {
+    const title = newSubtask.trim()
+    if (!title) return
+    const sub: Subtask = { id: crypto.randomUUID(), title, done: false }
+    setForm(prev => ({ ...prev, subtasks: [...prev.subtasks, sub] }))
+    setNewSubtask('')
+  }
+  const removeSubtask = (id: string) =>
+    setForm(prev => ({ ...prev, subtasks: prev.subtasks.filter(s => s.id !== id) }))
+  const toggleSubtask = (id: string) =>
+    setForm(prev => ({ ...prev, subtasks: prev.subtasks.map(s => s.id === id ? { ...s, done: !s.done } : s) }))
 
   const set = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -153,7 +168,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
 
   const handleAddProject = (name: string, color: string) => {
     const id = crypto.randomUUID()
-    dispatch({ type: 'ADD_PROJECT', payload: { id, name, color, description: '' } })
+    dispatch({ type: 'ADD_PROJECT', payload: { id, name, color, description: '', notes: '' } })
     set('projectId', id)
     setAddingProject(false)
   }
@@ -188,7 +203,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
       dueTime:        form.dueTime || null,
       slaHours:       form.slaHours ? Number(form.slaHours) : null,
       estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : null,
-      subtasks:       task?.subtasks ?? [],
+      subtasks:       form.subtasks,
       comments:       task?.comments ?? [],
       recurrence,
     }
@@ -390,6 +405,51 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
               onCancel={() => setAddingLabel(false)}
             />
           )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+        <Button variant="ghost" onClick={onClose}>{t.form.cancel}</Button>
+        <Button variant="primary" onClick={handleSubmit}>
+          {task ? t.form.save : t.form.create}
+        </Button>
+        {/* Subtasks */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-700">{t.detail.subtasks}</span>
+          {form.subtasks.length > 0 && (
+            <div className="space-y-1">
+              {form.subtasks.map(s => (
+                <div key={s.id} className="flex items-center gap-2 group">
+                  <button type="button" onClick={() => toggleSubtask(s.id)}
+                    className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      s.done ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 hover:border-indigo-400'
+                    }`}>
+                    {s.done && <Check size={10} className="text-white" strokeWidth={3} />}
+                  </button>
+                  <span className={`flex-1 text-sm ${s.done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                    {s.title}
+                  </span>
+                  <button type="button" onClick={() => removeSubtask(s.id)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500 transition-all">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text" value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
+              placeholder={t.detail.addSubtask}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }}
+              className="flex-1 h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button type="button" onClick={addSubtask}
+              disabled={!newSubtask.trim()}
+              className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 transition-colors">
+              <Plus size={13} />
+            </button>
+          </div>
         </div>
       </div>
 

@@ -13,12 +13,13 @@ import TaskDetail from './components/tasks/TaskDetail'
 import SyncModal from './components/sync/SyncModal'
 import ManageModal from './components/settings/ManageModal'
 import AuthModal from './components/auth/AuthModal'
+import ProjectNotesModal from './components/notes/ProjectNotesModal'
 import PomodoroModal from './components/focus/PomodoroModal'
 import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
 import OfflineToast from './components/pwa/OfflineToast'
 import { usePWA } from './hooks/usePWA'
-import type { Status, Task } from './types'
+import type { Status, Task, Project } from './types'
 
 function AppShell() {
   const { state, dispatch } = useApp()
@@ -33,7 +34,8 @@ function AppShell() {
   const [authOpen, setAuthOpen]   = useState(false)
   const [manageTab, setManageTab] = useState<'projects' | 'labels'>('projects')
   const [manageOpen, setManageOpen] = useState(false)
-  const [focusTask, setFocusTask] = useState<Task | null>(null)
+  const [focusTask,   setFocusTask]   = useState<Task | null>(null)
+  const [notesProject, setNotesProject] = useState<Project | null>(null)
 
   const handleManage = useCallback((tab: 'projects' | 'labels') => {
     setManageTab(tab)
@@ -68,7 +70,7 @@ function AppShell() {
     <div className="flex h-[100dvh] bg-slate-50 overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex h-full">
-        <Sidebar onSync={() => setSyncOpen(true)} onManage={handleManage} />
+        <Sidebar onSync={() => setSyncOpen(true)} onManage={handleManage} onNotes={setNotesProject} />
       </div>
 
       {/* Mobile sidebar overlay */}
@@ -78,7 +80,8 @@ function AppShell() {
           <div className="fixed inset-y-0 left-0 z-50 w-64 lg:hidden">
             <Sidebar mobile onClose={() => setSidebarOpen(false)}
               onSync={() => { setSidebarOpen(false); setSyncOpen(true) }}
-              onManage={handleManage} />
+              onManage={handleManage}
+              onNotes={p => { setSidebarOpen(false); setNotesProject(p) }} />
           </div>
         </>
       )}
@@ -124,6 +127,7 @@ function AppShell() {
       </div>
 
       {/* Modals */}
+      <ProjectNotesModal project={notesProject} onClose={() => setNotesProject(null)} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
       <ManageModal open={manageOpen} onClose={() => setManageOpen(false)} initialTab={manageTab} />
       <SyncModal open={syncOpen} onClose={() => setSyncOpen(false)} />

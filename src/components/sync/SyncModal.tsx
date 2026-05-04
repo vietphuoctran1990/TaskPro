@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react'
-import { Download, Upload, Copy, Check, X, RefreshCw } from 'lucide-react'
+import { Download, Upload, Copy, Check, X, RefreshCw, CalendarDays } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
+import { downloadICS } from '../../lib/ical'
 import type { AppState } from '../../types'
 
 interface SyncModalProps {
@@ -118,10 +119,20 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
               <p>📋 {state.tasks.length} tasks</p>
               <p>📁 {state.projects.length} projects</p>
               <p>🏷️ {state.labels.length} labels</p>
+              <p>📅 {state.tasks.filter(t => t.dueDate).length} tasks có deadline</p>
             </div>
             <Button variant="primary" onClick={handleExport} className="w-full justify-center">
               <Download size={14} /> {t.sync.exportBtn}
             </Button>
+            <div className="border-t border-slate-100 pt-4">
+              <p className="text-sm font-medium text-slate-700 mb-1">Xuất lịch (.ics)</p>
+              <p className="text-xs text-slate-500 mb-3">
+                Nhập vào Google Calendar, Apple Calendar, Outlook — các task có deadline sẽ xuất hiện trên lịch.
+              </p>
+              <Button variant="secondary" onClick={() => downloadICS(state.tasks, state.projects)} className="w-full justify-center">
+                <CalendarDays size={14} /> Tải file .ics
+              </Button>
+            </div>
           </div>
         )}
 
