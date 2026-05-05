@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useState, useRef } from 'react'
 import {
   ChevronDown, ChevronUp, ChevronsUpDown,
   MoreHorizontal, Pencil, Timer, Trash2, CheckSquare, Calendar,
@@ -54,15 +54,29 @@ function SortHeader({ field, label, currentField, currentDir, onSort, className 
 function TaskMenu({ onEdit, onDelete, onFocus }: { onEdit: () => void; onDelete: () => void; onFocus?: () => void }) {
   const t = useT()
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+    }
+    setOpen(v => !v)
+  }
+
   return (
-    <div className="relative" onClick={e => e.stopPropagation()}>
-      <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setOpen(v => !v)}>
+    <div onClick={e => e.stopPropagation()}>
+      <Button ref={btnRef} variant="ghost" size="icon" className="w-7 h-7" onClick={handleOpen}>
         <MoreHorizontal size={14} />
       </Button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-8 z-20 w-36 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-50 w-36 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden"
+            style={{ top: pos.top, right: pos.right }}
+          >
             <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
               onClick={() => { setOpen(false); onEdit() }}>
               <Pencil size={13} /> {t.detail.edit}
