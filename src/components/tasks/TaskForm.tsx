@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Calendar, Clock, Timer, Repeat, Plus, Check, X, Trash2 } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
@@ -111,7 +111,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     { label: t.sla.custom,     value: 'custom' },
   ]
 
-  const [form, setForm] = useState<FormData>(() => ({
+  const buildForm = useCallback((): FormData => ({
     title:               task?.title          ?? '',
     description:         task?.description    ?? '',
     status:              task?.status         ?? defaultStatus,
@@ -126,16 +126,31 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     recurrenceInterval:  task?.recurrence?.interval ? String(task.recurrence.interval) : '1',
     recurrenceEndDate:   task?.recurrence?.endDate  ?? '',
     subtasks:            task?.subtasks ?? [],
-  }))
-  const [errors, setErrors] = useState<{ title?: string }>({})
-  const [slaPreset, setSlaPreset] = useState(() => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [task, defaultStatus, defaultDate, state.projects])
+
+  const buildSlaPreset = useCallback(() => {
     if (!task?.slaHours) return ''
-    const match = SLA_PRESETS.find(p => p.value === String(task.slaHours))
-    return match ? match.value : 'custom'
-  })
+    return (['4', '8', '24', '72'].includes(String(task.slaHours)) ? String(task.slaHours) : 'custom')
+  }, [task])
+
+  const [form, setForm] = useState<FormData>(buildForm)
+  const [errors, setErrors] = useState<{ title?: string }>({})
+  const [slaPreset, setSlaPreset] = useState(buildSlaPreset)
   const [addingProject, setAddingProject] = useState(false)
   const [addingLabel,   setAddingLabel]   = useState(false)
   const [newSubtask,    setNewSubtask]    = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    setForm(buildForm())
+    setErrors({})
+    setSlaPreset(buildSlaPreset())
+    setAddingProject(false)
+    setAddingLabel(false)
+    setNewSubtask('')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, task])
 
   const addSubtask = () => {
     const title = newSubtask.trim()
