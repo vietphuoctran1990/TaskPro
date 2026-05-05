@@ -116,8 +116,17 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
 
   if (filteredTasks.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-16 text-center">
-        <p className="text-slate-400 text-sm mb-3">{t.list.noTasks}</p>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-16 flex flex-col items-center gap-4">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" className="opacity-20">
+          <rect x="8" y="14" width="48" height="6" rx="3" fill="#6366f1"/>
+          <rect x="8" y="26" width="36" height="5" rx="2.5" fill="#6366f1"/>
+          <rect x="8" y="37" width="28" height="5" rx="2.5" fill="#6366f1"/>
+          <rect x="8" y="48" width="20" height="5" rx="2.5" fill="#6366f1"/>
+        </svg>
+        <div className="text-center">
+          <p className="text-slate-500 text-sm font-medium mb-1">{t.list.noTasks}</p>
+          <p className="text-slate-400 text-xs">Tạo công việc đầu tiên để bắt đầu</p>
+        </div>
         <Button variant="primary" size="sm" onClick={onAddTask}>+ {t.header.newTask}</Button>
       </div>
     )

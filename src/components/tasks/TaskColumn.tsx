@@ -1,10 +1,11 @@
 import { memo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus } from 'lucide-react'
+import { Plus, CircleDot, Loader2, Eye, CheckCircle2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import TaskCard from './TaskCard'
 import Button from '../ui/Button'
+import { useT } from '../../i18n'
 import type { Task, Status } from '../../types'
 
 interface Column {
@@ -23,33 +24,38 @@ interface TaskColumnProps {
   onFocusTask?: (task: Task) => void
 }
 
+const COLUMN_STYLES: Record<Status, {
+  header: string; badge: string; dot: string; dropBg: string; emptyIcon: React.ElementType; emptyColor: string
+}> = {
+  todo:        { header: 'text-slate-700',   badge: 'bg-slate-100 text-slate-600',    dot: 'bg-slate-400',   dropBg: 'bg-slate-50 dark:bg-slate-800/40',      emptyIcon: CircleDot,    emptyColor: 'text-slate-300' },
+  in_progress: { header: 'text-blue-700',    badge: 'bg-blue-50 text-blue-600',       dot: 'bg-blue-500',    dropBg: 'bg-blue-50/40 dark:bg-blue-900/10',     emptyIcon: Loader2,      emptyColor: 'text-blue-200' },
+  in_review:   { header: 'text-violet-700',  badge: 'bg-violet-50 text-violet-600',   dot: 'bg-violet-500',  dropBg: 'bg-violet-50/40 dark:bg-violet-900/10', emptyIcon: Eye,          emptyColor: 'text-violet-200' },
+  done:        { header: 'text-emerald-700', badge: 'bg-emerald-50 text-emerald-600', dot: 'bg-emerald-500', dropBg: 'bg-emerald-50/30 dark:bg-emerald-900/10', emptyIcon: CheckCircle2, emptyColor: 'text-emerald-200' },
+}
+
 const TaskColumn = memo(function TaskColumn({
-  column,
-  tasks,
-  onAddTask,
-  onEditTask,
-  onViewTask,
-  onFocusTask,
+  column, tasks, onAddTask, onEditTask, onViewTask, onFocusTask,
 }: TaskColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
+  const t = useT()
+  const s = COLUMN_STYLES[column.id]
+  const EmptyIcon = s.emptyIcon
 
   return (
     <div className="flex flex-col w-72 shrink-0">
       {/* Column header */}
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2">
-          <span className={cn('w-2 h-2 rounded-full', column.dotColor)} />
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          <span className={cn('w-2 h-2 rounded-full', s.dot)} />
+          <span className={cn('text-sm font-semibold', s.header)}>
             {column.label}
           </span>
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span className={cn('inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold', s.badge)}>
             {tasks.length}
           </span>
         </div>
         <Button
-          variant="ghost"
-          size="icon"
-          className="w-7 h-7"
+          variant="ghost" size="icon" className="w-7 h-7"
           onClick={() => onAddTask(column.id)}
           aria-label={`Add task to ${column.label}`}
         >
@@ -64,31 +70,26 @@ const TaskColumn = memo(function TaskColumn({
           'flex-1 flex flex-col gap-2.5 min-h-[200px] rounded-xl p-2 transition-colors duration-200',
           isOver
             ? 'bg-indigo-50 dark:bg-indigo-900/20 border-2 border-dashed border-indigo-300 dark:border-indigo-700'
-            : 'bg-slate-50 dark:bg-slate-800/40'
+            : s.dropBg
         )}
       >
-        <SortableContext
-          items={tasks.map(t => t.id)}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map(task => (
             <TaskCard
-              key={task.id}
-              task={task}
-              onEdit={onEditTask}
-              onView={onViewTask}
-              onFocus={onFocusTask}
+              key={task.id} task={task}
+              onEdit={onEditTask} onView={onViewTask} onFocus={onFocusTask}
             />
           ))}
         </SortableContext>
 
         {tasks.length === 0 && (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 py-6">
+            <EmptyIcon size={24} className={cn('opacity-40', s.emptyColor)} />
             <button
               onClick={() => onAddTask(column.id)}
               className="text-xs text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors flex items-center gap-1"
             >
-              <Plus size={12} /> Add task
+              <Plus size={11} /> {t.header.newTask}
             </button>
           </div>
         )}

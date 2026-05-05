@@ -9,6 +9,7 @@ import { PriorityBadge, Badge } from '../ui/Badge'
 import SLABadge from '../sla/SLABadge'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
+import { useToast } from '../../context/ToastContext'
 import { cn, formatDateTime, getDeadline, getTimeRemaining } from '../../lib/utils'
 import { googleCalendarUrl } from '../../lib/ical'
 import type { Task } from '../../types'
@@ -23,6 +24,7 @@ interface TaskDetailProps {
 export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetailProps) {
   const { state, dispatch } = useApp()
   const t = useT()
+  const { toast } = useToast()
   const [newSubtask, setNewSubtask] = useState('')
   const [newComment, setNewComment] = useState('')
   const [, tick] = useState(0)
@@ -74,8 +76,9 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
   const handleDelete = useCallback(() => {
     if (!task) return
     dispatch({ type: 'DELETE_TASK', payload: task.id })
+    toast(state.language === 'vi' ? 'Đã xóa công việc' : 'Task deleted', 'info')
     onClose()
-  }, [task, dispatch, onClose])
+  }, [task, dispatch, onClose, toast, state.language])
 
   const statusKeys = ['todo', 'in_progress', 'in_review', 'done'] as const
 

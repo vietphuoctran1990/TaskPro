@@ -126,10 +126,10 @@ export default function Header({ onAddTask, onOpenSidebar, onOpenAuth }: HeaderP
 
         {/* Search */}
         <div className="hidden md:flex relative">
-          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="search" placeholder={t.header.search} value={state.searchQuery}
             onChange={e => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
-            className="h-8 pl-8 pr-3 w-40 rounded-lg border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+            className="h-8 pl-8 pr-3 w-36 focus:w-56 rounded-lg border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all duration-300"
           />
         </div>
 

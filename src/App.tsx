@@ -18,6 +18,7 @@ import PomodoroModal from './components/focus/PomodoroModal'
 import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
 import OfflineToast from './components/pwa/OfflineToast'
+import { ToastProvider } from './context/ToastContext'
 import { usePWA } from './hooks/usePWA'
 import type { Status, Task, Project } from './types'
 
@@ -170,7 +171,9 @@ export default function App() {
     <AppProvider>
       <AuthProvider>
         <I18nProvider>
-          <AppShell />
+          <ToastProvider>
+            <AppShell />
+          </ToastProvider>
         </I18nProvider>
       </AuthProvider>
     </AppProvider>

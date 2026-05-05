@@ -13,22 +13,35 @@ interface DashboardViewProps {
   onAddTask: () => void
 }
 
+function DonutChart({ pct, color }: { pct: number; color: string }) {
+  const r = 34
+  const circ = 2 * Math.PI * r
+  const offset = circ - (pct / 100) * circ
+  return (
+    <svg width="88" height="88" viewBox="0 0 88 88" className="shrink-0">
+      <circle cx="44" cy="44" r={r} fill="none" stroke="#f1f5f9" strokeWidth="9" />
+      <circle
+        cx="44" cy="44" r={r} fill="none" stroke={color} strokeWidth="9"
+        strokeDasharray={`${circ} ${circ}`}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform="rotate(-90 44 44)"
+        style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+      />
+      <text x="44" y="48" textAnchor="middle" fontSize="15" fontWeight="700" fill={color}>{pct}%</text>
+    </svg>
+  )
+}
+
 function StatCard({
-  label, value, sub, color, icon,
+  label, value, sub, gradient, iconBg, icon,
 }: {
   label: string; value: number | string; sub?: string
-  color: 'indigo' | 'blue' | 'emerald' | 'red'
-  icon: React.ReactNode
+  gradient: string; iconBg: string; icon: React.ReactNode
 }) {
-  const colors = {
-    indigo:  'bg-indigo-50 text-indigo-600',
-    blue:    'bg-blue-50 text-blue-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    red:     'bg-red-50 text-red-600',
-  }
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4">
-      <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center shrink-0', colors[color])}>
+    <div className={cn('rounded-2xl border p-4 flex items-center gap-4', gradient)}>
+      <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-white', iconBg)}>
         {icon}
       </div>
       <div className="min-w-0">
@@ -46,17 +59,15 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
 
   const today = new Date().toISOString().slice(0, 10)
 
-  // ── Stats ────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const total       = filteredTasks.length
-    const inProgress  = filteredTasks.filter(t => t.status === 'in_progress').length
-    const doneTotal   = filteredTasks.filter(t => t.status === 'done').length
-    const doneToday   = filteredTasks.filter(t => t.status === 'done' && t.updatedAt.slice(0, 10) === today).length
-    const breached    = filteredTasks.filter(t => getSLAStatus(t) === 'breached').length
+    const total      = filteredTasks.length
+    const inProgress = filteredTasks.filter(t => t.status === 'in_progress').length
+    const doneTotal  = filteredTasks.filter(t => t.status === 'done').length
+    const doneToday  = filteredTasks.filter(t => t.status === 'done' && t.updatedAt.slice(0, 10) === today).length
+    const breached   = filteredTasks.filter(t => getSLAStatus(t) === 'breached').length
     return { total, inProgress, doneTotal, doneToday, breached }
   }, [filteredTasks, today])
 
-  // ── SLA health ───────────────────────────────────────────────────────────
   const slaHealth = useMemo(() => {
     const nonDone = filteredTasks.filter(t => t.status !== 'done')
     if (!nonDone.length) return { pct: 100, onTrack: 0, atRisk: 0, critical: 0, breached: 0 }
@@ -67,7 +78,6 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
     return { pct: Math.round((onTrack / nonDone.length) * 100), onTrack, atRisk, critical, breached }
   }, [filteredTasks])
 
-  // ── Weekly activity (last 7 days) ─────────────────────────────────────────
   const weekData = useMemo(() => {
     const locale = state.language === 'vi' ? 'vi-VN' : 'en-US'
     return Array.from({ length: 7 }, (_, i) => {
@@ -82,7 +92,6 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
   }, [filteredTasks, state.language, today])
   const maxWeek = Math.max(...weekData.map(d => d.count), 1)
 
-  // ── Upcoming deadlines ───────────────────────────────────────────────────
   const upcoming = useMemo(() =>
     filteredTasks
       .filter(t => t.status !== 'done' && getDeadline(t))
@@ -91,7 +100,6 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
     [filteredTasks]
   )
 
-  // ── Project breakdown ────────────────────────────────────────────────────
   const projectStats = useMemo(() =>
     state.projects
       .map(p => {
@@ -104,27 +112,43 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
     [state.projects, filteredTasks]
   )
 
-  const healthColor =
-    slaHealth.pct >= 80 ? 'text-emerald-600' :
-    slaHealth.pct >= 50 ? 'text-amber-600' : 'text-red-600'
-
-  const healthBarColor =
-    slaHealth.pct >= 80 ? 'bg-emerald-500' :
-    slaHealth.pct >= 50 ? 'bg-amber-500' : 'bg-red-500'
+  const donutColor =
+    slaHealth.pct >= 80 ? '#10b981' :
+    slaHealth.pct >= 50 ? '#f59e0b' : '#ef4444'
 
   return (
     <div className="space-y-4 pb-4">
-      {/* ── Stat cards ── */}
+      {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label={t.dashboard.totalTasks}      value={stats.total}      sub={t.dashboard.done(stats.doneTotal)}      color="indigo"  icon={<BarChart3 size={20} />} />
-        <StatCard label={t.dashboard.inProgress}      value={stats.inProgress}                                               color="blue"    icon={<TrendingUp size={20} />} />
-        <StatCard label={t.dashboard.completedToday}  value={stats.doneToday}                                               color="emerald" icon={<CheckCircle2 size={20} />} />
-        <StatCard label={t.dashboard.slaBreached}     value={stats.breached}                                                color="red"     icon={<AlertTriangle size={20} />} />
+        <StatCard
+          label={t.dashboard.totalTasks} value={stats.total} sub={t.dashboard.done(stats.doneTotal)}
+          gradient="bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-100"
+          iconBg="bg-gradient-to-br from-indigo-500 to-violet-600"
+          icon={<BarChart3 size={20} />}
+        />
+        <StatCard
+          label={t.dashboard.inProgress} value={stats.inProgress}
+          gradient="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-100"
+          iconBg="bg-gradient-to-br from-blue-500 to-cyan-500"
+          icon={<TrendingUp size={20} />}
+        />
+        <StatCard
+          label={t.dashboard.completedToday} value={stats.doneToday}
+          gradient="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100"
+          iconBg="bg-gradient-to-br from-emerald-500 to-teal-500"
+          icon={<CheckCircle2 size={20} />}
+        />
+        <StatCard
+          label={t.dashboard.slaBreached} value={stats.breached}
+          gradient="bg-gradient-to-br from-red-50 to-orange-50 border-red-100"
+          iconBg="bg-gradient-to-br from-red-500 to-orange-500"
+          icon={<AlertTriangle size={20} />}
+        />
       </div>
 
-      {/* ── Weekly activity + SLA health ── */}
+      {/* Weekly activity + SLA health */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Weekly bar chart */}
+        {/* Weekly bar chart with gradient bars */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h3 className="text-sm font-semibold text-slate-700 mb-4">{t.dashboard.weeklyActivity}</h3>
           <div className="flex items-end gap-2 h-28">
@@ -133,14 +157,17 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
                 <span className="text-xs font-semibold text-slate-600 min-h-[1rem]">
                   {count > 0 ? count : ''}
                 </span>
-                <div className="w-full flex flex-col justify-end" style={{ height: '72px' }}>
+                <div className="w-full flex flex-col justify-end rounded-t overflow-hidden" style={{ height: '72px' }}>
                   <div
-                    className={cn(
-                      'w-full rounded-t transition-all',
-                      isToday ? 'bg-indigo-500' : 'bg-indigo-200',
-                      count === 0 && 'bg-slate-100'
-                    )}
-                    style={{ height: `${Math.max((count / maxWeek) * 72, count > 0 ? 8 : 4)}px` }}
+                    className="w-full rounded-t transition-all duration-500"
+                    style={{
+                      height: `${Math.max((count / maxWeek) * 72, count > 0 ? 8 : 4)}px`,
+                      background: count === 0
+                        ? '#f1f5f9'
+                        : isToday
+                          ? 'linear-gradient(to top, #6366f1, #8b5cf6)'
+                          : 'linear-gradient(to top, #a5b4fc, #c4b5fd)',
+                    }}
                   />
                 </div>
                 <span className={cn('text-xs', isToday ? 'text-indigo-600 font-semibold' : 'text-slate-400')}>
@@ -151,44 +178,30 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
           </div>
         </div>
 
-        {/* SLA health */}
+        {/* SLA health with donut chart */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h3 className="text-sm font-semibold text-slate-700 mb-4">{t.dashboard.slaHealth}</h3>
-          <div className="flex items-center gap-5 mb-4">
-            <div className={cn('text-5xl font-bold tabular-nums', healthColor)}>
-              {slaHealth.pct}%
+          <div className="flex items-center gap-5 mb-3">
+            <DonutChart pct={slaHealth.pct} color={donutColor} />
+            <div className="flex-1 space-y-1.5">
+              {[
+                { label: t.dashboard.onTrack,     value: slaHealth.onTrack,  cls: 'bg-emerald-50 text-emerald-700' },
+                { label: t.dashboard.atRisk,      value: slaHealth.atRisk,   cls: 'bg-amber-50 text-amber-700' },
+                { label: t.dashboard.critical,    value: slaHealth.critical, cls: 'bg-orange-50 text-orange-700' },
+                { label: t.dashboard.slaBreached, value: slaHealth.breached, cls: 'bg-red-50 text-red-700' },
+              ].map(({ label, value, cls }) => (
+                <div key={label} className={cn('flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium', cls)}>
+                  <span>{label}</span>
+                  <span className="font-bold">{value}</span>
+                </div>
+              ))}
             </div>
-            <div className="flex-1">
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-1">
-                <div className={cn('h-full rounded-full transition-all', healthBarColor)}
-                  style={{ width: `${slaHealth.pct}%` }} />
-              </div>
-              <p className="text-xs text-slate-400">
-                {slaHealth.onTrack} {t.dashboard.onTrack} ·{' '}
-                {slaHealth.atRisk} {t.dashboard.atRisk} ·{' '}
-                {slaHealth.critical} {t.dashboard.critical}
-              </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: t.dashboard.onTrack,  value: slaHealth.onTrack,  cls: 'bg-emerald-50 text-emerald-700' },
-              { label: t.dashboard.atRisk,   value: slaHealth.atRisk,   cls: 'bg-amber-50 text-amber-700' },
-              { label: t.dashboard.critical, value: slaHealth.critical, cls: 'bg-orange-50 text-orange-700' },
-              { label: t.dashboard.slaBreached, value: slaHealth.breached, cls: 'bg-red-50 text-red-700' },
-            ].map(({ label, value, cls }) => (
-              <div key={label} className={cn('flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium', cls)}>
-                <span>{label}</span>
-                <span className="font-bold text-sm">{value}</span>
-              </div>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* ── Upcoming deadlines + project breakdown ── */}
+      {/* Upcoming deadlines + project breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Upcoming deadlines */}
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -198,8 +211,8 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
             <Button variant="ghost" size="sm" onClick={onAddTask}>+ {t.header.newTask}</Button>
           </div>
           {upcoming.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-slate-400">
-              <CheckCircle2 size={24} className="text-emerald-400" />
+            <div className="flex flex-col items-center gap-2 py-10 text-slate-400">
+              <CheckCircle2 size={28} className="text-emerald-400" />
               <p className="text-xs">{t.dashboard.noDeadlines}</p>
             </div>
           ) : (
@@ -235,7 +248,6 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
           )}
         </div>
 
-        {/* Project breakdown */}
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100">
             <h3 className="text-sm font-semibold text-slate-700">{t.dashboard.projectBreakdown}</h3>
@@ -253,9 +265,7 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
                         {project.name}
                       </span>
-                      <span className="text-xs text-slate-400">
-                        {done}/{total} · {pct}%
-                      </span>
+                      <span className="text-xs text-slate-400">{done}/{total} · {pct}%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                       <div

@@ -47,7 +47,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
       {/* Logo */}
       <div className="flex items-center justify-between px-5 h-14 border-b border-slate-200 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
             <CheckSquare size={14} className="text-white" />
           </div>
           <span className="text-base font-bold text-slate-900 tracking-tight">{t.app.name}</span>

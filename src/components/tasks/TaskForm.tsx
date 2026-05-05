@@ -6,6 +6,7 @@ import { Input, Textarea } from '../ui/Input'
 import Select from '../ui/Select'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
+import { useToast } from '../../context/ToastContext'
 import type { Task, Priority, Status, Recurrence, Subtask } from '../../types'
 
 interface TaskFormProps {
@@ -101,6 +102,7 @@ function InlineCreate({
 export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', defaultDate = '' }: TaskFormProps) {
   const { state, dispatch } = useApp()
   const t = useT()
+  const { toast } = useToast()
 
   const SLA_PRESETS = [
     { label: t.sla.none_preset, value: '' },
@@ -224,8 +226,10 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     }
     if (task) {
       dispatch({ type: 'UPDATE_TASK', payload: { ...payload, id: task.id } })
+      toast(state.language === 'vi' ? 'Đã cập nhật công việc' : 'Task updated', 'success')
     } else {
       dispatch({ type: 'ADD_TASK', payload })
+      toast(state.language === 'vi' ? 'Đã tạo công việc mới' : 'Task created', 'success')
     }
     onClose()
   }

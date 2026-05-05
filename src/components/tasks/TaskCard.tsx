@@ -1,7 +1,7 @@
-import { memo, useState } from 'react'
+import { memo, useState, useRef } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Calendar, CheckSquare, GripVertical, MessageSquare, MoreHorizontal, Pencil, Repeat, Timer, Trash2 } from 'lucide-react'
+import { Calendar, GripVertical, MessageSquare, MoreHorizontal, Pencil, Repeat, Timer, Trash2 } from 'lucide-react'
 import { cn, formatDateTime, getDeadline, getSLAStatus } from '../../lib/utils'
 import { PriorityBadge, Badge } from '../ui/Badge'
 import SLABadge from '../sla/SLABadge'
@@ -18,16 +18,18 @@ interface TaskCardProps {
 }
 
 const PRIORITY_ACCENT: Record<string, string> = {
-  urgent: 'border-t-red-500',
-  high:   'border-t-orange-400',
-  medium: 'border-t-blue-400',
-  low:    'border-t-slate-200',
+  urgent: 'border-l-red-500',
+  high:   'border-l-orange-400',
+  medium: 'border-l-blue-400',
+  low:    'border-l-slate-200',
 }
 
 const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskCardProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
+  const menuBtnRef = useRef<HTMLButtonElement>(null)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
@@ -37,12 +39,21 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
   const deadline = getDeadline(task)
   const sla = getSLAStatus(task)
 
+  const handleMenuOpen = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (menuBtnRef.current) {
+      const r = menuBtnRef.current.getBoundingClientRect()
+      setMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+    }
+    setMenuOpen(v => !v)
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group bg-white rounded-xl border border-slate-200 border-t-2 shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer select-none',
+        'group bg-white rounded-xl border border-slate-200 border-l-[3px] shadow-sm hover:shadow-md hover:scale-[1.015] hover:-translate-y-0.5 transition-all duration-150 cursor-pointer select-none',
         PRIORITY_ACCENT[task.priority],
         isDragging && 'opacity-50 shadow-xl scale-105 z-50',
         task.status === 'done' && 'opacity-60'
@@ -59,17 +70,21 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
         </button>
         <div className="relative ml-auto">
           <Button
+            ref={menuBtnRef}
             variant="ghost" size="icon"
             className="w-6 h-6 opacity-0 group-hover:opacity-100"
-            onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+            onClick={handleMenuOpen}
           >
             <MoreHorizontal size={13} />
           </Button>
           {menuOpen && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-7 z-20 w-36 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
-                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+              <div
+                className="fixed z-50 w-36 bg-white rounded-xl border border-slate-200 shadow-lg"
+                style={{ top: menuPos.top, right: menuPos.right }}
+              >
+                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors rounded-t-xl"
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit(task) }}>
                   <Pencil size={13} /> {t.detail.edit}
                 </button>
@@ -79,7 +94,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
                     <Timer size={13} /> {t.pomodoro.focus}
                   </button>
                 )}
-                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors rounded-b-xl"
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); dispatch({ type: 'DELETE_TASK', payload: task.id }) }}>
                   <Trash2 size={13} /> {t.detail.delete}
                 </button>
@@ -124,13 +139,21 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
           </div>
           <div className="flex items-center gap-2.5">
             {task.subtasks.length > 0 && (
-              <span className={cn(
-                'flex items-center gap-1 text-xs',
-                completedSub === task.subtasks.length ? 'text-emerald-600' : 'text-slate-400'
-              )}>
-                <CheckSquare size={11} />
-                {completedSub}/{task.subtasks.length}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-10 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className={cn('h-full rounded-full transition-all duration-300',
+                      completedSub === task.subtasks.length ? 'bg-emerald-500' : 'bg-indigo-400'
+                    )}
+                    style={{ width: `${task.subtasks.length ? (completedSub / task.subtasks.length) * 100 : 0}%` }}
+                  />
+                </div>
+                <span className={cn('text-xs tabular-nums',
+                  completedSub === task.subtasks.length ? 'text-emerald-600' : 'text-slate-400'
+                )}>
+                  {completedSub}/{task.subtasks.length}
+                </span>
+              </div>
             )}
             {task.comments.length > 0 && (
               <span className="flex items-center gap-1 text-xs text-slate-400">
