@@ -29,8 +29,8 @@ function UserMenu({ onOpenAuth }: { onOpenAuth: () => void }) {
   if (!user) {
     return (
       <button onClick={onOpenAuth}
-        className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors bg-white">
-        <User size={13} />{t.auth.signIn}
+        className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors bg-white">
+        <User size={13} /><span className="hidden sm:inline">{t.auth.signIn}</span>
       </button>
     )
   }
