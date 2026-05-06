@@ -32,7 +32,6 @@ interface FormData {
   recurrenceInterval: string
   recurrenceEndDate: string
   subtasks: Subtask[]
-  links: string[]
 }
 
 const PRESET_COLORS = [
@@ -129,7 +128,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     recurrenceInterval:  task?.recurrence?.interval ? String(task.recurrence.interval) : '1',
     recurrenceEndDate:   task?.recurrence?.endDate  ?? '',
     subtasks:            task?.subtasks ?? [],
-    links:               task?.links ?? [],
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [task, defaultStatus, defaultDate, state.projects])
 
@@ -144,7 +142,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   const [addingProject, setAddingProject] = useState(false)
   const [addingLabel,   setAddingLabel]   = useState(false)
   const [newSubtask,    setNewSubtask]    = useState('')
-  const [newLink,       setNewLink]       = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -154,7 +151,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     setAddingProject(false)
     setAddingLabel(false)
     setNewSubtask('')
-    setNewLink('')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task])
 
@@ -169,16 +165,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     setForm(prev => ({ ...prev, subtasks: prev.subtasks.filter(s => s.id !== id) }))
   const toggleSubtask = (id: string) =>
     setForm(prev => ({ ...prev, subtasks: prev.subtasks.map(s => s.id === id ? { ...s, done: !s.done } : s) }))
-
-  const addLink = () => {
-    const url = newLink.trim()
-    if (!url) return
-    const full = url.startsWith('http') ? url : `https://${url}`
-    setForm(prev => ({ ...prev, links: [...prev.links, full] }))
-    setNewLink('')
-  }
-  const removeLink = (idx: number) =>
-    setForm(prev => ({ ...prev, links: prev.links.filter((_, i) => i !== idx) }))
 
   const set = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -235,7 +221,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
       slaHours:       form.slaHours ? Number(form.slaHours) : null,
       estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : null,
       subtasks:       form.subtasks,
-      links:          form.links,
       comments:       task?.comments ?? [],
       recurrence,
     }
@@ -492,39 +477,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
           )}
         </div>
 
-        {/* Links */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">{t.form.links}</span>
-          {form.links.length > 0 && (
-            <div className="space-y-1.5">
-              {form.links.map((link, idx) => (
-                <div key={idx} className="flex items-center gap-2 group">
-                  <a href={link} target="_blank" rel="noopener noreferrer"
-                    className="flex-1 text-xs text-indigo-600 hover:text-indigo-700 hover:underline truncate"
-                    onClick={e => e.stopPropagation()}>
-                    {link}
-                  </a>
-                  <button type="button" onClick={() => removeLink(idx)}
-                    className="shrink-0 opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500 transition-all">
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <input
-              type="url" value={newLink} onChange={e => setNewLink(e.target.value)}
-              placeholder={t.form.linkPlaceholder}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addLink() } }}
-              className="flex-1 h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button type="button" onClick={addLink} disabled={!newLink.trim()}
-              className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 transition-colors">
-              {t.form.addLink}
-            </button>
-          </div>
-        </div>
       </div>
     </Modal>
   )

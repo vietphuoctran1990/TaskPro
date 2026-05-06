@@ -47,7 +47,6 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 2),
     projectId: 'p1',
     recurrence: null,
-    links: [],
   },
   {
     id: 't2',
@@ -74,7 +73,6 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 1),
     projectId: 'p2',
     recurrence: null,
-    links: [],
   },
   {
     id: 't3',
@@ -93,7 +91,6 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 48),
     projectId: 'p2',
     recurrence: null,
-    links: [],
   },
   {
     id: 't4',
@@ -117,7 +114,6 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 24),
     projectId: 'p3',
     recurrence: null,
-    links: [],
   },
   {
     id: 't5',
@@ -140,7 +136,6 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 24),
     projectId: 'p1',
     recurrence: null,
-    links: [],
   },
   {
     id: 't6',
@@ -163,7 +158,6 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 24 * 2),
     projectId: 'p2',
     recurrence: null,
-    links: [],
   },
   {
     id: 't7',
@@ -182,7 +176,6 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 24),
     projectId: 'p2',
     recurrence: null,
-    links: [],
   },
   {
     id: 't8',
@@ -206,7 +199,6 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 12),
     projectId: 'p1',
     recurrence: null,
-    links: [],
   },
   {
     id: 't9',
@@ -231,7 +223,6 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 1),
     projectId: 'p4',
     recurrence: null,
-    links: [],
   },
   {
     id: 't10',
@@ -250,6 +241,5 @@ export const DEFAULT_TASKS: Task[] = [
     updatedAt: iso(-3600_000 * 12),
     projectId: 'p2',
     recurrence: null,
-    links: [],
   },
 ]

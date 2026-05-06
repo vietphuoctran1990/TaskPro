@@ -40,11 +40,11 @@ export interface Translations {
     description: string; descPlaceholder: string; status: string; priority: string
     project: string; dueDate: string; dueTime: string; slaTimeHint: string
     slaWindow: string; slaWindowHint: string; estimatedHours: string; estPlaceholder: string
-    hours: string; labels: string; links: string; linkPlaceholder: string; addLink: string
+    hours: string; labels: string
     cancel: string; create: string; save: string; titleRequired: string
   }
   detail: {
-    description: string; labels: string; subtasks: string; comments: string; links: string
+    description: string; labels: string; subtasks: string; comments: string
     addSubtask: string; addComment: string; ctrlEnter: string; moveTo: string
     estimated: string; overdueBy: string; remaining: string; slaDeadline: string
     slaWindow: string; edit: string; delete: string

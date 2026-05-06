@@ -229,22 +229,6 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                 </div>
               </div>
 
-              {/* Links */}
-              {task.links && task.links.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t.detail.links}</h4>
-                  <div className="space-y-1.5">
-                    {task.links.map((link, i) => (
-                      <a key={i} href={link} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 hover:underline truncate group">
-                        <ExternalLink size={12} className="shrink-0 text-indigo-400" />
-                        <span className="truncate">{link}</span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Comments */}
               <div>
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">

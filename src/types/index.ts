@@ -42,7 +42,6 @@ export interface Task {
   slaHours: number | null       // max resolution time (hours from creation)
   estimatedHours: number | null // estimated effort
   recurrence: Recurrence | null
-  links: string[]
   createdAt: string
   updatedAt: string
   projectId: string
