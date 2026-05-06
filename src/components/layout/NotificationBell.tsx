@@ -5,12 +5,14 @@ import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import { useNotifications } from '../../hooks/useNotifications'
+import { useAuth } from '../../context/AuthContext'
 
 const NOTIF_OPTIONS = [15, 30, 60] as const
 
 export default function NotificationBell() {
   const { state, dispatch } = useApp()
   const t = useT()
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [permission, setPermission] = useState<NotificationPermission>(
     'Notification' in window ? Notification.permission : 'denied'
@@ -22,6 +24,7 @@ export default function NotificationBell() {
     enabled: permission === 'granted',
     notifBefore: state.notifBefore,
     onMarkDone: (taskId) => dispatch({ type: 'MOVE_TASK', payload: { id: taskId, status: 'done' } }),
+    userId: user?.id,
   })
 
   const alerts = getUpcomingAlerts()

@@ -33,14 +33,33 @@ export default async () => {
     await Promise.allSettled(
       blobs.map(async ({ key }) => {
         const deviceId = key.replace(/^sub:/, '')
-        const [subJson, schedJson] = await Promise.all([
-          store.get(key),
-          store.get(`sched:${deviceId}`),
-        ])
-        if (!subJson || !schedJson) return
+        const subJson  = await store.get(key)
+        if (!subJson) return
 
-        const subscription = JSON.parse(subJson) as webpush.PushSubscription
-        const schedules    = JSON.parse(schedJson) as SchedulePayload[]
+        // Parse subscription — handle both old format (raw subscription) and new format ({ subscription, userId })
+        let subscription: webpush.PushSubscription
+        let userId: string | null = null
+        try {
+          const parsed = JSON.parse(subJson) as Record<string, unknown>
+          if (parsed.subscription && 'userId' in parsed) {
+            subscription = parsed.subscription as webpush.PushSubscription
+            userId = (parsed.userId as string | null) ?? null
+          } else {
+            subscription = parsed as unknown as webpush.PushSubscription
+          }
+        } catch { return }
+
+        // Look up schedule: user-scoped first (cross-device), fall back to device-specific
+        let schedJson: string | null = null
+        if (userId) {
+          schedJson = await store.get(`sched:user:${userId}`)
+        }
+        if (!schedJson) {
+          schedJson = await store.get(`sched:${deviceId}`)
+        }
+        if (!schedJson) return
+
+        const schedules = JSON.parse(schedJson) as SchedulePayload[]
 
         const due = schedules.filter(s => {
           const delay = s.fireAt - now

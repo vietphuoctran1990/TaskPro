@@ -15,12 +15,19 @@ export default async (req: Request, context: Context) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: cors() })
 
   try {
-    const { deviceId, schedules } = await req.json()
+    const { deviceId, schedules, userId } = await req.json()
     if (!deviceId || !Array.isArray(schedules)) return new Response('Missing fields', { status: 400, headers: cors() })
 
     const store = getStore('push-data')
+    // Always store device-specific (fallback for anonymous / old clients)
     await store.set(`sched:${deviceId}`, JSON.stringify(schedules))
-    console.log(`[schedule] stored ${schedules.length} items for device ${deviceId}`)
+    // If logged in, store user-scoped schedule so ALL devices of this user get notified
+    if (userId) {
+      await store.set(`sched:user:${userId}`, JSON.stringify(schedules))
+      console.log(`[schedule] stored ${schedules.length} items for user ${userId} (device ${deviceId})`)
+    } else {
+      console.log(`[schedule] stored ${schedules.length} items for device ${deviceId}`)
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...cors(), 'Content-Type': 'application/json' },

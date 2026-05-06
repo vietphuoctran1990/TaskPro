@@ -15,6 +15,7 @@ interface Options {
   enabled: boolean
   notifBefore: number[]
   onMarkDone: (taskId: string) => void
+  userId?: string
 }
 
 interface Threshold {
@@ -49,7 +50,7 @@ function getDeviceId(): string {
   return id
 }
 
-async function syncSubscriptionToServer(reg: ServiceWorkerRegistration) {
+async function syncSubscriptionToServer(reg: ServiceWorkerRegistration, userId?: string) {
   if (!VAPID_PUBLIC_KEY) {
     console.warn('[push] VITE_VAPID_PUBLIC_KEY not set — push disabled')
     return
@@ -65,7 +66,7 @@ async function syncSubscriptionToServer(reg: ServiceWorkerRegistration) {
     const res = await fetch('/api/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription: sub.toJSON(), deviceId: getDeviceId() }),
+      body: JSON.stringify({ subscription: sub.toJSON(), deviceId: getDeviceId(), userId: userId ?? null }),
     })
     console.log('[push] subscription synced, status:', res.status)
   } catch (err) {
@@ -77,12 +78,12 @@ interface ScheduleItem {
   key: string; taskId: string; title: string; body: string; fireAt: number; requireInteraction: boolean
 }
 
-async function syncSchedulesToServer(schedules: ScheduleItem[]) {
+async function syncSchedulesToServer(schedules: ScheduleItem[], userId?: string) {
   try {
     const res = await fetch('/api/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId: getDeviceId(), schedules }),
+      body: JSON.stringify({ deviceId: getDeviceId(), schedules, userId: userId ?? null }),
     })
     if (!res.ok) console.warn('[push] schedule sync failed:', res.status)
   } catch (err) {
@@ -116,7 +117,7 @@ function buildSchedulesFor(
     })
 }
 
-export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }: Options) {
+export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, userId }: Options) {
   const notifiedRef   = useRef(new Set<string>())
   const mainTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const swRegRef      = useRef<ServiceWorkerRegistration | null>(null)
@@ -142,7 +143,7 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
   useEffect(() => {
     if (!swReady || !enabled) return
     if (Notification.permission === 'granted' && swRegRef.current) {
-      syncSubscriptionToServer(swRegRef.current)
+      syncSubscriptionToServer(swRegRef.current, userId)
     }
   }, [swReady, enabled])
 
@@ -195,7 +196,7 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
       const schedules = buildSchedules()
       reg.active.postMessage({ type: 'RESCHEDULE_ALL', payload: { schedules } })
       // Sync to server so the cron job can push when the app is closed
-      syncSchedulesToServer(schedules)
+      syncSchedulesToServer(schedules, userId)
     }
 
     send()
@@ -246,7 +247,7 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone }:
     if (!('Notification' in window)) return 'denied'
     const perm = await Notification.requestPermission()
     if (perm === 'granted' && swRegRef.current) {
-      await syncSubscriptionToServer(swRegRef.current)
+      await syncSubscriptionToServer(swRegRef.current, userId)
     }
     return perm
   }, [])
