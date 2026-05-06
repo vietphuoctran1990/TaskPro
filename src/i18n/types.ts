@@ -23,7 +23,7 @@ export interface Translations {
     newTask: string; search: string; allPriorities: string; allStatuses: string
     allSLA: string; clear: string; language: string; filters: string; tasks: string
   }
-  views: { dashboard: string; kanban: string; list: string; calendar: string }
+  views: { dashboard: string; kanban: string; list: string; calendar: string; timeline: string }
   status: { todo: string; in_progress: string; in_review: string; done: string }
   priority: {
     low: string; medium: string; high: string; urgent: string; allPriorities: string
@@ -40,10 +40,11 @@ export interface Translations {
     description: string; descPlaceholder: string; status: string; priority: string
     project: string; dueDate: string; dueTime: string; slaTimeHint: string
     slaWindow: string; slaWindowHint: string; estimatedHours: string; estPlaceholder: string
-    hours: string; labels: string; cancel: string; create: string; save: string; titleRequired: string
+    hours: string; labels: string; links: string; linkPlaceholder: string; addLink: string
+    cancel: string; create: string; save: string; titleRequired: string
   }
   detail: {
-    description: string; labels: string; subtasks: string; comments: string
+    description: string; labels: string; subtasks: string; comments: string; links: string
     addSubtask: string; addComment: string; ctrlEnter: string; moveTo: string
     estimated: string; overdueBy: string; remaining: string; slaDeadline: string
     slaWindow: string; edit: string; delete: string
@@ -67,6 +68,18 @@ export interface Translations {
     onTrack: string; atRisk: string; critical: string
     tasks: (n: number) => string
     done: (n: number) => string
+    reports: string; monthlyTrend: string; byPriority: string; completionRate: string
+    week: (n: number) => string
+  }
+  onboarding: {
+    step1Title: string; step1Desc: string
+    step2Title: string; step2Desc: string
+    step3Title: string; step3Desc: string
+    step4Title: string; step4Desc: string
+    next: string; skip: string; getStarted: string
+  }
+  timeline: {
+    title: string; noTasks: string; today: string; noDueDate: string
   }
   recurrence: {
     title: string; none: string; daily: string; weekly: string; monthly: string

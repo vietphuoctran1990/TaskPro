@@ -57,6 +57,7 @@ function getInitialState(): AppState {
           slaHours:       t.slaHours       ?? null,
           estimatedHours: t.estimatedHours ?? null,
           recurrence:     t.recurrence     ?? null,
+          links:          t.links          ?? [],
         })),
         filterSLA:   parsed.filterSLA   ?? 'all',
         dateFilter:  parsed.dateFilter  ?? 'all',

@@ -30,7 +30,7 @@ export const en: Translations = {
     allStatuses: 'All statuses', allSLA: 'All SLA', clear: 'Clear',
     language: 'VI', filters: 'Filters', tasks: 'tasks',
   },
-  views: { dashboard: 'Dashboard', kanban: 'Kanban', list: 'List', calendar: 'Calendar' },
+  views: { dashboard: 'Dashboard', kanban: 'Kanban', list: 'List', calendar: 'Calendar', timeline: 'Timeline' },
   status: { todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done' },
   priority: {
     low: 'Low', medium: 'Medium', high: 'High', urgent: 'Urgent',
@@ -51,11 +51,12 @@ export const en: Translations = {
     project: 'Project', dueDate: 'Due Date', dueTime: 'Due Time', slaTimeHint: '(SLA)',
     slaWindow: 'SLA Window', slaWindowHint: '(max resolution time from creation)',
     estimatedHours: 'Est. hours', estPlaceholder: 'e.g. 4', hours: 'hours',
-    labels: 'Labels', cancel: 'Cancel', create: 'Create Task', save: 'Save changes',
+    labels: 'Labels', links: 'Links', linkPlaceholder: 'https://…', addLink: 'Add link',
+    cancel: 'Cancel', create: 'Create Task', save: 'Save changes',
     titleRequired: 'Title is required',
   },
   detail: {
-    description: 'Description', labels: 'Labels', subtasks: 'Subtasks', comments: 'Comments',
+    description: 'Description', labels: 'Labels', subtasks: 'Subtasks', comments: 'Comments', links: 'Links',
     addSubtask: 'Add subtask…', addComment: 'Add a comment…', ctrlEnter: 'Ctrl+Enter to submit',
     moveTo: 'Move to:', estimated: 'est.', overdueBy: 'Overdue by', remaining: 'remaining',
     slaDeadline: 'SLA Deadline', slaWindow: 'SLA window', edit: 'Edit', delete: 'Delete',
@@ -80,6 +81,18 @@ export const en: Translations = {
     onTrack: 'On Track', atRisk: 'At Risk', critical: 'Critical',
     tasks: (n) => `${n} task${n !== 1 ? 's' : ''}`,
     done: (n) => `${n} done`,
+    reports: 'Reports', monthlyTrend: '4-Week Trend', byPriority: 'By Priority', completionRate: 'Completion Rate',
+    week: (n) => `W${n}`,
+  },
+  onboarding: {
+    step1Title: 'Welcome to TaskPro! 👋', step1Desc: 'Smart task management, track progress and never miss a deadline.',
+    step2Title: 'Create your first task', step2Desc: 'Click "New Task" to add a task. Set priority, deadline, labels and subtasks.',
+    step3Title: 'Organize with Projects', step3Desc: 'Group tasks into projects. Select a project from the sidebar to filter quickly.',
+    step4Title: 'Sync across devices', step4Desc: 'Sign in to automatically sync between computer and phone. Notifications work even when the app is closed.',
+    next: 'Next', skip: 'Skip', getStarted: "Let's go!",
+  },
+  timeline: {
+    title: 'Timeline', noTasks: 'No tasks with deadlines', today: 'Today', noDueDate: 'No deadline',
   },
   pomodoro: {
     focus: 'Focus Mode', work: 'Focus', shortBreak: 'Short Break', longBreak: 'Long Break',

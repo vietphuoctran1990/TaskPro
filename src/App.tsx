@@ -8,6 +8,8 @@ import TaskBoard from './components/tasks/TaskBoard'
 import ListView from './components/views/ListView'
 import CalendarView from './components/views/CalendarView'
 import DashboardView from './components/views/DashboardView'
+import TimelineView from './components/views/TimelineView'
+import OnboardingTour from './components/onboarding/OnboardingTour'
 import TaskForm from './components/tasks/TaskForm'
 import TaskDetail from './components/tasks/TaskDetail'
 import SyncModal from './components/sync/SyncModal'
@@ -20,6 +22,7 @@ import UpdateBanner from './components/pwa/UpdateBanner'
 import OfflineToast from './components/pwa/OfflineToast'
 import { ToastProvider } from './context/ToastContext'
 import { usePWA } from './hooks/usePWA'
+import { Plus } from 'lucide-react'
 import type { Status, Task, Project } from './types'
 
 function AppShell() {
@@ -37,6 +40,12 @@ function AppShell() {
   const [manageOpen, setManageOpen] = useState(false)
   const [focusTask,   setFocusTask]   = useState<Task | null>(null)
   const [notesProject, setNotesProject] = useState<Project | null>(null)
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('taskpro-onboarded'))
+
+  const handleFinishOnboarding = () => {
+    localStorage.setItem('taskpro-onboarded', '1')
+    setShowOnboarding(false)
+  }
 
   const handleManage = useCallback((tab: 'projects' | 'labels') => {
     setManageTab(tab)
@@ -118,6 +127,12 @@ function AppShell() {
               onAddTask={(date) => handleAddTask('todo', date)}
             />
           )}
+          {state.viewMode === 'timeline' && (
+            <TimelineView
+              onViewTask={handleViewTask}
+              onAddTask={() => handleAddTask()}
+            />
+          )}
           {state.viewMode === 'dashboard' && (
             <DashboardView
               onViewTask={handleViewTask}
@@ -126,6 +141,15 @@ function AppShell() {
           )}
         </main>
       </div>
+
+      {/* Mobile FAB */}
+      <button
+        onClick={() => handleAddTask()}
+        className="fixed bottom-6 right-6 z-30 sm:hidden w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center"
+        aria-label="Add task"
+      >
+        <Plus size={24} />
+      </button>
 
       {/* Modals */}
       <ProjectNotesModal project={notesProject} onClose={() => setNotesProject(null)} />
@@ -155,6 +179,8 @@ function AppShell() {
           }}
         />
       )}
+
+      {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
 
       {/* PWA UI */}
       {needRefresh && <UpdateBanner onUpdate={() => updateServiceWorker(true)} />}

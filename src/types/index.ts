@@ -1,6 +1,6 @@
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type Status = 'todo' | 'in_progress' | 'in_review' | 'done'
-export type ViewMode = 'dashboard' | 'kanban' | 'list' | 'calendar'
+export type ViewMode = 'dashboard' | 'kanban' | 'list' | 'calendar' | 'timeline'
 export type SortField = 'title' | 'priority' | 'status' | 'dueDate' | 'sla' | 'createdAt'
 export type SortDir = 'asc' | 'desc'
 
@@ -42,6 +42,7 @@ export interface Task {
   slaHours: number | null       // max resolution time (hours from creation)
   estimatedHours: number | null // estimated effort
   recurrence: Recurrence | null
+  links: string[]
   createdAt: string
   updatedAt: string
   projectId: string

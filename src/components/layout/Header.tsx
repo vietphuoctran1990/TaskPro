@@ -1,4 +1,4 @@
-import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2 } from 'lucide-react'
+import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
@@ -16,7 +16,7 @@ interface HeaderProps {
 }
 
 const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
-  dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar,
+  dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar, timeline: GanttChart,
 }
 
 function UserMenu({ onOpenAuth }: { onOpenAuth: () => void }) {
@@ -80,7 +80,7 @@ export default function Header({ onAddTask, onOpenSidebar, onOpenAuth }: HeaderP
   const t = useT()
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar']
+  const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline']
   const project = state.projects.find(p => p.id === state.activeProjectId)
   const taskCount = state.tasks.filter(tk =>
     state.activeProjectId ? tk.projectId === state.activeProjectId : true

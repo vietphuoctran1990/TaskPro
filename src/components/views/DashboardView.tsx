@@ -6,6 +6,7 @@ import { PriorityBadge } from '../ui/Badge'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import type { Task } from '../../types'
+import type { Translations } from '../../i18n/types'
 import Button from '../ui/Button'
 
 interface DashboardViewProps {
@@ -49,6 +50,79 @@ function StatCard({
         <p className="text-xs text-slate-500 mt-0.5 truncate">{label}</p>
         {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
       </div>
+    </div>
+  )
+}
+
+function WeeklyTrend({ tasks, t }: { tasks: Task[]; language?: string; t: Translations }) {
+  const weeks = Array.from({ length: 4 }, (_, i) => {
+    const weekStart = new Date()
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() - (3 - i) * 7)
+    const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000)
+    const startStr = weekStart.toISOString().slice(0, 10)
+    const endStr   = weekEnd.toISOString().slice(0, 10)
+    const done  = tasks.filter(t => t.status === 'done' && t.updatedAt.slice(0, 10) >= startStr && t.updatedAt.slice(0, 10) <= endStr).length
+    const total = tasks.filter(t => t.createdAt.slice(0, 10) >= startStr && t.createdAt.slice(0, 10) <= endStr).length
+    const label = t.dashboard.week(i + 1)
+    const isCurrent = i === 3
+    return { label, done, total, isCurrent }
+  })
+  const maxDone = Math.max(...weeks.map(w => w.done), 1)
+  return (
+    <div className="space-y-3">
+      {weeks.map(({ label, done, total, isCurrent }) => (
+        <div key={label}>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className={cn('text-xs font-medium', isCurrent ? 'text-indigo-600' : 'text-slate-500')}>{label}</span>
+            <span className="text-xs text-slate-400">{done} {t.dashboard.done(done)} / {total} {t.dashboard.tasks(total)}</span>
+          </div>
+          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${(done / maxDone) * 100}%`,
+                background: isCurrent ? 'linear-gradient(to right, #6366f1, #8b5cf6)' : 'linear-gradient(to right, #a5b4fc, #c4b5fd)',
+              }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const PRIORITY_META = [
+  { key: 'urgent', label: 'Urgent', color: '#ef4444' },
+  { key: 'high',   label: 'High',   color: '#f97316' },
+  { key: 'medium', label: 'Medium', color: '#3b82f6' },
+  { key: 'low',    label: 'Low',    color: '#94a3b8' },
+] as const
+
+function PriorityBreakdown({ tasks }: { tasks: Task[] }) {
+  return (
+    <div className="space-y-3">
+      {PRIORITY_META.map(({ key, label, color }) => {
+        const all  = tasks.filter(t => t.priority === key)
+        const done = all.filter(t => t.status === 'done').length
+        const pct  = all.length ? Math.round((done / all.length) * 100) : 0
+        return (
+          <div key={key}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                {label}
+              </span>
+              <span className="text-xs text-slate-400">{done}/{all.length} · {pct}%</span>
+            </div>
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${pct}%`, backgroundColor: color }}
+              />
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -278,6 +352,19 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
               })}
             </div>
           )}
+        </div>
+      </div>
+      {/* ── Reports ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* 4-week trend */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">{t.dashboard.monthlyTrend}</h3>
+          <WeeklyTrend tasks={filteredTasks} language={state.language} t={t} />
+        </div>
+        {/* Priority breakdown */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">{t.dashboard.byPriority}</h3>
+          <PriorityBreakdown tasks={filteredTasks} />
         </div>
       </div>
     </div>

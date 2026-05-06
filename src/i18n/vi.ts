@@ -30,7 +30,7 @@ export const vi: Translations = {
     allStatuses: 'Tất cả trạng thái', allSLA: 'Tất cả SLA', clear: 'Xóa bộ lọc',
     language: 'EN', filters: 'Bộ lọc', tasks: 'công việc',
   },
-  views: { dashboard: 'Tổng quan', kanban: 'Kanban', list: 'Danh sách', calendar: 'Lịch' },
+  views: { dashboard: 'Tổng quan', kanban: 'Kanban', list: 'Danh sách', calendar: 'Lịch', timeline: 'Timeline' },
   status: { todo: 'Cần làm', in_progress: 'Đang làm', in_review: 'Đang xét duyệt', done: 'Hoàn thành' },
   priority: {
     low: 'Thấp', medium: 'Trung bình', high: 'Cao', urgent: 'Khẩn cấp',
@@ -51,11 +51,12 @@ export const vi: Translations = {
     project: 'Dự án', dueDate: 'Ngày hết hạn', dueTime: 'Giờ hết hạn', slaTimeHint: '(SLA)',
     slaWindow: 'Khung thời gian SLA', slaWindowHint: '(thời gian xử lý tối đa từ khi tạo)',
     estimatedHours: 'Giờ ước tính', estPlaceholder: 'vd. 4', hours: 'giờ',
-    labels: 'Nhãn', cancel: 'Hủy', create: 'Tạo công việc', save: 'Lưu thay đổi',
+    labels: 'Nhãn', links: 'Liên kết', linkPlaceholder: 'https://…', addLink: 'Thêm link',
+    cancel: 'Hủy', create: 'Tạo công việc', save: 'Lưu thay đổi',
     titleRequired: 'Tiêu đề là bắt buộc',
   },
   detail: {
-    description: 'Mô tả', labels: 'Nhãn', subtasks: 'Công việc con', comments: 'Bình luận',
+    description: 'Mô tả', labels: 'Nhãn', subtasks: 'Công việc con', comments: 'Bình luận', links: 'Liên kết',
     addSubtask: 'Thêm công việc con…', addComment: 'Thêm bình luận…',
     ctrlEnter: 'Ctrl+Enter để gửi', moveTo: 'Chuyển sang:', estimated: 'ước tính',
     overdueBy: 'Trễ', remaining: 'còn lại', slaDeadline: 'Hạn chót SLA',
@@ -82,6 +83,18 @@ export const vi: Translations = {
     onTrack: 'Đúng hạn', atRisk: 'Có nguy cơ', critical: 'Nguy cấp',
     tasks: (n) => `${n} công việc`,
     done: (n) => `${n} hoàn thành`,
+    reports: 'Báo cáo', monthlyTrend: 'Xu hướng 4 tuần', byPriority: 'Theo mức độ', completionRate: 'Tỷ lệ hoàn thành',
+    week: (n) => `T${n}`,
+  },
+  onboarding: {
+    step1Title: 'Chào mừng đến TaskPro! 👋', step1Desc: 'Quản lý công việc thông minh, theo dõi tiến độ và không bỏ lỡ deadline nào.',
+    step2Title: 'Tạo công việc đầu tiên', step2Desc: 'Nhấn nút "Tạo công việc" để thêm task mới. Bạn có thể đặt độ ưu tiên, deadline, nhãn và subtask.',
+    step3Title: 'Tổ chức theo Dự án', step3Desc: 'Nhóm các công việc vào dự án để dễ quản lý. Chọn dự án từ thanh bên trái để lọc nhanh.',
+    step4Title: 'Đồng bộ đa thiết bị', step4Desc: 'Đăng nhập để tự động đồng bộ dữ liệu giữa máy tính và điện thoại. Thông báo đến hạn hoạt động khi app đóng.',
+    next: 'Tiếp theo', skip: 'Bỏ qua', getStarted: 'Bắt đầu thôi!',
+  },
+  timeline: {
+    title: 'Timeline', noTasks: 'Không có công việc nào có deadline', today: 'Hôm nay', noDueDate: 'Chưa có deadline',
   },
   pomodoro: {
     focus: 'Chế độ Tập trung', work: 'Tập trung', shortBreak: 'Nghỉ ngắn', longBreak: 'Nghỉ dài',
