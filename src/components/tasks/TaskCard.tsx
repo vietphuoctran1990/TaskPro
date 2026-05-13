@@ -53,7 +53,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group bg-white rounded-xl border border-slate-200 border-l-[3px] shadow-sm hover:shadow-md hover:scale-[1.015] hover:-translate-y-0.5 transition-all duration-150 cursor-pointer select-none',
+        'group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-l-[3px] shadow-sm hover:shadow-md hover:scale-[1.015] hover:-translate-y-0.5 transition-all duration-150 cursor-pointer select-none',
         PRIORITY_ACCENT[task.priority],
         isDragging && 'opacity-50 shadow-xl scale-105 z-50',
         task.status === 'done' && 'opacity-60'
@@ -63,7 +63,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
       <div className="flex items-center justify-between px-3 pt-2.5 pb-0">
         <button
           {...attributes} {...listeners}
-          className="text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-0.5 rounded"
+          className="text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-0.5 rounded"
           onClick={e => e.stopPropagation()}
         >
           <GripVertical size={13} />
@@ -81,10 +81,10 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
               <div
-                className="fixed z-50 w-36 bg-white rounded-xl border border-slate-200 shadow-lg"
+                className="fixed z-50 w-36 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg"
                 style={{ top: menuPos.top, right: menuPos.right }}
               >
-                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors rounded-t-xl"
+                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-t-xl"
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit(task) }}>
                   <Pencil size={13} /> {t.detail.edit}
                 </button>
@@ -107,7 +107,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
       {/* Body */}
       <div className="px-3 pb-3" onClick={() => onView(task)}>
         <p className={cn(
-          'text-sm font-medium text-slate-800 leading-snug mb-2',
+          'text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug mb-2',
           task.status === 'done' && 'line-through text-slate-400'
         )}>
           {task.title}
@@ -140,7 +140,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
           <div className="flex items-center gap-2.5">
             {task.subtasks.length > 0 && (
               <div className="flex items-center gap-1.5">
-                <div className="w-10 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-10 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                   <div
                     className={cn('h-full rounded-full transition-all duration-300',
                       completedSub === task.subtasks.length ? 'bg-emerald-500' : 'bg-indigo-400'
