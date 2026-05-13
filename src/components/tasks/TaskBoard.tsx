@@ -31,7 +31,7 @@ interface TaskBoardProps {
 }
 
 export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTask }: TaskBoardProps) {
-  const { filteredTasks, dispatch } = useApp()
+  const { state, filteredTasks, dispatch } = useApp()
   const [activeTask, setActiveTask] = useState<Task | null>(null)
 
   const sensors = useSensors(
@@ -96,8 +96,10 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
         const newIndex = columnTasks.findIndex(t => t.id === overId)
         if (oldIndex !== -1 && newIndex !== -1) {
           const reordered = arrayMove(columnTasks, oldIndex, newIndex)
-          const otherTasks = filteredTasks.filter(t => t.status !== activeTask.status)
-          dispatch({ type: 'REORDER_TASKS', payload: [...otherTasks, ...reordered] })
+          // Merge into full state.tasks to preserve tasks hidden by active filters
+          const reorderedIdSet = new Set(reordered.map(t => t.id))
+          const outsideTasks = state.tasks.filter(t => !reorderedIdSet.has(t.id))
+          dispatch({ type: 'REORDER_TASKS', payload: [...outsideTasks, ...reordered] })
         }
       } else if (overTask && activeTask.status !== overTask.status) {
         dispatch({ type: 'MOVE_TASK', payload: { id: activeId, status: overTask.status } })

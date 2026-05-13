@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
+import { localISO } from '../../lib/dateLocal'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import type { Task } from '../../types'
@@ -74,7 +75,7 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
     d.getMonth() === today.getMonth() &&
     d.getDate() === today.getDate()
 
-  const dateKey = (d: Date) => d.toISOString().slice(0, 10)
+  const dateKey = (d: Date) => localISO(d)
 
   const monthLabel = `${t.calendar.months[month]} ${year}`
 

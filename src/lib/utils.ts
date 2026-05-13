@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import type { Task, SLAStatus, Recurrence } from '../types'
+import { localISO } from './dateLocal'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -71,11 +72,12 @@ export function isDueSoon(dateStr: string | null, timeStr?: string | null): bool
 
 /** Compute the next due date for a recurring task */
 export function nextRecurringDate(dueDate: string, recurrence: Recurrence): string {
-  const d = new Date(dueDate)
+  const [y, m, day] = dueDate.split('-').map(Number)
+  const d = new Date(y, m - 1, day) // parse as local midnight, not UTC
   if (recurrence.type === 'daily')   d.setDate(d.getDate() + recurrence.interval)
   if (recurrence.type === 'weekly')  d.setDate(d.getDate() + recurrence.interval * 7)
   if (recurrence.type === 'monthly') d.setMonth(d.getMonth() + recurrence.interval)
-  return d.toISOString().slice(0, 10)
+  return localISO(d)
 }
 
 /** Spawn the next instance of a recurring task (returns null if past endDate) */

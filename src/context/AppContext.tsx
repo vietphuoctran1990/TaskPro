@@ -14,6 +14,7 @@ import {
   generateId, getSLAStatus, PRIORITY_ORDER, STATUS_ORDER, SLA_ORDER,
   getDeadline, createNextRecurringTask,
 } from '../lib/utils'
+import { todayLocalISO, tomorrowLocalISO } from '../lib/dateLocal'
 
 type Action =
   | { type: 'ADD_TASK';        payload: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> }
@@ -211,8 +212,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (state.filterStatus   !== 'all') tasks = tasks.filter(t => t.status   === state.filterStatus)
     if (state.filterSLA      !== 'all') tasks = tasks.filter(t => getSLAStatus(t) === state.filterSLA)
     if (state.dateFilter     !== 'all') {
-      const todayStr = new Date().toISOString().slice(0, 10)
-      const tomorrowStr = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+      const todayStr = todayLocalISO()
+      const tomorrowStr = tomorrowLocalISO()
       if (state.dateFilter === 'today') {
         tasks = tasks.filter(t => t.dueDate === todayStr)
       } else if (state.dateFilter === 'tomorrow') {

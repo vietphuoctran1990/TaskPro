@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { AlertTriangle, Calendar, CheckCircle2, Clock, TrendingUp, BarChart3 } from 'lucide-react'
 import { cn, getDeadline, getSLAStatus, getTimeRemaining } from '../../lib/utils'
+import { localISO, todayLocalISO } from '../../lib/dateLocal'
 import SLABadge from '../sla/SLABadge'
 import { PriorityBadge } from '../ui/Badge'
 import { useApp } from '../../context/AppContext'
@@ -59,8 +60,8 @@ function WeeklyTrend({ tasks, t }: { tasks: Task[]; language?: string; t: Transl
     const weekStart = new Date()
     weekStart.setDate(weekStart.getDate() - weekStart.getDay() - (3 - i) * 7)
     const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000)
-    const startStr = weekStart.toISOString().slice(0, 10)
-    const endStr   = weekEnd.toISOString().slice(0, 10)
+    const startStr = localISO(weekStart)
+    const endStr   = localISO(weekEnd)
     const done  = tasks.filter(t => t.status === 'done' && t.updatedAt.slice(0, 10) >= startStr && t.updatedAt.slice(0, 10) <= endStr).length
     const total = tasks.filter(t => t.createdAt.slice(0, 10) >= startStr && t.createdAt.slice(0, 10) <= endStr).length
     const label = t.dashboard.week(i + 1)
@@ -131,7 +132,7 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
   const { state, filteredTasks } = useApp()
   const t = useT()
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocalISO()
 
   const stats = useMemo(() => {
     const total      = filteredTasks.length
@@ -157,7 +158,7 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date()
       d.setDate(d.getDate() - (6 - i))
-      const dayStr = d.toISOString().slice(0, 10)
+      const dayStr = localISO(d)
       const count  = filteredTasks.filter(t => t.status === 'done' && t.updatedAt.slice(0, 10) === dayStr).length
       const label  = d.toLocaleDateString(locale, { weekday: 'short' })
       const isToday = dayStr === today

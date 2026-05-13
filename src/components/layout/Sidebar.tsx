@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText, Sun, Sunset, Calendar } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
+import { todayLocalISO, tomorrowLocalISO } from '../../lib/dateLocal'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import Button from '../ui/Button'
@@ -21,8 +22,8 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
 
   const stats = useMemo(() => {
     const tasks = state.tasks
-    const todayStr    = new Date().toISOString().slice(0, 10)
-    const tomorrowStr = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+    const todayStr    = todayLocalISO()
+    const tomorrowStr = tomorrowLocalISO()
     return {
       total:    tasks.length,
       done:     tasks.filter(t => t.status === 'done').length,
