@@ -44,14 +44,14 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
   }
 
   return (
-    <aside className={cn('flex flex-col bg-white border-r border-slate-200', mobile ? 'w-full h-full' : 'w-60 shrink-0 h-full')}>
+    <aside className={cn('flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700', mobile ? 'w-full h-full' : 'w-60 shrink-0 h-full')}>
       {/* Logo */}
-      <div className="flex items-center justify-between px-5 h-14 border-b border-slate-200 shrink-0">
+      <div className="flex items-center justify-between px-5 h-14 border-b border-slate-200 dark:border-slate-700 shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
             <CheckSquare size={14} className="text-white" />
           </div>
-          <span className="text-base font-bold text-slate-900 tracking-tight">{t.app.name}</span>
+          <span className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">{t.app.name}</span>
         </div>
         {mobile && <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>}
       </div>
@@ -61,17 +61,17 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
         <button
           onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'all' }); onClose?.() }}
           className={cn('w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-            state.activeProjectId === null && state.dateFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100')}>
+            state.activeProjectId === null && state.dateFilter === 'all' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800')}>
           <LayoutDashboard size={15} />
           <span className="flex-1 text-left">{t.sidebar.allTasks}</span>
           <span className="text-xs opacity-50">{stats.total}</span>
         </button>
         {/* Date filter sub-items */}
-        <div className="ml-3 pl-3 border-l border-slate-100 space-y-0.5">
+        <div className="ml-3 pl-3 border-l border-slate-100 dark:border-slate-700/50 space-y-0.5">
           <button
             onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'today' }); onClose?.() }}
             className={cn('w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
-              state.activeProjectId === null && state.dateFilter === 'today' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700')}>
+              state.activeProjectId === null && state.dateFilter === 'today' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200')}>
             <Sun size={13} />
             <span className="flex-1 text-left">{t.sidebar.today}</span>
             <span className="text-xs opacity-50">{stats.today}</span>
@@ -79,7 +79,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
           <button
             onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'tomorrow' }); onClose?.() }}
             className={cn('w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
-              state.activeProjectId === null && state.dateFilter === 'tomorrow' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700')}>
+              state.activeProjectId === null && state.dateFilter === 'tomorrow' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200')}>
             <Sunset size={13} />
             <span className="flex-1 text-left">{t.sidebar.tomorrow}</span>
             <span className="text-xs opacity-50">{stats.tomorrow}</span>
@@ -87,7 +87,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
           <button
             onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'upcoming' }); onClose?.() }}
             className={cn('w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
-              state.activeProjectId === null && state.dateFilter === 'upcoming' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700')}>
+              state.activeProjectId === null && state.dateFilter === 'upcoming' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200')}>
             <Calendar size={13} />
             <span className="flex-1 text-left">{t.sidebar.upcoming}</span>
             <span className="text-xs opacity-50">{stats.upcoming}</span>
@@ -97,7 +97,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
         {/* Projects */}
         <div className="pt-3">
           <div className="flex items-center">
-            <button className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-600 transition-colors"
+            <button className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               onClick={() => setProjectsOpen(v => !v)}>
               <FolderOpen size={12} />
               <span className="flex-1 text-left">{t.sidebar.projects}</span>
@@ -105,7 +105,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
             </button>
             {onManage && (
               <button onClick={() => onManage('projects')}
-                className="p-1 mr-1 rounded text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                className="p-1 mr-1 rounded text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
                 title={t.sidebar.manage}>
                 <Settings2 size={12} />
               </button>
@@ -137,7 +137,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
                 </div>
               ) : (
                 <button onClick={() => setAddingProject(true)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-50">
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-400 dark:text-slate-500 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
                   <Plus size={12} /> {t.sidebar.newProject}
                 </button>
               )}
@@ -148,12 +148,12 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
         {/* Labels */}
         <div className="pt-3">
           <div className="flex items-center">
-            <div className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               <Tag size={12} /><span>{t.sidebar.labels}</span>
             </div>
             {onManage && (
               <button onClick={() => onManage('labels')}
-                className="p-1 mr-1 rounded text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                className="p-1 mr-1 rounded text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
                 title={t.sidebar.manage}>
                 <Settings2 size={12} />
               </button>
@@ -173,31 +173,31 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
       </div>
 
       {/* Stats */}
-      <div className="border-t border-slate-200 px-4 py-4 space-y-3">
+      <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-4 space-y-3">
         <div>
           <div className="flex justify-between mb-1">
-            <span className="text-xs text-slate-500 font-medium">{t.sidebar.overallProgress}</span>
-            <span className="text-xs font-semibold text-slate-700">{stats.done}/{stats.total}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t.sidebar.overallProgress}</span>
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{stats.done}/{stats.total}</span>
           </div>
-          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
             <div className="h-full bg-indigo-500 rounded-full transition-all duration-500"
               style={{ width: `${stats.total ? (stats.done / stats.total) * 100 : 0}%` }} />
           </div>
         </div>
         <div className="grid grid-cols-3 gap-1.5">
           <StatChip icon={<AlertTriangle size={11} />} label={t.sidebar.breached} value={stats.breached}
-            className={stats.breached > 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-50 text-slate-400 border-slate-200'} />
+            className={stats.breached > 0 ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'} />
           <StatChip icon={<Zap size={11} />} label={t.sidebar.critical} value={stats.critical}
-            className={stats.critical > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-50 text-slate-400 border-slate-200'} />
+            className={stats.critical > 0 ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'} />
           <StatChip icon={<Clock size={11} />} label={t.sidebar.atRisk} value={stats.atRisk}
-            className={stats.atRisk > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-400 border-slate-200'} />
+            className={stats.atRisk > 0 ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'} />
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1.5 text-slate-500"><TrendingUp size={12} /> {t.sidebar.inProgress}</span>
-          <span className="font-semibold text-slate-700">{stats.inProg}</span>
+          <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400"><TrendingUp size={12} /> {t.sidebar.inProgress}</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-300">{stats.inProg}</span>
         </div>
         {onSync && (
-          <button onClick={onSync} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-colors border border-slate-200">
+          <button onClick={onSync} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 transition-colors border border-slate-200 dark:border-slate-700">
             <RefreshCw size={12} /> {t.sidebar.syncBackup}
           </button>
         )}
@@ -209,7 +209,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
 function ProjectItem({ project, active, count, onClick, onNotes }: { project: Project; active: boolean; count: number; onClick: () => void; onNotes?: () => void }) {
   return (
     <div className={cn('group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
-      active ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-100')}>
+      active ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800')}>
       <button onClick={onClick} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
         <span className="flex-1 truncate">{project.name}</span>
