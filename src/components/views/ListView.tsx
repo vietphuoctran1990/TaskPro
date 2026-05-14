@@ -36,7 +36,7 @@ function SortHeader({ field, label, currentField, currentDir, onSort, className 
   return (
     <th
       className={cn(
-        'px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer select-none hover:text-slate-700 whitespace-nowrap',
+        'px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap',
         className
       )}
       onClick={() => onSort(field)}
@@ -74,10 +74,10 @@ function TaskMenu({ onEdit, onDelete, onFocus }: { onEdit: () => void; onDelete:
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-50 w-36 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden"
+            className="fixed z-50 w-36 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden"
             style={{ top: pos.top, right: pos.right }}
           >
-            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
               onClick={() => { setOpen(false); onEdit() }}>
               <Pencil size={13} /> {t.detail.edit}
             </button>
@@ -116,7 +116,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
 
   if (filteredTasks.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-16 flex flex-col items-center gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm py-16 flex flex-col items-center gap-4">
         <svg width="64" height="64" viewBox="0 0 64 64" fill="none" className="opacity-20">
           <rect x="8" y="14" width="48" height="6" rx="3" fill="#6366f1"/>
           <rect x="8" y="26" width="36" height="5" rx="2.5" fill="#6366f1"/>
@@ -124,8 +124,8 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
           <rect x="8" y="48" width="20" height="5" rx="2.5" fill="#6366f1"/>
         </svg>
         <div className="text-center">
-          <p className="text-slate-500 text-sm font-medium mb-1">{t.list.noTasks}</p>
-          <p className="text-slate-400 text-xs">Tạo công việc đầu tiên để bắt đầu</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">{t.list.noTasks}</p>
+          <p className="text-slate-400 dark:text-slate-500 text-xs">Tạo công việc đầu tiên để bắt đầu</p>
         </div>
         <Button variant="primary" size="sm" onClick={onAddTask}>+ {t.header.newTask}</Button>
       </div>
@@ -133,10 +133,10 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
 
       {/* ── MOBILE CARD LIST (hidden on md+) ─────────────────────────── */}
-      <div className="md:hidden divide-y divide-slate-100">
+      <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
         {filteredTasks.map(task => {
           const project = state.projects.find(p => p.id === task.projectId)
           const deadline = getDeadline(task)
@@ -144,7 +144,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
           return (
             <div
               key={task.id}
-              className="px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
+              className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
               onClick={() => onViewTask(task)}
             >
               {/* Row 1: checkbox + title + menu */}
@@ -152,7 +152,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                 <button
                   className={cn(
                     'shrink-0 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
-                    done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 hover:border-indigo-400'
+                    done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400'
                   )}
                   onClick={e => toggleDone(task, e)}
                 >
@@ -163,7 +163,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                   )}
                 </button>
                 <p className={cn(
-                  'flex-1 text-sm font-medium text-slate-800 truncate',
+                  'flex-1 text-sm font-medium text-slate-800 dark:text-slate-200 truncate',
                   done && 'line-through text-slate-400'
                 )}>
                   {task.title}
@@ -213,7 +213,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
       {/* ── DESKTOP TABLE (hidden on mobile) ─────────────────────────── */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full min-w-[800px]">
-          <thead className="bg-slate-50 border-b border-slate-200">
+          <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
             <tr>
               <SortHeader field="title"    label={t.list.task}     currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} className="pl-5 w-80" />
               <SortHeader field="status"   label={t.list.status}   currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
@@ -224,7 +224,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
               <th className="px-4 py-3 w-10" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
             {filteredTasks.map(task => {
               const project = state.projects.find(p => p.id === task.projectId)
               const deadline = getDeadline(task)
@@ -232,7 +232,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
               return (
                 <tr
                   key={task.id}
-                  className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                  className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group"
                   onClick={() => onViewTask(task)}
                 >
                   <td className="px-5 py-3.5">
@@ -240,7 +240,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                       <button
                         className={cn(
                           'mt-0.5 shrink-0 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
-                          done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 hover:border-indigo-400'
+                          done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400'
                         )}
                         onClick={e => toggleDone(task, e)}
                       >
@@ -251,7 +251,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                         )}
                       </button>
                       <div className="min-w-0">
-                        <p className={cn('text-sm font-medium text-slate-800 truncate max-w-[280px]', done && 'line-through text-slate-400')}>
+                        <p className={cn('text-sm font-medium text-slate-800 dark:text-slate-200 truncate max-w-[280px]', done && 'line-through text-slate-400')}>
                           {task.title}
                         </p>
                         {task.subtasks.length > 0 && (
@@ -264,7 +264,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                     </div>
                   </td>
                   <td className="px-4 py-3.5">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
                       <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[task.status])} />
                       {t.status[task.status]}
                     </span>
@@ -302,7 +302,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 text-xs text-slate-400">
+      <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-400 dark:text-slate-500">
         {t.list.tasks(filteredTasks.length)}
         {' · '}
         {t.list.completed(filteredTasks.filter(tk => tk.status === 'done').length)}

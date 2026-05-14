@@ -94,7 +94,7 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
   return (
     <Modal open={open} onClose={onClose} title={t.sync.title} size="md">
       {/* Tab bar */}
-      <div className="flex border-b border-slate-200 px-6">
+      <div className="flex border-b border-slate-200 dark:border-slate-700 px-6">
         {tabs.map(tb => (
           <button
             key={tb.id}
@@ -102,7 +102,7 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
             className={`flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 transition-colors -mb-px ${
               tab === tb.id
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
             }`}
           >
             {tb.icon} {tb.label}
@@ -114,8 +114,8 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
         {/* ── Export tab ── */}
         {tab === 'export' && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">{t.sync.exportDesc}</p>
-            <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs text-slate-500 space-y-1">
+            <p className="text-sm text-slate-600 dark:text-slate-400">{t.sync.exportDesc}</p>
+            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 text-xs text-slate-500 dark:text-slate-400 space-y-1">
               <p>📋 {state.tasks.length} tasks</p>
               <p>📁 {state.projects.length} projects</p>
               <p>🏷️ {state.labels.length} labels</p>
@@ -124,9 +124,9 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
             <Button variant="primary" onClick={handleExport} className="w-full justify-center">
               <Download size={14} /> {t.sync.exportBtn}
             </Button>
-            <div className="border-t border-slate-100 pt-4">
-              <p className="text-sm font-medium text-slate-700 mb-1">Xuất lịch (.ics)</p>
-              <p className="text-xs text-slate-500 mb-3">
+            <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Xuất lịch (.ics)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                 Nhập vào Google Calendar, Apple Calendar, Outlook — các task có deadline sẽ xuất hiện trên lịch.
               </p>
               <Button variant="secondary" onClick={() => downloadICS(state.tasks, state.projects)} className="w-full justify-center">
@@ -139,7 +139,7 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
         {/* ── Import tab ── */}
         {tab === 'import' && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">{t.sync.importDesc}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{t.sync.importDesc}</p>
             {/* Mode selector */}
             <div className="flex gap-2">
               {(['merge', 'replace'] as const).map(mode => (
@@ -149,7 +149,7 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
                   className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
                     importMode === mode
                       ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
+                      : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-300'
                   }`}
                 >
                   {mode === 'merge' ? t.sync.importMerge : t.sync.importReplace}
@@ -180,10 +180,10 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
           <div className="space-y-5">
             {/* Copy code */}
             <div>
-              <p className="text-sm font-medium text-slate-700 mb-1">{t.sync.codeTitle}</p>
-              <p className="text-xs text-slate-500 mb-3">{t.sync.codeDesc}</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.sync.codeTitle}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t.sync.codeDesc}</p>
               <div className="flex gap-2">
-                <div className="flex-1 font-mono text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 truncate text-slate-500 select-all">
+                <div className="flex-1 font-mono text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 truncate text-slate-500 dark:text-slate-400 select-all">
                   {syncCode.slice(0, 40)}…
                 </div>
                 <Button variant={copied ? 'primary' : 'secondary'} size="sm" onClick={handleCopyCode} className="shrink-0">
@@ -194,12 +194,12 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
 
             {/* Paste & apply */}
             <div>
-              <p className="text-sm font-medium text-slate-700 mb-1">{t.sync.pasteCode}</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.sync.pasteCode}</p>
               <div className="flex gap-2">
                 <select
                   value={importMode}
                   onChange={e => setImportMode(e.target.value as 'merge' | 'replace')}
-                  className="h-9 px-2 rounded-lg border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="merge">{t.sync.importMerge}</option>
                   <option value="replace">{t.sync.importReplace}</option>
@@ -210,7 +210,7 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
                 value={pasteValue}
                 onChange={e => { setPasteValue(e.target.value); setApplyStatus('idle') }}
                 placeholder={t.sync.codePlaceholder}
-                className="w-full mt-2 px-3 py-2 font-mono text-xs rounded-xl border border-slate-200 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full mt-2 px-3 py-2 font-mono text-xs rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <Button
                 variant="primary"
@@ -227,7 +227,7 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
         )}
       </div>
 
-      <div className="flex justify-end px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+      <div className="flex justify-end px-6 py-3 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 rounded-b-2xl">
         <Button variant="ghost" size="sm" onClick={onClose}>
           <X size={13} /> {t.form.cancel}
         </Button>

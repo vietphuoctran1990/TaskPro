@@ -47,9 +47,9 @@ function StatCard({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-2xl font-bold text-slate-900 leading-none">{value}</p>
-        <p className="text-xs text-slate-500 mt-0.5 truncate">{label}</p>
-        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+        <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 leading-none">{value}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{label}</p>
+        {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
       </div>
     </div>
   )
@@ -74,10 +74,10 @@ function WeeklyTrend({ tasks, t }: { tasks: Task[]; language?: string; t: Transl
       {weeks.map(({ label, done, total, isCurrent }) => (
         <div key={label}>
           <div className="flex items-center justify-between mb-1.5">
-            <span className={cn('text-xs font-medium', isCurrent ? 'text-indigo-600' : 'text-slate-500')}>{label}</span>
-            <span className="text-xs text-slate-400">{done} {t.dashboard.done(done)} / {total} {t.dashboard.tasks(total)}</span>
+            <span className={cn('text-xs font-medium', isCurrent ? 'text-indigo-600' : 'text-slate-500 dark:text-slate-400')}>{label}</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{done} {t.dashboard.done(done)} / {total} {t.dashboard.tasks(total)}</span>
           </div>
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -109,13 +109,13 @@ function PriorityBreakdown({ tasks }: { tasks: Task[] }) {
         return (
           <div key={key}>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                 {label}
               </span>
-              <span className="text-xs text-slate-400">{done}/{all.length} · {pct}%</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">{done}/{all.length} · {pct}%</span>
             </div>
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{ width: `${pct}%`, backgroundColor: color }}
@@ -224,8 +224,8 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
       {/* Weekly activity + SLA health */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Weekly bar chart with gradient bars */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">{t.dashboard.weeklyActivity}</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">{t.dashboard.weeklyActivity}</h3>
           <div className="flex items-end gap-2 h-28">
             {weekData.map(({ label, count, isToday }, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
@@ -254,8 +254,8 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
         </div>
 
         {/* SLA health with donut chart */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">{t.dashboard.slaHealth}</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">{t.dashboard.slaHealth}</h3>
           <div className="flex items-center gap-5 mb-3">
             <DonutChart pct={slaHealth.pct} color={donutColor} />
             <div className="flex-1 space-y-1.5">
@@ -277,9 +277,9 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
 
       {/* Upcoming deadlines + project breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/50">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
               <Clock size={14} className="text-slate-400" />
               {t.dashboard.upcomingDeadlines}
             </h3>
@@ -291,14 +291,14 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
               <p className="text-xs">{t.dashboard.noDeadlines}</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
               {upcoming.map(task => {
                 const deadline = getDeadline(task)!
                 const overdue  = deadline.getTime() < Date.now()
                 return (
                   <button
                     key={task.id}
-                    className="w-full flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left"
+                    className="w-full flex items-start gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-left"
                     onClick={() => onViewTask(task)}
                   >
                     <div className={cn(
@@ -306,7 +306,7 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
                       overdue ? 'bg-red-500' : getSLAStatus(task) === 'critical' ? 'bg-orange-500' : 'bg-amber-400'
                     )} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{task.title}</p>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{task.title}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <PriorityBadge priority={task.priority} />
                         <span className={cn('text-xs', overdue ? 'text-red-600 font-medium' : 'text-slate-400')}>
@@ -323,9 +323,9 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-700">{t.dashboard.projectBreakdown}</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700/50">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.dashboard.projectBreakdown}</h3>
           </div>
           {projectStats.length === 0 ? (
             <div className="py-8 text-center text-xs text-slate-400">{t.list.noTasks}</div>
@@ -336,13 +336,13 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
                 return (
                   <div key={project.id}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
                         {project.name}
                       </span>
-                      <span className="text-xs text-slate-400">{done}/{total} · {pct}%</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500">{done}/{total} · {pct}%</span>
                     </div>
-                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${pct}%`, backgroundColor: project.color }}
@@ -358,13 +358,13 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
       {/* ── Reports ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* 4-week trend */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">{t.dashboard.monthlyTrend}</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">{t.dashboard.monthlyTrend}</h3>
           <WeeklyTrend tasks={filteredTasks} language={state.language} t={t} />
         </div>
         {/* Priority breakdown */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">{t.dashboard.byPriority}</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">{t.dashboard.byPriority}</h3>
           <PriorityBreakdown tasks={filteredTasks} />
         </div>
       </div>

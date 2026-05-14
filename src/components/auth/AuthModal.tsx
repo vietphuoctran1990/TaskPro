@@ -53,23 +53,23 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   return (
     <Modal open={open} onClose={() => { onClose(); reset() }} size="sm">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-900">
+      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
           {tab === 'login' ? t.auth.signIn : t.auth.createAccount}
         </h2>
         <Button variant="ghost" size="icon" onClick={() => { onClose(); reset() }}><X size={16} /></Button>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 px-6">
+      <div className="flex border-b border-slate-200 dark:border-slate-700 px-6">
         <button onClick={() => switchTab('login')}
           className={`py-3 px-1 mr-6 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5
-            ${tab === 'login' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            ${tab === 'login' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
           <LogIn size={13} />{t.auth.signIn}
         </button>
         <button onClick={() => switchTab('register')}
           className={`py-3 px-1 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5
-            ${tab === 'register' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            ${tab === 'register' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
           <UserPlus size={13} />{t.auth.createAccount}
         </button>
       </div>
@@ -88,26 +88,26 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">{t.auth.email}</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">{t.auth.email}</label>
               <div className="relative">
                 <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="email" autoComplete="email" required
                   value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                  className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-600 transition-all"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">{t.auth.password}</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">{t.auth.password}</label>
               <div className="relative">
                 <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="password" autoComplete={tab === 'login' ? 'current-password' : 'new-password'} required
                   value={password} onChange={e => setPassword(e.target.value)}
                   placeholder={tab === 'register' ? t.auth.passwordHint : '••••••••'}
-                  className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                  className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-600 transition-all"
                 />
               </div>
               {tab === 'register' && (
@@ -116,7 +116,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             </div>
 
             {error && (
-              <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-xs text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 rounded-lg px-3 py-2">{error}</p>
             )}
 
             <Button type="submit" variant="primary" className="w-full" disabled={loading}>
@@ -125,10 +125,10 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
                 : tab === 'login' ? t.auth.signIn : t.auth.createAccount}
             </Button>
 
-            <p className="text-xs text-center text-slate-400">
+            <p className="text-xs text-center text-slate-400 dark:text-slate-500">
               {tab === 'login' ? t.auth.noAccount : t.auth.hasAccount}{' '}
               <button type="button" onClick={() => switchTab(tab === 'login' ? 'register' : 'login')}
-                className="text-indigo-600 hover:underline font-medium">
+                className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
                 {tab === 'login' ? t.auth.createAccount : t.auth.signIn}
               </button>
             </p>

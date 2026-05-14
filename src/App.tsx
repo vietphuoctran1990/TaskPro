@@ -77,7 +77,7 @@ function AppShell() {
   const handleCloseDetail = useCallback(() => setViewingTask(null), [])
 
   return (
-    <div className="flex h-[100dvh] bg-slate-50 overflow-hidden">
+    <div className="flex h-[100dvh] bg-slate-50 dark:bg-slate-900 overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex h-full">
         <Sidebar onSync={() => setSyncOpen(true)} onManage={handleManage} onNotes={setNotesProject} />

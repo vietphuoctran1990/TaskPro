@@ -45,15 +45,15 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
 
   if (projectGroups.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-16 flex flex-col items-center gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm py-16 flex flex-col items-center gap-4">
         <svg width="64" height="64" viewBox="0 0 64 64" fill="none" className="opacity-20">
           <rect x="4"  y="28" width="24" height="8" rx="4" fill="#6366f1"/>
           <rect x="20" y="16" width="32" height="8" rx="4" fill="#8b5cf6"/>
           <rect x="12" y="40" width="28" height="8" rx="4" fill="#6366f1"/>
         </svg>
         <div className="text-center">
-          <p className="text-slate-500 text-sm font-medium mb-1">{t.timeline.noTasks}</p>
-          <p className="text-slate-400 text-xs">Thêm deadline cho công việc để hiển thị</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">{t.timeline.noTasks}</p>
+          <p className="text-slate-400 dark:text-slate-500 text-xs">Thêm deadline cho công việc để hiển thị</p>
         </div>
         <button
           onClick={onAddTask}
@@ -68,26 +68,26 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
   const todayOffset = DAYS_BACK * DAY_W // px from left to today line
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
       <div className="flex">
         {/* Frozen left: project + task names */}
-        <div className="shrink-0 w-48 border-r border-slate-200 bg-white z-10">
+        <div className="shrink-0 w-48 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-10">
           {/* Header placeholder */}
-          <div className="h-10 border-b border-slate-200 bg-slate-50 flex items-center px-4">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t.list.task}</span>
+          <div className="h-10 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex items-center px-4">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.list.task}</span>
           </div>
           {projectGroups.map(({ project, tasks }) => (
             <div key={project.id}>
               {/* Project header */}
-              <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-100">
+              <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700/50">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
-                <span className="text-xs font-semibold text-slate-600 truncate">{project.name}</span>
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate">{project.name}</span>
               </div>
               {/* Task rows */}
               {tasks.map(task => (
                 <div
                   key={task.id}
-                  className="h-10 flex items-center px-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors"
+                  className="h-10 flex items-center px-4 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
                   onClick={() => onViewTask(task)}
                 >
                   <span className={cn(
@@ -106,7 +106,7 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
         <div ref={scrollRef} className="flex-1 overflow-x-auto">
           <div style={{ width: DAYS_TOTAL * DAY_W, position: 'relative' }}>
             {/* Day headers */}
-            <div className="flex h-10 border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
+            <div className="flex h-10 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 sticky top-0 z-10">
               {days.map((d, i) => {
                 const isToday  = d.getTime() === today.getTime()
                 const isSunday = d.getDay() === 0
@@ -115,20 +115,20 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
                   <div
                     key={i}
                     className={cn(
-                      'flex-none flex flex-col items-center justify-center border-r border-slate-100 text-center',
-                      isToday && 'bg-indigo-50',
-                      (isSunday || isSat) && !isToday && 'bg-slate-100/60'
+                      'flex-none flex flex-col items-center justify-center border-r border-slate-100 dark:border-slate-700/50 text-center',
+                      isToday && 'bg-indigo-50 dark:bg-indigo-900/20',
+                      (isSunday || isSat) && !isToday && 'bg-slate-100/60 dark:bg-slate-700/20'
                     )}
                     style={{ width: DAY_W }}
                   >
                     <span className={cn('text-[10px] font-medium leading-none',
-                      isToday ? 'text-indigo-600' : 'text-slate-400'
+                      isToday ? 'text-indigo-600' : 'text-slate-400 dark:text-slate-500'
                     )}>
                       {d.toLocaleDateString(state.language === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'narrow' })}
                     </span>
                     <span className={cn(
                       'text-xs font-bold leading-none mt-0.5',
-                      isToday ? 'text-indigo-600' : 'text-slate-600'
+                      isToday ? 'text-indigo-600' : 'text-slate-600 dark:text-slate-400'
                     )}>
                       {d.getDate()}
                     </span>
@@ -147,11 +147,11 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
             {projectGroups.map(({ project, tasks }) => (
               <div key={project.id}>
                 {/* Project header row */}
-                <div className="flex border-b border-slate-100 bg-slate-50" style={{ height: 33 }}>
+                <div className="flex border-b border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/80" style={{ height: 33 }}>
                   {days.map((d, i) => (
                     <div key={i} className={cn(
-                      'flex-none border-r border-slate-100',
-                      (d.getDay() === 0 || d.getDay() === 6) && 'bg-slate-100/60'
+                      'flex-none border-r border-slate-100 dark:border-slate-700/50',
+                      (d.getDay() === 0 || d.getDay() === 6) && 'bg-slate-100/60 dark:bg-slate-700/20'
                     )} style={{ width: DAY_W }} />
                   ))}
                 </div>
@@ -171,14 +171,14 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
                   return (
                     <div
                       key={task.id}
-                      className="relative flex border-b border-slate-50"
+                      className="relative flex border-b border-slate-50 dark:border-slate-700/30"
                       style={{ height: 40 }}
                     >
                       {/* Background grid cells */}
                       {days.map((d, i) => (
                         <div key={i} className={cn(
-                          'flex-none border-r border-slate-50',
-                          (d.getDay() === 0 || d.getDay() === 6) && 'bg-slate-50/80'
+                          'flex-none border-r border-slate-50 dark:border-slate-700/30',
+                          (d.getDay() === 0 || d.getDay() === 6) && 'bg-slate-50/80 dark:bg-slate-700/10'
                         )} style={{ width: DAY_W }} />
                       ))}
                       {/* Bar */}
@@ -213,7 +213,7 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 px-4 py-2.5 border-t border-slate-100 bg-slate-50 text-xs text-slate-500">
+      <div className="flex items-center gap-4 px-4 py-2.5 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-500 dark:text-slate-400">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-1.5 rounded-full bg-indigo-500 inline-block" />
           {t.list.task}

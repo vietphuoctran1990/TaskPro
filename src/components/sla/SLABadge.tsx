@@ -24,12 +24,12 @@ export default function SLABadge({ task, showTimer = false, size = 'sm' }: SLABa
   const overdue = deadline && deadline.getTime() < Date.now()
 
   const CONFIG: Record<SLAStatus, { label: string; className: string; icon: React.ElementType }> = {
-    on_track:  { label: t.sla.on_track,  className: 'bg-emerald-50 text-emerald-700 border-emerald-200',  icon: CheckCircle2 },
-    at_risk:   { label: t.sla.at_risk,   className: 'bg-amber-50 text-amber-700 border-amber-200',         icon: AlertTriangle },
-    critical:  { label: t.sla.critical,  className: 'bg-orange-50 text-orange-700 border-orange-200',      icon: Zap },
-    breached:  { label: t.sla.breached,  className: 'bg-red-50 text-red-700 border-red-200',               icon: AlertTriangle },
-    completed: { label: t.sla.completed, className: 'bg-slate-50 text-slate-500 border-slate-200',         icon: CheckCircle2 },
-    none:      { label: t.sla.none,      className: 'bg-slate-50 text-slate-400 border-slate-200',         icon: Clock },
+    on_track:  { label: t.sla.on_track,  className: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',  icon: CheckCircle2 },
+    at_risk:   { label: t.sla.at_risk,   className: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',         icon: AlertTriangle },
+    critical:  { label: t.sla.critical,  className: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800',      icon: Zap },
+    breached:  { label: t.sla.breached,  className: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',               icon: AlertTriangle },
+    completed: { label: t.sla.completed, className: 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700',         icon: CheckCircle2 },
+    none:      { label: t.sla.none,      className: 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700',         icon: Clock },
   }
 
   const cfg = CONFIG[status]

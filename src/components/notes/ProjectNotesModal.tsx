@@ -48,7 +48,7 @@ export default function ProjectNotesModal({ project, onClose }: Props) {
           value={notes}
           onChange={e => handleChange(e.target.value)}
           placeholder={`Ghi chú, tài liệu, meeting notes cho dự án "${project.name}"…\n\nHỗ trợ Markdown:\n# Tiêu đề\n- Danh sách\n**In đậm** _Nghiêng_`}
-          className="w-full min-h-[420px] px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-300 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono leading-relaxed"
+          className="w-full min-h-[420px] px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-500 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono leading-relaxed"
         />
         <div className="flex items-center justify-between">
           <span className={`text-xs transition-colors ${saved ? 'text-emerald-500' : 'text-slate-400'}`}>
@@ -56,7 +56,7 @@ export default function ProjectNotesModal({ project, onClose }: Props) {
           </span>
           <div className="flex gap-2">
             <button onClick={onClose}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 transition-colors">
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
               <X size={12} /> Đóng
             </button>
             <button onClick={handleSave} disabled={saved}

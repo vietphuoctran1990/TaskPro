@@ -87,10 +87,10 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
       {task && (
         <>
           {/* Header */}
-          <div className="px-6 py-4 border-b border-slate-200">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-start justify-between gap-3 mb-3">
               <h2 className={cn(
-                'text-lg font-semibold text-slate-900 leading-snug',
+                'text-lg font-semibold text-slate-900 dark:text-slate-100 leading-snug',
                 task.status === 'done' && 'line-through text-slate-400'
               )}>
                 {task.title}
@@ -107,7 +107,7 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
               <PriorityBadge priority={task.priority} />
               <SLABadge task={task} showTimer size="md" />
               {project && (
-                <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: project.color }} />
                   {project.name}
                 </span>
@@ -123,9 +123,9 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
           <div className="overflow-y-auto max-h-[60vh]">
             {/* SLA timeline */}
             {deadline && task.status !== 'done' && (
-              <div className="mx-6 mt-4 p-3 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="mx-6 mt-4 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                  <span className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-400">
                     <Clock size={12} /> {t.detail.slaDeadline}
                   </span>
                   <span className={cn(
@@ -139,7 +139,7 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                     <Calendar size={11} />
                     {formatDateTime(task.dueDate, task.dueTime)}
                     {task.slaHours && <span className="text-slate-400">· {task.slaHours}h {t.detail.slaWindow}</span>}
@@ -158,15 +158,15 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
               {/* Description */}
               {task.description && (
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t.detail.description}</h3>
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{task.description}</p>
+                  <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">{t.detail.description}</h3>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{task.description}</p>
                 </div>
               )}
 
               {/* Labels */}
               {labels.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t.detail.labels}</h3>
+                  <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">{t.detail.labels}</h3>
                   <div className="flex flex-wrap gap-1.5">
                     {labels.map(l => <Badge key={l.id} color={l.color}>{l.name}</Badge>)}
                   </div>
@@ -176,15 +176,15 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
               {/* Subtasks */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <CheckSquare size={11} /> {t.detail.subtasks}
+                  <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckSquare size={11} className="text-slate-400 dark:text-slate-500" /> {t.detail.subtasks}
                   </h3>
                   {totalSub > 0 && (
-                    <span className="text-xs text-slate-500">{completedSub}/{totalSub}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{completedSub}/{totalSub}</span>
                   )}
                 </div>
                 {totalSub > 0 && (
-                  <div className="w-full h-1 bg-slate-100 rounded-full mb-3 overflow-hidden">
+                  <div className="w-full h-1 bg-slate-100 dark:bg-slate-700 rounded-full mb-3 overflow-hidden">
                     <div className="h-full bg-emerald-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
                   </div>
                 )}
@@ -195,7 +195,7 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                         onClick={() => handleToggleSub(sub.id)}
                         className={cn(
                           'shrink-0 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
-                          sub.done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 hover:border-emerald-400'
+                          sub.done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600 hover:border-emerald-400'
                         )}
                       >
                         {sub.done && (
@@ -204,7 +204,7 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                           </svg>
                         )}
                       </button>
-                      <span className={cn('flex-1 text-sm', sub.done && 'line-through text-slate-400')}>
+                      <span className={cn('flex-1 text-sm text-slate-700 dark:text-slate-300', sub.done && 'line-through text-slate-400 dark:text-slate-500')}>
                         {sub.title}
                       </span>
                       <button
@@ -221,7 +221,7 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                     type="text" placeholder={t.detail.addSubtask}
                     value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAddSub()}
-                    className="flex-1 h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <Button variant="ghost" size="icon" onClick={handleAddSub} disabled={!newSubtask.trim()}>
                     <Plus size={14} />
@@ -231,15 +231,15 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
 
               {/* Comments */}
               <div>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <MessageSquare size={11} /> {t.detail.comments} {task.comments.length > 0 && `(${task.comments.length})`}
                 </h3>
                 {task.comments.length > 0 && (
                   <div className="space-y-2.5 mb-3">
                     {task.comments.map(c => (
-                      <div key={c.id} className="bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
-                        <p className="text-sm text-slate-700 leading-relaxed">{c.text}</p>
-                        <p className="text-xs text-slate-400 mt-1">
+                      <div key={c.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl px-3 py-2.5 border border-slate-100 dark:border-slate-700/50">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{c.text}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                           {new Date(c.createdAt).toLocaleString(state.language === 'vi' ? 'vi-VN' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
@@ -254,21 +254,21 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                     onChange={e => setNewComment(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleAddComment() }}
                     rows={2}
-                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <Button variant="primary" size="icon" className="self-end" onClick={handleAddComment} disabled={!newComment.trim()}>
                     <Send size={14} />
                   </Button>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">{t.detail.ctrlEnter}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t.detail.ctrlEnter}</p>
               </div>
             </div>
           </div>
 
           {/* Footer — status changer + focus */}
-          <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 rounded-b-2xl">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-slate-500 mr-1">{t.detail.moveTo}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 mr-1">{t.detail.moveTo}</span>
               {statusKeys.map(s => (
                 <button
                   key={s}
@@ -277,7 +277,7 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                     'px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
                     task.status === s
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600'
+                      : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-300 hover:text-indigo-600'
                   )}
                 >
                   {t.status[s]}

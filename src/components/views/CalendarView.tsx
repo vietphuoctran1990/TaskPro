@@ -117,10 +117,10 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
       )}
 
       {/* Calendar card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <h2 className="text-base font-semibold text-slate-800">{monthLabel}</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">{monthLabel}</h2>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={() => setCursor(new Date(year, month - 1, 1))}>
               <ChevronLeft size={16} />
@@ -139,9 +139,9 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
         </div>
 
         {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-slate-200">
+        <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-700">
           {t.calendar.days.map(d => (
-            <div key={d} className="px-2 py-2.5 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <div key={d} className="px-2 py-2.5 text-center text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               {d}
             </div>
           ))}
@@ -159,9 +159,9 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
               <div
                 key={i}
                 className={cn(
-                  'min-h-[100px] border-r border-b border-slate-100 p-1.5 transition-colors',
-                  !cell.current && 'bg-slate-50/60',
-                  cell.current && 'hover:bg-slate-50/80 cursor-pointer'
+                  'min-h-[100px] border-r border-b border-slate-100 dark:border-slate-700/50 p-1.5 transition-colors',
+                  !cell.current && 'bg-slate-50/60 dark:bg-slate-800/50',
+                  cell.current && 'hover:bg-slate-50/80 dark:hover:bg-slate-700/30 cursor-pointer'
                 )}
                 onClick={() => cell.current && cellTasks.length === 0 && onAddTask(key)}
               >
@@ -172,10 +172,10 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
                     todayCell
                       ? 'bg-indigo-600 text-white'
                       : !cell.current
-                      ? 'text-slate-300'
+                      ? 'text-slate-300 dark:text-slate-600'
                       : isPast
-                      ? 'text-slate-400'
-                      : 'text-slate-700'
+                      ? 'text-slate-400 dark:text-slate-500'
+                      : 'text-slate-700 dark:text-slate-300'
                   )}>
                     {cell.date.getDate()}
                   </span>
@@ -200,23 +200,23 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
                         onClick={e => { e.stopPropagation(); onViewTask(task) }}
                         className={cn(
                           'w-full text-left px-1.5 py-0.5 rounded text-xs truncate flex items-center gap-1 border-l-2 transition-colors',
-                          'bg-white hover:bg-indigo-50 shadow-sm border border-slate-100',
+                          'bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 shadow-sm border border-slate-100 dark:border-slate-600',
                           PRIORITY_BORDER[task.priority],
                           task.status === 'done' && 'opacity-50 line-through'
                         )}
                         title={task.title}
                       >
                         <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', SLA_DOT[sla])} />
-                        <span className="truncate text-slate-700 font-medium">{task.title}</span>
+                        <span className="truncate text-slate-700 dark:text-slate-300 font-medium">{task.title}</span>
                         {task.dueTime && (
-                          <span className="shrink-0 text-slate-400">{task.dueTime}</span>
+                          <span className="shrink-0 text-slate-400 dark:text-slate-500">{task.dueTime}</span>
                         )}
                       </button>
                     )
                   })}
                   {cellTasks.length > 3 && (
                     <button
-                      className="w-full text-left px-1.5 py-0.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
+                      className="w-full text-left px-1.5 py-0.5 text-xs text-slate-400 dark:text-slate-500 hover:text-indigo-600 transition-colors"
                       onClick={e => { e.stopPropagation(); onViewTask(cellTasks[3]) }}
                     >
                       {t.calendar.more(cellTasks.length - 3)}
@@ -229,7 +229,7 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
         </div>
 
         {/* Legend */}
-        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex flex-wrap gap-4 text-xs text-slate-500">
+        <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
           {([
             [t.calendar.breached, 'bg-red-500'],
             [t.calendar.critical, 'bg-orange-500'],

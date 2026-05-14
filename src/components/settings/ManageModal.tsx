@@ -61,17 +61,17 @@ function ProjectRow({ project, taskCount }: { project: Project; taskCount: numbe
 
   if (editing) {
     return (
-      <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3 space-y-2.5">
+      <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/40 dark:bg-indigo-900/20 p-3 space-y-2.5">
         <input
           autoFocus value={name} onChange={e => setName(e.target.value)}
           placeholder={t.manage.projectName}
           onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel() }}
-          className="w-full h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
         <input
           value={desc} onChange={e => setDesc(e.target.value)}
           placeholder={t.manage.description}
-          className="w-full h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
         <ColorPicker value={color} onChange={setColor} />
         <div className="flex gap-2">
@@ -83,13 +83,13 @@ function ProjectRow({ project, taskCount }: { project: Project; taskCount: numbe
   }
 
   return (
-    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-slate-50 group">
+    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 group">
       <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-800 truncate">{project.name}</p>
-        {project.description && <p className="text-xs text-slate-400 truncate">{project.description}</p>}
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{project.name}</p>
+        {project.description && <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{project.description}</p>}
       </div>
-      <span className="text-xs text-slate-400 shrink-0">{t.manage.taskCount(taskCount)}</span>
+      <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button onClick={() => setEditing(true)}
           className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">

@@ -58,7 +58,7 @@ function InlineCreate({
   }
 
   return (
-    <div className="mt-2 p-3 rounded-xl border border-indigo-200 bg-indigo-50/60 space-y-2.5">
+    <div className="mt-2 p-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/60 dark:bg-indigo-900/20 space-y-2.5">
       <input
         autoFocus
         type="text"
@@ -66,7 +66,7 @@ function InlineCreate({
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') onCancel() }}
-        className="h-8 w-full px-2.5 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="h-8 w-full px-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
       <div className="flex items-center gap-1.5 flex-wrap">
         {PRESET_COLORS.map(c => (
@@ -90,7 +90,7 @@ function InlineCreate({
         </button>
         <button
           type="button" onClick={onCancel}
-          className="h-7 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50 transition-colors"
+          className="h-7 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
         >
           <X size={12} />
         </button>
@@ -245,7 +245,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
       title={task ? t.form.editTask : t.form.newTask}
       size="lg"
       footer={
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 rounded-b-2xl">
           <Button variant="ghost" onClick={onClose}>{t.form.cancel}</Button>
           <Button variant="primary" onClick={handleSubmit}>
             {task ? t.form.save : t.form.create}
@@ -263,7 +263,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
 
         {/* Subtasks */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">{t.detail.subtasks}</span>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.detail.subtasks}</span>
           {form.subtasks.length > 0 && (
             <div className="space-y-1">
               {form.subtasks.map(s => (
@@ -274,7 +274,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
                     }`}>
                     {s.done && <Check size={10} className="text-white" strokeWidth={3} />}
                   </button>
-                  <span className={`flex-1 text-sm ${s.done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                  <span className={`flex-1 text-sm ${s.done ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
                     {s.title}
                   </span>
                   <button type="button" onClick={() => removeSubtask(s.id)}
@@ -290,7 +290,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
               type="text" value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
               placeholder={t.detail.addSubtask}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }}
-              className="flex-1 h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <button type="button" onClick={addSubtask}
               disabled={!newSubtask.trim()}
@@ -324,7 +324,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-slate-700">{t.form.project}</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.project}</label>
               <button
                 type="button"
                 onClick={() => { setAddingProject(v => !v); setAddingLabel(false) }}
@@ -335,7 +335,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             </div>
             <select
               id="task-project" value={form.projectId} onChange={e => set('projectId', e.target.value)}
-              className="h-9 w-full px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-9 w-full px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {state.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
@@ -349,39 +349,39 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700">{t.form.estimatedHours}</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.estimatedHours}</label>
             <div className="relative">
               <Timer size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input type="number" min="0" step="0.5" placeholder={t.form.estPlaceholder}
                 value={form.estimatedHours} onChange={e => set('estimatedHours', e.target.value)}
-                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700">{t.form.dueDate}</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueDate}</label>
             <div className="relative">
               <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)}
-                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700">{t.form.dueTime} <span className="text-slate-400 font-normal">{t.form.slaTimeHint}</span></label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueTime} <span className="text-slate-400 dark:text-slate-500 font-normal">{t.form.slaTimeHint}</span></label>
             <div className="relative">
               <Clock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input type="time" value={form.dueTime} onChange={e => set('dueTime', e.target.value)}
-                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
         </div>
 
         {/* SLA window */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-slate-700">
-            {t.form.slaWindow} <span className="text-slate-400 font-normal">{t.form.slaWindowHint}</span>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {t.form.slaWindow} <span className="text-slate-400 dark:text-slate-500 font-normal">{t.form.slaWindowHint}</span>
           </label>
           <div className="flex gap-2 flex-wrap">
             {SLA_PRESETS.map(p => (
@@ -389,7 +389,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                   slaPreset === p.value
                     ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                    : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:text-indigo-600'
                 }`}>
                 {p.label}
               </button>
@@ -399,16 +399,16 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             <div className="flex items-center gap-2 mt-1">
               <input type="number" min="1" placeholder={t.form.hours}
                 value={form.slaHours} onChange={e => set('slaHours', e.target.value)}
-                className="h-9 w-28 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-              <span className="text-sm text-slate-500">{t.form.hours}</span>
+                className="h-9 w-28 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">{t.form.hours}</span>
             </div>
           )}
         </div>
 
         {/* Recurrence */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-            <Repeat size={13} className="text-slate-400" /> {t.recurrence.title}
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Repeat size={13} className="text-slate-400 dark:text-slate-500" /> {t.recurrence.title}
           </label>
           <div className="flex gap-2 flex-wrap">
             {(['', 'daily', 'weekly', 'monthly'] as const).map(type => (
@@ -417,7 +417,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                   form.recurrenceType === type
                     ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                    : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:text-indigo-600'
                 }`}>
                 {type === ''        ? t.recurrence.none    :
                  type === 'daily'   ? t.recurrence.daily   :
@@ -428,15 +428,15 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
           </div>
           {form.recurrenceType && (
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-sm text-slate-500">{t.recurrence.every}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{t.recurrence.every}</span>
               <input type="number" min="1" max="99"
                 value={form.recurrenceInterval} onChange={e => set('recurrenceInterval', e.target.value)}
-                className="h-9 w-20 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-              <span className="text-sm text-slate-500">{recurrenceUnitLabel}</span>
+                className="h-9 w-20 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">{recurrenceUnitLabel}</span>
               <span className="text-slate-300">·</span>
-              <label className="text-sm text-slate-500">{t.recurrence.endDate}</label>
+              <label className="text-sm text-slate-500 dark:text-slate-400">{t.recurrence.endDate}</label>
               <input type="date" value={form.recurrenceEndDate} onChange={e => set('recurrenceEndDate', e.target.value)}
-                className="h-9 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                className="h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           )}
         </div>
@@ -444,7 +444,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
         {/* Labels */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-700">{t.form.labels}</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.labels}</span>
             <button
               type="button"
               onClick={() => { setAddingLabel(v => !v); setAddingProject(false) }}
