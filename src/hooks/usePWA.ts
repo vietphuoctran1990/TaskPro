@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -13,7 +13,6 @@ export function usePWA() {
 
   const {
     needRefresh: [needRefresh],
-    updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
       if (r) {
@@ -60,6 +59,19 @@ export function usePWA() {
     }
     return outcome === 'accepted'
   }
+
+  // Reliable update: post SKIP_WAITING to waiting SW, reload on controllerchange
+  const updateServiceWorker = useCallback(async () => {
+    const reg = await navigator.serviceWorker.getRegistration()
+    if (!reg?.waiting) {
+      window.location.reload()
+      return
+    }
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload()
+    }, { once: true })
+    reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+  }, [])
 
   return {
     canInstall: !!installPrompt && !isInstalled,

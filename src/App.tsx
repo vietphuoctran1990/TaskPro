@@ -183,7 +183,7 @@ function AppShell() {
       {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
 
       {/* PWA UI */}
-      {needRefresh && <UpdateBanner onUpdate={() => updateServiceWorker(true)} />}
+      {needRefresh && <UpdateBanner onUpdate={() => updateServiceWorker()} />}
       {canInstall && !installDismissed && (
         <InstallBanner onInstall={install} onDismiss={() => setInstallDismissed(true)} />
       )}
