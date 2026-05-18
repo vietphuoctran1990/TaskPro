@@ -165,9 +165,9 @@ function AppShell() {
 
       {/* Mobile FAB */}
       <button
-        onClick={() => handleAddTask()}
+        onClick={() => state.viewMode === 'notes' ? handleAddNote() : handleAddTask()}
         className="fixed bottom-6 right-6 z-30 sm:hidden w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center"
-        aria-label="Add task"
+        aria-label={state.viewMode === 'notes' ? 'Tạo ghi chú' : 'Thêm công việc'}
       >
         <Plus size={24} />
       </button>

@@ -114,8 +114,8 @@ function NoteCard({ note, folderName, onEdit, onDelete, onTogglePin }: NoteCardP
         </div>
       )}
 
-      {/* Action buttons on hover */}
-      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      {/* Action buttons — always visible on touch, hover-reveal on desktop */}
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10">
         <button
           onClick={e => { e.stopPropagation(); onTogglePin() }}
           title={note.pinned ? 'Bỏ ghim' : 'Ghim ghi chú'}
