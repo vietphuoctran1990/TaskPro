@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { StickyNote, Pin, Pencil, Trash2, Plus, LayoutGrid, List, CheckSquare, Square, FileDown, Trash } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
@@ -21,24 +21,29 @@ export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
+  const folderMap = useMemo(
+    () => new Map(state.noteFolders.map(f => [f.id, f])),
+    [state.noteFolders]
+  )
+
   const activeFolder = state.activeNoteFolderId
-    ? state.noteFolders.find(f => f.id === state.activeNoteFolderId) ?? null
+    ? (folderMap.get(state.activeNoteFolderId) ?? null)
     : null
 
-  const visibleNotes = state.notes.filter(n => {
+  const visibleNotes = useMemo(() => state.notes.filter(n => {
     if (activeFolder && n.folderId !== activeFolder.id) return false
     if (state.searchQuery.trim()) {
       const q = state.searchQuery.toLowerCase()
       return n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
     }
     return true
-  })
+  }), [state.notes, activeFolder, state.searchQuery])
 
-  const sorted = [...visibleNotes].sort((a, b) => {
+  const sorted = useMemo(() => [...visibleNotes].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1
     if (!a.pinned && b.pinned) return 1
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  })
+  }), [visibleNotes])
 
   const heading = activeFolder ? activeFolder.name : 'Tất cả ghi chú'
 
@@ -83,17 +88,20 @@ export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
     navigator.clipboard.writeText(text).catch(() => {})
   }
 
-  const sharedNoteProps = (note: Note) => ({
-    note,
-    folderName: note.folderId ? (state.noteFolders.find(f => f.id === note.folderId)?.name ?? '') : '',
-    folderColor: note.folderId ? (state.noteFolders.find(f => f.id === note.folderId)?.color ?? '') : '',
-    onEdit: () => onEditNote(note),
-    onDelete: () => dispatch({ type: 'DELETE_NOTE', payload: note.id }),
-    onTogglePin: () => dispatch({ type: 'UPDATE_NOTE', payload: { id: note.id, pinned: !note.pinned } }),
-    selectMode,
-    selected: selectedIds.has(note.id),
-    onSelect: () => toggleSelect(note.id),
-  })
+  const sharedNoteProps = (note: Note) => {
+    const folder = note.folderId ? folderMap.get(note.folderId) : null
+    return {
+      note,
+      folderName: folder?.name ?? '',
+      folderColor: folder?.color ?? '',
+      onEdit: () => onEditNote(note),
+      onDelete: () => dispatch({ type: 'DELETE_NOTE', payload: note.id }),
+      onTogglePin: () => dispatch({ type: 'UPDATE_NOTE', payload: { id: note.id, pinned: !note.pinned } }),
+      selectMode,
+      selected: selectedIds.has(note.id),
+      onSelect: () => toggleSelect(note.id),
+    }
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -226,7 +234,7 @@ interface NoteItemProps {
   onSelect: () => void
 }
 
-function NoteCard({ note, folderName, folderColor, onEdit, onDelete, onTogglePin, selectMode, selected, onSelect }: NoteItemProps) {
+const NoteCard = memo(function NoteCard({ note, folderName, folderColor, onEdit, onDelete, onTogglePin, selectMode, selected, onSelect }: NoteItemProps) {
   return (
     <div
       onClick={selectMode ? onSelect : onEdit}
@@ -309,9 +317,9 @@ function NoteCard({ note, folderName, folderColor, onEdit, onDelete, onTogglePin
       </div>
     </div>
   )
-}
+})
 
-function NoteListRow({ note, folderName, folderColor, onEdit, onDelete, onTogglePin, selectMode, selected, onSelect }: NoteItemProps) {
+const NoteListRow = memo(function NoteListRow({ note, folderName, folderColor, onEdit, onDelete, onTogglePin, selectMode, selected, onSelect }: NoteItemProps) {
   return (
     <div
       onClick={selectMode ? onSelect : onEdit}
@@ -392,4 +400,4 @@ function NoteListRow({ note, folderName, folderColor, onEdit, onDelete, onToggle
       )}
     </div>
   )
-}
+})

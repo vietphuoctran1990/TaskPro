@@ -1,5 +1,5 @@
 import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -83,6 +83,18 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
   const [searchOpen, setSearchOpen] = useState(false)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
 
+  const [localSearch, setLocalSearch] = useState(state.searchQuery)
+
+  useEffect(() => {
+    const timer = setTimeout(() => dispatch({ type: 'SET_SEARCH', payload: localSearch }), 300)
+    return () => clearTimeout(timer)
+  }, [localSearch, dispatch])
+
+  // Sync if search is cleared externally (e.g. clearAllFilters)
+  useEffect(() => {
+    if (state.searchQuery === '' && localSearch !== '') setLocalSearch('')
+  }, [state.searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes']
   const isNotesMode = state.viewMode === 'notes'
   const project = state.projects.find(p => p.id === state.activeProjectId)
@@ -91,13 +103,13 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
   ).length
   const hasFilters =
     state.filterPriority !== 'all' || state.filterStatus !== 'all' ||
-    state.filterSLA !== 'all' || state.searchQuery.trim() !== ''
+    state.filterSLA !== 'all' || localSearch.trim() !== ''
 
   const clearAllFilters = () => {
     dispatch({ type: 'SET_FILTER_PRIORITY', payload: 'all' })
     dispatch({ type: 'SET_FILTER_STATUS',   payload: 'all' })
     dispatch({ type: 'SET_FILTER_SLA',      payload: 'all' })
-    dispatch({ type: 'SET_SEARCH',          payload: '' })
+    setLocalSearch('')
   }
 
   return (
@@ -117,14 +129,14 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
                 autoFocus
                 type="search"
                 placeholder={t.header.search}
-                value={state.searchQuery}
-                onChange={e => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
+                value={localSearch}
+                onChange={e => setLocalSearch(e.target.value)}
                 className="h-9 pl-8 pr-3 w-full rounded-lg border border-indigo-300 dark:border-indigo-600 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-700"
               />
             </div>
             <Button variant="ghost" size="icon" onClick={() => {
               setSearchOpen(false)
-              dispatch({ type: 'SET_SEARCH', payload: '' })
+              setLocalSearch('')
             }}>
               <X size={16} />
             </Button>
@@ -169,19 +181,19 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
 
             {/* Search — desktop only */}
             <div className="hidden md:flex relative">
-              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input type="search" placeholder={t.header.search} value={state.searchQuery}
-                onChange={e => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 z-10" />
+              <input type="search" placeholder={t.header.search} value={localSearch}
+                onChange={e => setLocalSearch(e.target.value)}
                 className="h-8 pl-8 pr-3 w-36 focus:w-56 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all duration-300"
               />
             </div>
 
             {/* Mobile search icon button */}
             <Button variant="ghost" size="icon"
-              className={cn('md:hidden relative', state.searchQuery.trim() && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
+              className={cn('md:hidden relative', localSearch.trim() && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
               onClick={() => setSearchOpen(true)}>
               <Search size={15} />
-              {state.searchQuery.trim() && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
+              {localSearch.trim() && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
             </Button>
 
             {/* Filters — desktop inline toggle (hidden in notes mode) */}
@@ -249,13 +261,13 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
           })}
         </div>
         {/* Active search chip */}
-        {state.searchQuery.trim() && (
+        {localSearch.trim() && (
           <button
-            onClick={() => dispatch({ type: 'SET_SEARCH', payload: '' })}
+            onClick={() => setLocalSearch('')}
             className="flex items-center gap-1 h-7 px-2 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-medium max-w-[120px] hover:bg-indigo-200 dark:hover:bg-indigo-800/50 transition-colors"
           >
             <Search size={10} className="shrink-0" />
-            <span className="truncate">{state.searchQuery}</span>
+            <span className="truncate">{localSearch}</span>
             <X size={10} className="shrink-0" />
           </button>
         )}

@@ -42,7 +42,7 @@ type Action =
   | { type: 'SET_NOTIF_BEFORE'; payload: number[] }
   | { type: 'SET_COLUMN_LABEL'; payload: { status: Status; label: string } }
   | { type: 'IMPORT_STATE';    payload: { data: AppState; mode: 'replace' | 'merge' } }
-  | { type: 'ADD_NOTE';           payload: Omit<Note, 'id' | 'createdAt' | 'updatedAt'> }
+  | { type: 'ADD_NOTE';           payload: Omit<Note, 'id' | 'createdAt' | 'updatedAt'> & { id?: string } }
   | { type: 'UPDATE_NOTE';        payload: Partial<Note> & { id: string } }
   | { type: 'DELETE_NOTE';        payload: string }
   | { type: 'ADD_NOTE_FOLDER';    payload: Omit<NoteFolder, 'id'> }
@@ -185,7 +185,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'ADD_NOTE':
       return {
         ...state,
-        notes: [...state.notes, { ...action.payload, id: generateId(), createdAt: now, updatedAt: now }],
+        notes: [...state.notes, { ...action.payload, id: action.payload.id ?? generateId(), createdAt: now, updatedAt: now }],
       }
     case 'UPDATE_NOTE':
       return {
@@ -244,7 +244,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState)
 
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch {}
+    const timer = setTimeout(() => {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch {}
+    }, 500)
+    return () => clearTimeout(timer)
   }, [state])
 
   useEffect(() => {

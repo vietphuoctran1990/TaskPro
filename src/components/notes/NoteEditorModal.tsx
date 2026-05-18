@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { ChevronDown, Check, X, Copy, Share2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
@@ -27,9 +27,7 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
   // The note id we're currently editing (created on first open if null)
   const editingIdRef = useRef<string | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isNewRef = useRef(false)
 
-  // Initialise local state when modal opens
   useEffect(() => {
     if (!open) return
     if (note) {
@@ -37,81 +35,49 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
       setTitle(note.title)
       setContent(note.content)
       setFolderId(note.folderId)
-      isNewRef.current = false
-      setSaveStatus('idle')
     } else {
-      // Will create note on first keystroke
       editingIdRef.current = null
       setTitle('')
       setContent('')
       setFolderId(defaultFolderId)
-      isNewRef.current = true
-      setSaveStatus('idle')
     }
+    setSaveStatus('idle')
   }, [open, note, defaultFolderId])
 
-  // Auto-save logic
   const scheduleSave = useCallback((nextTitle: string, nextContent: string, nextFolderId: string) => {
     setSaveStatus('dirty')
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      const now = new Date().toISOString()
       if (editingIdRef.current) {
         dispatch({
           type: 'UPDATE_NOTE',
           payload: { id: editingIdRef.current, title: nextTitle, content: nextContent, folderId: nextFolderId },
         })
       } else {
-        // Create new note, capture id via ADD_NOTE
-        // We'll store the id via a workaround: generate locally before dispatch
-        const id = crypto.randomUUID ? crypto.randomUUID() : `note_${now}`
+        const id = crypto.randomUUID()
         editingIdRef.current = id
         dispatch({
           type: 'ADD_NOTE',
-          payload: {
-            title: nextTitle,
-            content: nextContent,
-            folderId: nextFolderId,
-            pinned: false,
-          },
+          payload: { id, title: nextTitle, content: nextContent, folderId: nextFolderId, pinned: false },
         })
-        // After dispatch the reducer sets a generated id; we can't predict it.
-        // So instead we embed the id into the ADD_NOTE payload pattern by not
-        // using a custom id — just mark that we've dispatched and pick up the
-        // most-recently-created note for future updates.
-        // Mark as "need to find id" on next update
-        editingIdRef.current = '__pending__'
       }
       setSaveStatus('saved')
     }, 600)
   }, [dispatch])
 
-  // When we're in __pending__ state, find the newest note to get its id
-  const resolvePendingId = useCallback(() => {
-    if (editingIdRef.current === '__pending__' && state.notes.length > 0) {
-      const newest = [...state.notes].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )[0]
-      editingIdRef.current = newest.id
-    }
-  }, [state.notes])
-
   const handleTitleChange = (val: string) => {
     setTitle(val)
-    resolvePendingId()
     scheduleSave(val, content, folderId)
   }
 
   const handleContentChange = (val: string) => {
     setContent(val)
-    resolvePendingId()
     scheduleSave(title, val, folderId)
   }
 
   const handleFolderChange = (newFolderId: string) => {
     setFolderId(newFolderId)
     setFolderDropdownOpen(false)
-    resolvePendingId()
     scheduleSave(title, content, newFolderId)
   }
 
@@ -120,9 +86,11 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
   }, [])
 
-  const currentFolderName = folderId
-    ? (state.noteFolders.find(f => f.id === folderId)?.name ?? 'Không có thư mục')
-    : 'Không có thư mục'
+  const currentFolder = useMemo(
+    () => state.noteFolders.find(f => f.id === folderId) ?? null,
+    [folderId, state.noteFolders]
+  )
+  const currentFolderName = currentFolder?.name ?? 'Không có thư mục'
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -214,7 +182,7 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
             {folderId && (
               <span
                 className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: state.noteFolders.find(f => f.id === folderId)?.color ?? '#6366f1' }}
+                style={{ backgroundColor: currentFolder?.color ?? '#6366f1' }}
               />
             )}
             {currentFolderName}
