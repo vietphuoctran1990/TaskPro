@@ -219,15 +219,17 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
 
             <UserMenu onOpenAuth={onOpenAuth} />
 
-            {isNotesMode ? (
-              <Button variant="primary" size="sm" onClick={onAddNote}>
-                <Plus size={14} /> <span className="hidden sm:inline">Tạo ghi chú</span>
-              </Button>
-            ) : (
-              <Button variant="primary" size="sm" onClick={onAddTask}>
-                <Plus size={14} /> <span className="hidden sm:inline">{t.header.newTask}</span>
-              </Button>
-            )}
+            <div className="hidden sm:block">
+              {isNotesMode ? (
+                <Button variant="primary" size="sm" onClick={onAddNote}>
+                  <Plus size={14} /> <span>Tạo ghi chú</span>
+                </Button>
+              ) : (
+                <Button variant="primary" size="sm" onClick={onAddTask}>
+                  <Plus size={14} /> <span>{t.header.newTask}</span>
+                </Button>
+              )}
+            </div>
           </>
         )}
       </div>
