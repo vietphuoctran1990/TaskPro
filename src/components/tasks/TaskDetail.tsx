@@ -83,7 +83,7 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
   const statusKeys = ['todo', 'in_progress', 'in_review', 'done'] as const
 
   return (
-    <Modal open={!!task} onClose={onClose} size="full">
+    <Modal open={!!task} onClose={onClose} size="lg">
       {task && (
         <>
           {/* Header */}
@@ -120,7 +120,7 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
             </div>
           </div>
 
-          <div className="overflow-y-auto">
+          <div className="overflow-y-auto max-h-[60vh]">
             {/* SLA timeline */}
             {deadline && task.status !== 'done' && (
               <div className="mx-6 mt-4 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">

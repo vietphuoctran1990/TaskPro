@@ -154,7 +154,7 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
   )
 
   return (
-    <Modal open={open} onClose={onClose} size="full" footer={footer}>
+    <Modal open={open} onClose={onClose} size="lg" footer={footer}>
       <div className="flex flex-col h-full">
         {/* Title input */}
         <div className="px-6 pt-6 pb-2">
