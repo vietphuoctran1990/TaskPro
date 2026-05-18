@@ -223,6 +223,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
       subtasks:       form.subtasks,
       comments:       task?.comments ?? [],
       recurrence,
+      isNote:         false,
     }
     if (task) {
       dispatch({ type: 'UPDATE_TASK', payload: { ...payload, id: task.id } })

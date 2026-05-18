@@ -99,7 +99,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'ADD_TASK':
       return {
         ...state,
-        tasks: [...state.tasks, { isNote: false, ...action.payload, id: generateId(), createdAt: now, updatedAt: now }],
+        tasks: [...state.tasks, { ...action.payload, id: generateId(), createdAt: now, updatedAt: now }],
       }
     case 'UPDATE_TASK':
       return {

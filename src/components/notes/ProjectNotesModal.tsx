@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Save, X, Plus, Trash2, Pencil, Check, StickyNote, FileText } from 'lucide-react'
 import Modal from '../ui/Modal'
 import { useApp } from '../../context/AppContext'
-import { generateId } from '../../lib/utils'
 import type { Project } from '../../types'
 
 interface Props {
