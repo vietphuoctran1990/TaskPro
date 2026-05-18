@@ -1,7 +1,7 @@
 import { memo, useState, useRef } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Calendar, GripVertical, MessageSquare, MoreHorizontal, Pencil, Repeat, Timer, Trash2 } from 'lucide-react'
+import { Calendar, CheckCheck, GripVertical, MessageSquare, MoreHorizontal, Pencil, Repeat, RotateCcw, Timer, Trash2, X } from 'lucide-react'
 import { cn, formatDateTime, getDeadline, getSLAStatus } from '../../lib/utils'
 import { PriorityBadge, Badge } from '../ui/Badge'
 import SLABadge from '../sla/SLABadge'
@@ -68,7 +68,34 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
         >
           <GripVertical size={13} />
         </button>
-        <div className="relative ml-auto">
+        <div className="flex items-center gap-0.5 ml-auto">
+          {/* Quick: mark done / undo done */}
+          {task.status !== 'done' ? (
+            <button
+              onClick={e => { e.stopPropagation(); dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'done' } }) }}
+              className="w-6 h-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-all"
+              title={t.status.done}
+            >
+              <CheckCheck size={13} />
+            </button>
+          ) : (
+            <button
+              onClick={e => { e.stopPropagation(); dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'todo' } }) }}
+              className="w-6 h-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all"
+              title={t.status.todo}
+            >
+              <RotateCcw size={12} />
+            </button>
+          )}
+          {/* Quick: delete/cancel */}
+          <button
+            onClick={e => { e.stopPropagation(); dispatch({ type: 'DELETE_TASK', payload: task.id }) }}
+            className="w-6 h-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
+            title={t.detail.delete}
+          >
+            <X size={13} />
+          </button>
+          <div className="relative">
           <Button
             ref={menuBtnRef}
             variant="ghost" size="icon"
@@ -101,6 +128,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
               </div>
             </>
           )}
+          </div>
         </div>
       </div>
 
