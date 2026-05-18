@@ -9,13 +9,14 @@ interface ModalProps {
   title?: string
   children: ReactNode
   footer?: ReactNode
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'full'
 }
 
-const sizes = {
+const sizes: Record<string, string> = {
   sm: 'max-w-md',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
+  full: 'sm:max-w-3xl',
 }
 
 export default function Modal({ open, onClose, title, children, footer, size = 'md' }: ModalProps) {
@@ -28,9 +29,14 @@ export default function Modal({ open, onClose, title, children, footer, size = '
 
   if (!open) return null
 
+  const isFull = size === 'full'
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+      className={cn(
+        'fixed inset-0 z-50 flex justify-center',
+        isFull ? 'items-stretch sm:items-center sm:p-4' : 'items-end sm:items-center sm:p-4'
+      )}
       role="dialog"
       aria-modal="true"
     >
@@ -41,8 +47,9 @@ export default function Modal({ open, onClose, title, children, footer, size = '
       <div
         className={cn(
           'relative w-full bg-white dark:bg-slate-800 shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col',
-          'rounded-t-2xl sm:rounded-2xl',
-          'max-h-[92dvh] sm:max-h-[90vh]',
+          isFull
+            ? 'h-dvh sm:h-auto rounded-none sm:rounded-2xl sm:max-h-[95vh]'
+            : 'rounded-t-2xl sm:rounded-2xl max-h-[92dvh] sm:max-h-[90vh]',
           sizes[size]
         )}
       >
@@ -54,9 +61,7 @@ export default function Modal({ open, onClose, title, children, footer, size = '
             </Button>
           </div>
         )}
-        {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 min-h-0">{children}</div>
-        {/* Footer always visible — never inside the scroll area */}
         {footer && <div className="shrink-0">{footer}</div>}
       </div>
     </div>
