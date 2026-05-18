@@ -45,6 +45,7 @@ export interface Task {
   createdAt: string
   updatedAt: string
   projectId: string
+  isNote: boolean               // hidden from all task views; only shown in project notes
 }
 
 export interface Project {

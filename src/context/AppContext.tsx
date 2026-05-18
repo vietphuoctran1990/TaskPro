@@ -59,6 +59,7 @@ function getInitialState(): AppState {
           slaHours:       t.slaHours       ?? null,
           estimatedHours: t.estimatedHours ?? null,
           recurrence:     t.recurrence     ?? null,
+          isNote:         t.isNote         ?? false,
         })),
         filterSLA:    parsed.filterSLA    ?? 'all',
         dateFilter:   parsed.dateFilter   ?? 'all',
@@ -98,7 +99,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'ADD_TASK':
       return {
         ...state,
-        tasks: [...state.tasks, { ...action.payload, id: generateId(), createdAt: now, updatedAt: now }],
+        tasks: [...state.tasks, { isNote: false, ...action.payload, id: generateId(), createdAt: now, updatedAt: now }],
       }
     case 'UPDATE_TASK':
       return {
@@ -209,7 +210,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state.darkMode])
 
   const filteredTasks = useMemo(() => {
-    let tasks = state.tasks
+    let tasks = state.tasks.filter(t => !t.isNote)
     if (state.activeProjectId)      tasks = tasks.filter(t => t.projectId === state.activeProjectId)
     if (state.searchQuery.trim()) {
       const q = state.searchQuery.toLowerCase()
