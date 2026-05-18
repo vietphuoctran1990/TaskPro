@@ -92,23 +92,23 @@ function ProjectRow({ project, taskCount }: { project: Project; taskCount: numbe
       <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button onClick={() => setEditing(true)}
-          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
           <Pencil size={13} />
         </button>
         {confirm ? (
           <div className="flex items-center gap-1">
             <button onClick={() => dispatch({ type: 'DELETE_PROJECT', payload: project.id })}
-              className="p-1 rounded-lg text-red-600 hover:bg-red-50 transition-colors text-xs font-medium px-2">
+              className="p-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-xs font-medium px-2">
               {t.manage.confirmDelete}
             </button>
             <button onClick={() => setConfirm(false)}
-              className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+              className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
               <X size={13} />
             </button>
           </div>
         ) : (
           <button onClick={() => setConfirm(true)}
-            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
             <Trash2 size={13} />
           </button>
         )}
@@ -138,12 +138,12 @@ function LabelRow({ label, taskCount }: { label: Label; taskCount: number }) {
 
   if (editing) {
     return (
-      <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3 space-y-2.5">
+      <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/40 dark:bg-indigo-900/20 p-3 space-y-2.5">
         <input
           autoFocus value={name} onChange={e => setName(e.target.value)}
           placeholder={t.manage.labelName}
           onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel() }}
-          className="w-full h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
         <ColorPicker value={color} onChange={setColor} />
         <div className="flex gap-2">
@@ -155,32 +155,32 @@ function LabelRow({ label, taskCount }: { label: Label; taskCount: number }) {
   }
 
   return (
-    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-slate-50 group">
+    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 group">
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0"
         style={{ backgroundColor: `${label.color}20`, color: label.color }}>
         {label.name}
       </span>
       <span className="flex-1" />
-      <span className="text-xs text-slate-400 shrink-0">{t.manage.taskCount(taskCount)}</span>
+      <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button onClick={() => setEditing(true)}
-          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
           <Pencil size={13} />
         </button>
         {confirm ? (
           <div className="flex items-center gap-1">
             <button onClick={() => dispatch({ type: 'DELETE_LABEL', payload: label.id })}
-              className="p-1 rounded-lg text-red-600 hover:bg-red-50 transition-colors text-xs font-medium px-2">
+              className="p-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-xs font-medium px-2">
               {t.manage.confirmDelete}
             </button>
             <button onClick={() => setConfirm(false)}
-              className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+              className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
               <X size={13} />
             </button>
           </div>
         ) : (
           <button onClick={() => setConfirm(true)}
-            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
             <Trash2 size={13} />
           </button>
         )}
@@ -204,17 +204,17 @@ function AddProjectForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 p-3 space-y-2.5 mt-2">
+    <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 p-3 space-y-2.5 mt-2">
       <input
         autoFocus value={name} onChange={e => setName(e.target.value)}
         placeholder={t.manage.projectName}
         onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onDone() }}
-        className="w-full h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
       <input
         value={desc} onChange={e => setDesc(e.target.value)}
         placeholder={t.manage.description}
-        className="w-full h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
       <ColorPicker value={color} onChange={setColor} />
       <div className="flex gap-2">
@@ -239,12 +239,12 @@ function AddLabelForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 p-3 space-y-2.5 mt-2">
+    <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 p-3 space-y-2.5 mt-2">
       <input
         autoFocus value={name} onChange={e => setName(e.target.value)}
         placeholder={t.manage.labelName}
         onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onDone() }}
-        className="w-full h-8 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
       <ColorPicker value={color} onChange={setColor} />
       <div className="flex gap-2">
@@ -269,30 +269,30 @@ export default function ManageModal({ open, onClose, initialTab = 'projects' }: 
   return (
     <Modal open={open} onClose={onClose} size="md">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-900">{t.manage.title}</h2>
+      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t.manage.title}</h2>
         <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 px-6">
+      <div className="flex border-b border-slate-200 dark:border-slate-700 px-6">
         <button
           onClick={() => { setTab('projects'); setAddingProject(false) }}
           className={cn('flex items-center gap-1.5 py-3 px-1 mr-6 text-sm font-medium border-b-2 -mb-px transition-colors',
             tab === 'projects'
               ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-700')}>
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200')}>
           <FolderOpen size={14} />{t.manage.projects}
-          <span className="ml-1 text-xs text-slate-400">({state.projects.length})</span>
+          <span className="ml-1 text-xs text-slate-400 dark:text-slate-500">({state.projects.length})</span>
         </button>
         <button
           onClick={() => { setTab('labels'); setAddingLabel(false) }}
           className={cn('flex items-center gap-1.5 py-3 px-1 text-sm font-medium border-b-2 -mb-px transition-colors',
             tab === 'labels'
               ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-700')}>
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200')}>
           <Tag size={14} />{t.manage.labels}
-          <span className="ml-1 text-xs text-slate-400">({state.labels.length})</span>
+          <span className="ml-1 text-xs text-slate-400 dark:text-slate-500">({state.labels.length})</span>
         </button>
       </div>
 
@@ -312,7 +312,7 @@ export default function ManageModal({ open, onClose, initialTab = 'projects' }: 
               ? <AddProjectForm onDone={() => setAddingProject(false)} />
               : (
                 <button onClick={() => setAddingProject(true)}
-                  className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-slate-200 text-sm text-slate-400 hover:text-indigo-600 hover:border-indigo-300 transition-colors">
+                  className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-600 text-sm text-slate-400 dark:text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-colors">
                   <Plus size={14} />{t.manage.addProject}
                 </button>
               )}
@@ -333,7 +333,7 @@ export default function ManageModal({ open, onClose, initialTab = 'projects' }: 
               ? <AddLabelForm onDone={() => setAddingLabel(false)} />
               : (
                 <button onClick={() => setAddingLabel(true)}
-                  className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-slate-200 text-sm text-slate-400 hover:text-indigo-600 hover:border-indigo-300 transition-colors">
+                  className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-600 text-sm text-slate-400 dark:text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-colors">
                   <Plus size={14} />{t.manage.addLabel}
                 </button>
               )}

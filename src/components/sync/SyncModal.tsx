@@ -157,7 +157,7 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
               ))}
             </div>
             {importMode === 'replace' && (
-              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">
+              <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
                 ⚠️ {t.sync.confirmReplace}
               </p>
             )}

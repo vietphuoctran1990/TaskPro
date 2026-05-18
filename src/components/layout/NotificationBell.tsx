@@ -124,10 +124,10 @@ export default function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="fixed right-4 top-14 z-40 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
+          <div className="fixed right-4 top-14 z-40 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-              <span className="text-sm font-semibold text-slate-800">{t.notifications.title}</span>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700/50">
+              <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t.notifications.title}</span>
               <div className="flex items-center gap-1">
                 {alerts.length > 0 && (
                   <span className="text-xs text-slate-400">{t.notifications.upcomingCount(alerts.length)}</span>
@@ -140,12 +140,12 @@ export default function NotificationBell() {
 
             {/* Permission banner */}
             {permission !== 'granted' && (
-              <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100">
+              <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
                 {permission === 'denied' ? (
-                  <p className="text-xs text-slate-600">{t.notifications.denied}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{t.notifications.denied}</p>
                 ) : (
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs text-slate-600">{t.notifications.enable}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{t.notifications.enable}</p>
                     <Button variant="primary" size="sm" onClick={handleEnable}>
                       <Bell size={12} /> {t.notifications.enable}
                     </Button>
@@ -155,9 +155,9 @@ export default function NotificationBell() {
             )}
 
             {/* Alert list */}
-            <div className="max-h-56 overflow-y-auto divide-y divide-slate-50">
+            <div className="max-h-56 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700/50">
               {alerts.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-6 text-slate-400">
+                <div className="flex flex-col items-center gap-2 py-6 text-slate-400 dark:text-slate-500">
                   <CheckCircle2 size={24} className="text-emerald-400" />
                   <p className="text-xs">{t.notifications.noUpcoming}</p>
                 </div>
@@ -169,8 +169,8 @@ export default function NotificationBell() {
                     <div
                       key={task.id}
                       className={cn(
-                        'flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors',
-                        overdue && 'bg-red-50/50'
+                        'flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors',
+                        overdue && 'bg-red-50/50 dark:bg-red-900/20'
                       )}
                     >
                       <div className={cn(
@@ -178,7 +178,7 @@ export default function NotificationBell() {
                         overdue ? 'bg-red-500' : minutesLeft <= 15 ? 'bg-orange-500' : 'bg-amber-400'
                       )} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-slate-800 truncate">{task.title}</p>
+                        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">{task.title}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className={cn('text-xs font-medium', overdue ? 'text-red-600' : 'text-amber-600')}>
                             {label}
@@ -204,8 +204,8 @@ export default function NotificationBell() {
             </div>
 
             {/* Notify-before settings */}
-            <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/60">
-              <p className="text-xs text-slate-500 font-medium mb-2">{t.notifications.notifyBefore}:</p>
+            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/60 dark:bg-slate-800/60">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-2">{t.notifications.notifyBefore}:</p>
               <div className="flex gap-2">
                 {NOTIF_OPTIONS.map(m => {
                   const active = state.notifBefore.includes(m)
@@ -217,7 +217,7 @@ export default function NotificationBell() {
                         'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors',
                         active
                           ? 'bg-indigo-600 text-white border-indigo-600'
-                          : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                          : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:text-indigo-600'
                       )}
                     >
                       {labelFor(m)}
@@ -229,10 +229,10 @@ export default function NotificationBell() {
 
             {/* Footer */}
             {permission === 'granted' && (
-              <div className="px-4 py-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs text-slate-400">
+              <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-2 text-xs text-slate-400 dark:text-slate-500">
                 <button
                   onClick={handleDebug}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                 >
                   Check server
                 </button>
@@ -241,10 +241,10 @@ export default function NotificationBell() {
                   disabled={testStatus === 'sending'}
                   className={cn(
                     'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors',
-                    testStatus === 'ok'   && 'bg-emerald-50 text-emerald-600 border-emerald-200',
-                    testStatus === 'fail' && 'bg-red-50 text-red-600 border-red-200',
-                    testStatus === 'idle' && 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600',
-                    testStatus === 'sending' && 'bg-white text-slate-400 border-slate-200',
+                    testStatus === 'ok'   && 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+                    testStatus === 'fail' && 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
+                    testStatus === 'idle' && 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:text-indigo-600',
+                    testStatus === 'sending' && 'bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-600',
                   )}
                 >
                   <Send size={10} />

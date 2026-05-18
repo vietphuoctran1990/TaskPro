@@ -96,19 +96,19 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
       {(slaStats.breached + slaStats.critical + slaStats.at_risk) > 0 && (
         <div className="flex flex-wrap gap-2">
           {slaStats.breached > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
               {slaStats.breached} {t.sla.slaBreached}
             </span>
           )}
           {slaStats.critical > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               {slaStats.critical} {t.calendar.critical}
             </span>
           )}
           {slaStats.at_risk > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               {slaStats.at_risk} {t.calendar.atRisk}
             </span>

@@ -25,25 +25,25 @@ export default function OnboardingTour({ onFinish }: Props) {
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 animate-in">
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-8 animate-in">
         {/* Skip */}
         <button
           onClick={onFinish}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           aria-label="Skip"
         >
           <X size={16} />
         </button>
 
         {/* Icon */}
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center mb-5 mx-auto">
-          <Icon size={28} className="text-indigo-600" />
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/40 dark:to-violet-900/40 flex items-center justify-center mb-5 mx-auto">
+          <Icon size={28} className="text-indigo-600 dark:text-indigo-400" />
         </div>
 
         {/* Content */}
         <div className="text-center mb-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-2">{steps[step].title}</h2>
-          <p className="text-sm text-slate-500 leading-relaxed">{steps[step].desc}</p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">{steps[step].title}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{steps[step].desc}</p>
         </div>
 
         {/* Progress dots */}
@@ -55,7 +55,7 @@ export default function OnboardingTour({ onFinish }: Props) {
               className={`rounded-full transition-all duration-200 ${
                 i === step
                   ? 'w-5 h-2 bg-indigo-600'
-                  : 'w-2 h-2 bg-slate-200 hover:bg-slate-300'
+                  : 'w-2 h-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'
               }`}
             />
           ))}

@@ -15,13 +15,14 @@ interface DashboardViewProps {
   onAddTask: () => void
 }
 
-function DonutChart({ pct, color }: { pct: number; color: string }) {
+function DonutChart({ pct, color, darkMode }: { pct: number; color: string; darkMode?: boolean }) {
   const r = 34
   const circ = 2 * Math.PI * r
   const offset = circ - (pct / 100) * circ
+  const trackColor = darkMode ? '#334155' : '#f1f5f9'
   return (
     <svg width="88" height="88" viewBox="0 0 88 88" className="shrink-0">
-      <circle cx="44" cy="44" r={r} fill="none" stroke="#f1f5f9" strokeWidth="9" />
+      <circle cx="44" cy="44" r={r} fill="none" stroke={trackColor} strokeWidth="9" />
       <circle
         cx="44" cy="44" r={r} fill="none" stroke={color} strokeWidth="9"
         strokeDasharray={`${circ} ${circ}`}
@@ -191,31 +192,33 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
     slaHealth.pct >= 80 ? '#10b981' :
     slaHealth.pct >= 50 ? '#f59e0b' : '#ef4444'
 
+  const isDark = state.darkMode
+
   return (
     <div className="space-y-4 pb-4">
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           label={t.dashboard.totalTasks} value={stats.total} sub={t.dashboard.done(stats.doneTotal)}
-          gradient="bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-100"
+          gradient="bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 border-indigo-100 dark:border-indigo-800"
           iconBg="bg-gradient-to-br from-indigo-500 to-violet-600"
           icon={<BarChart3 size={20} />}
         />
         <StatCard
           label={t.dashboard.inProgress} value={stats.inProgress}
-          gradient="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-100"
+          gradient="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-100 dark:border-blue-800"
           iconBg="bg-gradient-to-br from-blue-500 to-cyan-500"
           icon={<TrendingUp size={20} />}
         />
         <StatCard
           label={t.dashboard.completedToday} value={stats.doneToday}
-          gradient="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100"
+          gradient="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-100 dark:border-emerald-800"
           iconBg="bg-gradient-to-br from-emerald-500 to-teal-500"
           icon={<CheckCircle2 size={20} />}
         />
         <StatCard
           label={t.dashboard.slaBreached} value={stats.breached}
-          gradient="bg-gradient-to-br from-red-50 to-orange-50 border-red-100"
+          gradient="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-100 dark:border-red-800"
           iconBg="bg-gradient-to-br from-red-500 to-orange-500"
           icon={<AlertTriangle size={20} />}
         />
@@ -238,7 +241,7 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
                     style={{
                       height: `${Math.max((count / maxWeek) * 72, count > 0 ? 8 : 4)}px`,
                       background: count === 0
-                        ? '#f1f5f9'
+                        ? (isDark ? '#334155' : '#f1f5f9')
                         : isToday
                           ? 'linear-gradient(to top, #6366f1, #8b5cf6)'
                           : 'linear-gradient(to top, #a5b4fc, #c4b5fd)',
@@ -257,13 +260,13 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">{t.dashboard.slaHealth}</h3>
           <div className="flex items-center gap-5 mb-3">
-            <DonutChart pct={slaHealth.pct} color={donutColor} />
+            <DonutChart pct={slaHealth.pct} color={donutColor} darkMode={isDark} />
             <div className="flex-1 space-y-1.5">
               {[
-                { label: t.dashboard.onTrack,     value: slaHealth.onTrack,  cls: 'bg-emerald-50 text-emerald-700' },
-                { label: t.dashboard.atRisk,      value: slaHealth.atRisk,   cls: 'bg-amber-50 text-amber-700' },
-                { label: t.dashboard.critical,    value: slaHealth.critical, cls: 'bg-orange-50 text-orange-700' },
-                { label: t.dashboard.slaBreached, value: slaHealth.breached, cls: 'bg-red-50 text-red-700' },
+                { label: t.dashboard.onTrack,     value: slaHealth.onTrack,  cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' },
+                { label: t.dashboard.atRisk,      value: slaHealth.atRisk,   cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' },
+                { label: t.dashboard.critical,    value: slaHealth.critical, cls: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' },
+                { label: t.dashboard.slaBreached, value: slaHealth.breached, cls: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' },
               ].map(({ label, value, cls }) => (
                 <div key={label} className={cn('flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium', cls)}>
                   <span>{label}</span>
