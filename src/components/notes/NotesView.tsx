@@ -142,9 +142,9 @@ export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
             </Button>
           )}
 
-          <Button variant="primary" size="sm" onClick={onAddNote}>
+          <Button variant="primary" size="sm" onClick={onAddNote} className="hidden sm:inline-flex">
             <Plus size={14} />
-            <span className="hidden sm:inline">Tạo ghi chú</span>
+            <span>Tạo ghi chú</span>
           </Button>
         </div>
       </div>
@@ -316,12 +316,12 @@ function NoteListRow({ note, folderName, folderColor, onEdit, onDelete, onToggle
     <div
       onClick={selectMode ? onSelect : onEdit}
       className={cn(
-        'group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors',
+        'group flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors',
         selected ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'
       )}
     >
       {/* Checkbox / pin / bullet */}
-      <div className="shrink-0 w-5 flex items-center justify-center">
+      <div className="shrink-0 w-5 mt-0.5 flex items-start justify-center">
         {selectMode ? (
           selected
             ? <CheckSquare size={16} className="text-indigo-600 dark:text-indigo-400" />
@@ -342,8 +342,8 @@ function NoteListRow({ note, folderName, folderColor, onEdit, onDelete, onToggle
           {note.title || 'Không có tiêu đề'}
         </p>
         {note.content && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
-            {note.content.replace(/\n/g, ' ')}
+          <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-3 leading-relaxed mt-0.5 whitespace-pre-wrap">
+            {note.content}
           </p>
         )}
       </div>
