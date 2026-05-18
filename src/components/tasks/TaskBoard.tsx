@@ -12,15 +12,16 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { useApp } from '../../context/AppContext'
+import { useT } from '../../i18n'
 import TaskColumn from './TaskColumn'
 import TaskCard from './TaskCard'
 import type { Status, Task } from '../../types'
 
-const COLUMNS: { id: Status; label: string; color: string; dotColor: string }[] = [
-  { id: 'todo', label: 'To Do', color: 'bg-slate-100', dotColor: 'bg-slate-400' },
-  { id: 'in_progress', label: 'In Progress', color: 'bg-blue-50', dotColor: 'bg-blue-500' },
-  { id: 'in_review', label: 'In Review', color: 'bg-purple-50', dotColor: 'bg-purple-500' },
-  { id: 'done', label: 'Done', color: 'bg-emerald-50', dotColor: 'bg-emerald-500' },
+const COLUMN_META: { id: Status; color: string; dotColor: string }[] = [
+  { id: 'todo',        color: 'bg-slate-100',  dotColor: 'bg-slate-400' },
+  { id: 'in_progress', color: 'bg-blue-50',    dotColor: 'bg-blue-500'  },
+  { id: 'in_review',   color: 'bg-purple-50',  dotColor: 'bg-purple-500'},
+  { id: 'done',        color: 'bg-emerald-50', dotColor: 'bg-emerald-500'},
 ]
 
 interface TaskBoardProps {
@@ -32,6 +33,12 @@ interface TaskBoardProps {
 
 export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTask }: TaskBoardProps) {
   const { state, filteredTasks, dispatch } = useApp()
+  const t = useT()
+
+  const COLUMNS = useMemo(() => COLUMN_META.map(c => ({
+    ...c,
+    label: state.columnLabels?.[c.id] ?? t.status[c.id],
+  })), [state.columnLabels, t.status])
 
   const handleRenameColumn = useCallback((status: Status, label: string) => {
     dispatch({ type: 'SET_COLUMN_LABEL', payload: { status, label } })
@@ -76,7 +83,7 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
         dispatch({ type: 'MOVE_TASK', payload: { id: activeId, status: overColumn.id } })
       }
     },
-    [filteredTasks, dispatch]
+    [filteredTasks, dispatch, COLUMNS]
   )
 
   const handleDragEnd = useCallback(
@@ -124,7 +131,7 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
         {COLUMNS.map(col => (
           <TaskColumn
             key={col.id}
-            column={{ ...col, label: state.columnLabels?.[col.id] ?? col.label }}
+            column={col}
             tasks={tasksByStatus[col.id]}
             onAddTask={onAddTask}
             onEditTask={onEditTask}
