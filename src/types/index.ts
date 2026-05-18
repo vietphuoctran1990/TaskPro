@@ -73,6 +73,7 @@ export interface AppState {
   darkMode: boolean
   language: 'en' | 'vi'
   notifBefore: number[]
+  columnLabels: Partial<Record<Status, string>>
 }
 
 export type SLAStatus = 'on_track' | 'at_risk' | 'critical' | 'breached' | 'completed' | 'none'

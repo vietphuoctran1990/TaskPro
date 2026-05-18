@@ -40,6 +40,7 @@ type Action =
   | { type: 'TOGGLE_DARK_MODE' }
   | { type: 'SET_LANGUAGE';    payload: 'en' | 'vi' }
   | { type: 'SET_NOTIF_BEFORE'; payload: number[] }
+  | { type: 'SET_COLUMN_LABEL'; payload: { status: Status; label: string } }
   | { type: 'IMPORT_STATE';    payload: { data: AppState; mode: 'replace' | 'merge' } }
 
 const STORAGE_KEY = 'taskpro_v2_state'
@@ -59,14 +60,15 @@ function getInitialState(): AppState {
           estimatedHours: t.estimatedHours ?? null,
           recurrence:     t.recurrence     ?? null,
         })),
-        filterSLA:   parsed.filterSLA   ?? 'all',
-        dateFilter:  parsed.dateFilter  ?? 'all',
-        viewMode:    parsed.viewMode    ?? 'kanban',
-        sortField:   parsed.sortField   ?? 'createdAt',
-        sortDir:     parsed.sortDir     ?? 'desc',
-        darkMode:    false,
-        language:    parsed.language    ?? 'vi',
-        notifBefore: parsed.notifBefore ?? [15, 30, 60],
+        filterSLA:    parsed.filterSLA    ?? 'all',
+        dateFilter:   parsed.dateFilter   ?? 'all',
+        viewMode:     parsed.viewMode     ?? 'kanban',
+        sortField:    parsed.sortField    ?? 'createdAt',
+        sortDir:      parsed.sortDir      ?? 'desc',
+        darkMode:     false,
+        language:     parsed.language     ?? 'vi',
+        notifBefore:  parsed.notifBefore  ?? [15, 30, 60],
+        columnLabels: parsed.columnLabels ?? {},
       }
     }
   } catch {}
@@ -86,6 +88,7 @@ function getInitialState(): AppState {
     darkMode: false,
     language: 'vi',
     notifBefore: [15, 30, 60],
+    columnLabels: {},
   }
 }
 
@@ -161,6 +164,10 @@ function reducer(state: AppState, action: Action): AppState {
     case 'TOGGLE_DARK_MODE':    return { ...state, darkMode: !state.darkMode }
     case 'SET_LANGUAGE':        return { ...state, language: action.payload }
     case 'SET_NOTIF_BEFORE':    return { ...state, notifBefore: action.payload }
+    case 'SET_COLUMN_LABEL': {
+      const { status, label } = action.payload
+      return { ...state, columnLabels: { ...state.columnLabels, [status]: label } }
+    }
     case 'IMPORT_STATE': {
       const { data, mode } = action.payload
       if (mode === 'replace') {

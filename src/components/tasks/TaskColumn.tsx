@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus, CircleDot, Loader2, Eye, CheckCircle2 } from 'lucide-react'
@@ -22,6 +22,7 @@ interface TaskColumnProps {
   onEditTask: (task: Task) => void
   onViewTask: (task: Task) => void
   onFocusTask?: (task: Task) => void
+  onRenameColumn?: (status: Status, label: string) => void
 }
 
 const COLUMN_STYLES: Record<Status, {
@@ -34,28 +35,75 @@ const COLUMN_STYLES: Record<Status, {
 }
 
 const TaskColumn = memo(function TaskColumn({
-  column, tasks, onAddTask, onEditTask, onViewTask, onFocusTask,
+  column, tasks, onAddTask, onEditTask, onViewTask, onFocusTask, onRenameColumn,
 }: TaskColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
   const t = useT()
   const s = COLUMN_STYLES[column.id]
   const EmptyIcon = s.emptyIcon
 
+  const [editing, setEditing] = useState(false)
+  const [draftLabel, setDraftLabel] = useState(column.label)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select()
+  }, [editing])
+
+  const startEdit = () => {
+    setDraftLabel(column.label)
+    setEditing(true)
+  }
+
+  const commitEdit = () => {
+    const trimmed = draftLabel.trim()
+    if (trimmed && trimmed !== column.label) {
+      onRenameColumn?.(column.id, trimmed)
+    }
+    setEditing(false)
+  }
+
+  const cancelEdit = () => {
+    setDraftLabel(column.label)
+    setEditing(false)
+  }
+
   return (
     <div className="flex flex-col w-72 shrink-0">
       {/* Column header */}
       <div className="flex items-center justify-between mb-3 px-1">
-        <div className="flex items-center gap-2">
-          <span className={cn('w-2 h-2 rounded-full', s.dot)} />
-          <span className={cn('text-sm font-semibold', s.header)}>
-            {column.label}
-          </span>
-          <span className={cn('inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold', s.badge)}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={cn('w-2 h-2 rounded-full shrink-0', s.dot)} />
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={draftLabel}
+              onChange={e => setDraftLabel(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitEdit()
+                if (e.key === 'Escape') cancelEdit()
+              }}
+              className={cn(
+                'text-sm font-semibold bg-transparent border-b-2 border-indigo-400 outline-none w-full min-w-0',
+                s.header
+              )}
+            />
+          ) : (
+            <span
+              className={cn('text-sm font-semibold cursor-pointer hover:opacity-70 transition-opacity truncate', s.header)}
+              onDoubleClick={startEdit}
+              title="Double-click to rename"
+            >
+              {column.label}
+            </span>
+          )}
+          <span className={cn('inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold shrink-0', s.badge)}>
             {tasks.length}
           </span>
         </div>
         <Button
-          variant="ghost" size="icon" className="w-7 h-7"
+          variant="ghost" size="icon" className="w-7 h-7 shrink-0"
           onClick={() => onAddTask(column.id)}
           aria-label={`Add task to ${column.label}`}
         >

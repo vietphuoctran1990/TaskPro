@@ -32,6 +32,10 @@ interface TaskBoardProps {
 
 export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTask }: TaskBoardProps) {
   const { state, filteredTasks, dispatch } = useApp()
+
+  const handleRenameColumn = useCallback((status: Status, label: string) => {
+    dispatch({ type: 'SET_COLUMN_LABEL', payload: { status, label } })
+  }, [dispatch])
   const [activeTask, setActiveTask] = useState<Task | null>(null)
 
   const sensors = useSensors(
@@ -120,12 +124,13 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
         {COLUMNS.map(col => (
           <TaskColumn
             key={col.id}
-            column={col}
+            column={{ ...col, label: state.columnLabels?.[col.id] ?? col.label }}
             tasks={tasksByStatus[col.id]}
             onAddTask={onAddTask}
             onEditTask={onEditTask}
             onViewTask={onViewTask}
             onFocusTask={onFocusTask}
+            onRenameColumn={handleRenameColumn}
           />
         ))}
       </div>
