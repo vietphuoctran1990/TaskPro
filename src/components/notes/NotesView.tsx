@@ -21,9 +21,14 @@ export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
     ? state.noteFolders.find(f => f.id === state.activeNoteFolderId) ?? null
     : null
 
-  const visibleNotes = state.notes.filter(n =>
-    activeFolder ? n.folderId === activeFolder.id : true
-  )
+  const visibleNotes = state.notes.filter(n => {
+    if (activeFolder && n.folderId !== activeFolder.id) return false
+    if (state.searchQuery.trim()) {
+      const q = state.searchQuery.toLowerCase()
+      return n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
+    }
+    return true
+  })
 
   // Pinned notes first
   const sorted = [...visibleNotes].sort((a, b) => {

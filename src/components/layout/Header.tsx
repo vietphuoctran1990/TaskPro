@@ -167,26 +167,22 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
               })}
             </div>
 
-            {/* Search — desktop only (hidden in notes mode) */}
-            {!isNotesMode && (
-              <div className="hidden md:flex relative">
-                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="search" placeholder={t.header.search} value={state.searchQuery}
-                  onChange={e => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
-                  className="h-8 pl-8 pr-3 w-36 focus:w-56 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all duration-300"
-                />
-              </div>
-            )}
+            {/* Search — desktop only */}
+            <div className="hidden md:flex relative">
+              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="search" placeholder={t.header.search} value={state.searchQuery}
+                onChange={e => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
+                className="h-8 pl-8 pr-3 w-36 focus:w-56 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all duration-300"
+              />
+            </div>
 
-            {/* Mobile search icon button (hidden in notes mode) */}
-            {!isNotesMode && (
-              <Button variant="ghost" size="icon"
-                className={cn('md:hidden relative', state.searchQuery.trim() && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
-                onClick={() => setSearchOpen(true)}>
-                <Search size={15} />
-                {state.searchQuery.trim() && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
-              </Button>
-            )}
+            {/* Mobile search icon button */}
+            <Button variant="ghost" size="icon"
+              className={cn('md:hidden relative', state.searchQuery.trim() && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
+              onClick={() => setSearchOpen(true)}>
+              <Search size={15} />
+              {state.searchQuery.trim() && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
+            </Button>
 
             {/* Filters — desktop inline toggle (hidden in notes mode) */}
             {!isNotesMode && (

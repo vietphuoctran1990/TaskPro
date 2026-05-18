@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { ChevronDown, Check, X } from 'lucide-react'
+import { ChevronDown, Check, X, Copy, Share2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import Modal from '../ui/Modal'
@@ -22,6 +22,7 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
   const [folderId, setFolderId] = useState(defaultFolderId)
   const [folderDropdownOpen, setFolderDropdownOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'dirty' | 'saved'>('idle')
+  const [copied, setCopied] = useState(false)
 
   // The note id we're currently editing (created on first open if null)
   const editingIdRef = useRef<string | null>(null)
@@ -123,6 +124,29 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
     ? (state.noteFolders.find(f => f.id === folderId)?.name ?? 'Không có thư mục')
     : 'Không có thư mục'
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
+  }
+
+  const handleShare = () => copyToClipboard(`${title}\n\n${content}`)
+
+  const handleExportForAI = () => {
+    const folder = currentFolderName !== 'Không có thư mục' ? currentFolderName : null
+    const date = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const parts = [
+      `# ${title || 'Ghi chú không tiêu đề'}`,
+      folder ? `Thư mục: ${folder}` : null,
+      `Ngày: ${date}`,
+      '',
+      content || '(trống)',
+    ].filter(p => p !== null)
+    copyToClipboard(parts.join('\n'))
+  }
+
   const footer = (
     <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
       <span className={cn(
@@ -135,9 +159,29 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
         {saveStatus === 'dirty' && 'Đang soạn…'}
         {saveStatus === 'idle' && ''}
       </span>
-      <Button variant="ghost" size="sm" onClick={onClose}>
-        <X size={14} /> Đóng
-      </Button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleShare}
+          title="Sao chép ghi chú"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+        >
+          {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+          {copied ? 'Đã sao chép' : 'Sao chép'}
+        </button>
+        <button
+          type="button"
+          onClick={handleExportForAI}
+          title="Xuất để dán vào AI"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors"
+        >
+          <Share2 size={13} />
+          Xuất cho AI
+        </button>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          <X size={14} /> Đóng
+        </Button>
+      </div>
     </div>
   )
 
@@ -219,7 +263,7 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
             value={content}
             onChange={e => handleContentChange(e.target.value)}
             placeholder="Viết ghi chú của bạn…"
-            className="w-full h-full min-h-[400px] resize-none bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 font-mono leading-relaxed"
+            className="w-full h-full min-h-[400px] resize-none bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 leading-relaxed"
           />
         </div>
       </div>
