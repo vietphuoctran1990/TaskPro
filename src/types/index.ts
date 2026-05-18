@@ -1,6 +1,6 @@
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type Status = 'todo' | 'in_progress' | 'in_review' | 'done'
-export type ViewMode = 'dashboard' | 'kanban' | 'list' | 'calendar' | 'timeline'
+export type ViewMode = 'dashboard' | 'kanban' | 'list' | 'calendar' | 'timeline' | 'notes'
 export type SortField = 'title' | 'priority' | 'status' | 'dueDate' | 'sla' | 'createdAt'
 export type SortDir = 'asc' | 'desc'
 
@@ -56,13 +56,32 @@ export interface Project {
   notes: string
 }
 
+export interface NoteFolder {
+  id: string
+  name: string
+  color: string
+}
+
+export interface Note {
+  id: string
+  title: string
+  content: string  // freeform text/markdown
+  folderId: string // '' = no folder
+  pinned: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export type DateFilter = 'all' | 'today' | 'tomorrow' | 'upcoming'
 
 export interface AppState {
   tasks: Task[]
   projects: Project[]
   labels: Label[]
+  notes: Note[]
+  noteFolders: NoteFolder[]
   activeProjectId: string | null
+  activeNoteFolderId: string | null
   searchQuery: string
   filterPriority: Priority | 'all'
   filterStatus: Status | 'all'

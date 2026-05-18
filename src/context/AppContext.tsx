@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import type {
-  AppState, Task, Project, Label, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment, DateFilter,
+  AppState, Task, Project, Label, Note, NoteFolder, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment, DateFilter,
 } from '../types'
 import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS } from '../data/defaults'
 import {
@@ -42,6 +42,13 @@ type Action =
   | { type: 'SET_NOTIF_BEFORE'; payload: number[] }
   | { type: 'SET_COLUMN_LABEL'; payload: { status: Status; label: string } }
   | { type: 'IMPORT_STATE';    payload: { data: AppState; mode: 'replace' | 'merge' } }
+  | { type: 'ADD_NOTE';           payload: Omit<Note, 'id' | 'createdAt' | 'updatedAt'> }
+  | { type: 'UPDATE_NOTE';        payload: Partial<Note> & { id: string } }
+  | { type: 'DELETE_NOTE';        payload: string }
+  | { type: 'ADD_NOTE_FOLDER';    payload: Omit<NoteFolder, 'id'> }
+  | { type: 'UPDATE_NOTE_FOLDER'; payload: NoteFolder }
+  | { type: 'DELETE_NOTE_FOLDER'; payload: string }
+  | { type: 'SET_ACTIVE_NOTE_FOLDER'; payload: string | null }
 
 const STORAGE_KEY = 'taskpro_v2_state'
 
@@ -61,6 +68,9 @@ function getInitialState(): AppState {
           recurrence:     t.recurrence     ?? null,
           isNote:         t.isNote         ?? false,
         })),
+        notes:               parsed.notes               ?? [],
+        noteFolders:         parsed.noteFolders         ?? [],
+        activeNoteFolderId:  parsed.activeNoteFolderId  ?? null,
         filterSLA:    parsed.filterSLA    ?? 'all',
         dateFilter:   parsed.dateFilter   ?? 'all',
         viewMode:     parsed.viewMode     ?? 'kanban',
@@ -77,7 +87,10 @@ function getInitialState(): AppState {
     tasks: DEFAULT_TASKS,
     projects: DEFAULT_PROJECTS,
     labels: DEFAULT_LABELS,
+    notes: [],
+    noteFolders: [],
     activeProjectId: null,
+    activeNoteFolderId: null,
     searchQuery: '',
     filterPriority: 'all',
     filterStatus: 'all',
@@ -169,6 +182,31 @@ function reducer(state: AppState, action: Action): AppState {
       const { status, label } = action.payload
       return { ...state, columnLabels: { ...state.columnLabels, [status]: label } }
     }
+    case 'ADD_NOTE':
+      return {
+        ...state,
+        notes: [...state.notes, { ...action.payload, id: generateId(), createdAt: now, updatedAt: now }],
+      }
+    case 'UPDATE_NOTE':
+      return {
+        ...state,
+        notes: state.notes.map(n => n.id === action.payload.id ? { ...n, ...action.payload, updatedAt: now } : n),
+      }
+    case 'DELETE_NOTE':
+      return { ...state, notes: state.notes.filter(n => n.id !== action.payload) }
+    case 'ADD_NOTE_FOLDER':
+      return { ...state, noteFolders: [...state.noteFolders, { ...action.payload, id: generateId() }] }
+    case 'UPDATE_NOTE_FOLDER':
+      return { ...state, noteFolders: state.noteFolders.map(f => f.id === action.payload.id ? action.payload : f) }
+    case 'DELETE_NOTE_FOLDER':
+      return {
+        ...state,
+        noteFolders: state.noteFolders.filter(f => f.id !== action.payload),
+        notes: state.notes.map(n => n.folderId === action.payload ? { ...n, folderId: '' } : n),
+        activeNoteFolderId: state.activeNoteFolderId === action.payload ? null : state.activeNoteFolderId,
+      }
+    case 'SET_ACTIVE_NOTE_FOLDER':
+      return { ...state, activeNoteFolderId: action.payload }
     case 'IMPORT_STATE': {
       const { data, mode } = action.payload
       if (mode === 'replace') {
@@ -178,11 +216,15 @@ function reducer(state: AppState, action: Action): AppState {
       const existIds = new Set(state.tasks.map(t => t.id))
       const existPIds = new Set(state.projects.map(p => p.id))
       const existLIds = new Set(state.labels.map(l => l.id))
+      const existNIds = new Set(state.notes.map(n => n.id))
+      const existNFIds = new Set(state.noteFolders.map(f => f.id))
       return {
         ...state,
-        tasks:    [...state.tasks,    ...data.tasks.filter(t => !existIds.has(t.id))],
-        projects: [...state.projects, ...data.projects.filter(p => !existPIds.has(p.id))],
-        labels:   [...state.labels,   ...data.labels.filter(l => !existLIds.has(l.id))],
+        tasks:       [...state.tasks,       ...data.tasks.filter(t => !existIds.has(t.id))],
+        projects:    [...state.projects,    ...data.projects.filter(p => !existPIds.has(p.id))],
+        labels:      [...state.labels,      ...data.labels.filter(l => !existLIds.has(l.id))],
+        notes:       [...state.notes,       ...(data.notes ?? []).filter(n => !existNIds.has(n.id))],
+        noteFolders: [...state.noteFolders, ...(data.noteFolders ?? []).filter(f => !existNFIds.has(f.id))],
       }
     }
     default:
