@@ -16,6 +16,8 @@ import SyncModal from './components/sync/SyncModal'
 import ManageModal from './components/settings/ManageModal'
 import AuthModal from './components/auth/AuthModal'
 import ProjectNotesModal from './components/notes/ProjectNotesModal'
+import NotesView from './components/notes/NotesView'
+import NoteEditorModal from './components/notes/NoteEditorModal'
 import PomodoroModal from './components/focus/PomodoroModal'
 import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
@@ -23,7 +25,7 @@ import OfflineToast from './components/pwa/OfflineToast'
 import { ToastProvider } from './context/ToastContext'
 import { usePWA } from './hooks/usePWA'
 import { Plus } from 'lucide-react'
-import type { Status, Task, Project } from './types'
+import type { Status, Task, Project, Note } from './types'
 
 function AppShell() {
   const { state, dispatch } = useApp()
@@ -40,6 +42,8 @@ function AppShell() {
   const [manageOpen, setManageOpen] = useState(false)
   const [focusTask,   setFocusTask]   = useState<Task | null>(null)
   const [notesProject, setNotesProject] = useState<Project | null>(null)
+  const [noteEditorOpen, setNoteEditorOpen] = useState(false)
+  const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('taskpro-onboarded'))
 
   const handleFinishOnboarding = () => {
@@ -72,6 +76,16 @@ function AppShell() {
     setFormOpen(true)
   }, [])
 
+  const handleAddNote = useCallback(() => {
+    setEditingNote(null)
+    setNoteEditorOpen(true)
+  }, [])
+
+  const handleEditNote = useCallback((note: Note) => {
+    setEditingNote(note)
+    setNoteEditorOpen(true)
+  }, [])
+
   const handleViewTask = useCallback((task: Task) => setViewingTask(task), [])
   const handleCloseForm = useCallback(() => { setFormOpen(false); setEditingTask(null) }, [])
   const handleCloseDetail = useCallback(() => setViewingTask(null), [])
@@ -100,6 +114,7 @@ function AppShell() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header
           onAddTask={() => handleAddTask()}
+          onAddNote={handleAddNote}
           onOpenSidebar={() => setSidebarOpen(true)}
           onOpenAuth={() => setAuthOpen(true)}
         />
@@ -139,6 +154,12 @@ function AppShell() {
               onAddTask={() => handleAddTask()}
             />
           )}
+          {state.viewMode === 'notes' && (
+            <NotesView
+              onAddNote={handleAddNote}
+              onEditNote={handleEditNote}
+            />
+          )}
         </main>
       </div>
 
@@ -152,6 +173,12 @@ function AppShell() {
       </button>
 
       {/* Modals */}
+      <NoteEditorModal
+        open={noteEditorOpen}
+        note={editingNote}
+        onClose={() => { setNoteEditorOpen(false); setEditingNote(null) }}
+        defaultFolderId={state.activeNoteFolderId ?? ''}
+      />
       <ProjectNotesModal project={notesProject} onClose={() => setNotesProject(null)} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
       <ManageModal open={manageOpen} onClose={() => setManageOpen(false)} initialTab={manageTab} />

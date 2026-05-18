@@ -30,7 +30,7 @@ export const en: Translations = {
     allStatuses: 'All statuses', allSLA: 'All SLA', clear: 'Clear',
     language: 'VI', filters: 'Filters', tasks: 'tasks',
   },
-  views: { dashboard: 'Dashboard', kanban: 'Kanban', list: 'List', calendar: 'Calendar', timeline: 'Timeline' },
+  views: { dashboard: 'Dashboard', kanban: 'Kanban', list: 'List', calendar: 'Calendar', timeline: 'Timeline', notes: 'Notes' },
   status: { todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done' },
   priority: {
     low: 'Low', medium: 'Medium', high: 'High', urgent: 'Urgent',

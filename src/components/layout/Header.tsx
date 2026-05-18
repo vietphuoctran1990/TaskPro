@@ -1,4 +1,4 @@
-import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X } from 'lucide-react'
+import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
@@ -11,12 +11,13 @@ import type { Priority, Status, ViewMode, SLAStatus } from '../../types'
 
 interface HeaderProps {
   onAddTask: () => void
+  onAddNote: () => void
   onOpenSidebar: () => void
   onOpenAuth: () => void
 }
 
 const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
-  dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar, timeline: GanttChart,
+  dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar, timeline: GanttChart, notes: StickyNote,
 }
 
 function UserMenu({ onOpenAuth }: { onOpenAuth: () => void }) {
@@ -75,14 +76,15 @@ function UserMenu({ onOpenAuth }: { onOpenAuth: () => void }) {
   )
 }
 
-export default function Header({ onAddTask, onOpenSidebar, onOpenAuth }: HeaderProps) {
+export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth }: HeaderProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
 
-  const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline']
+  const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes']
+  const isNotesMode = state.viewMode === 'notes'
   const project = state.projects.find(p => p.id === state.activeProjectId)
   const taskCount = state.tasks.filter(tk =>
     state.activeProjectId ? tk.projectId === state.activeProjectId : true
@@ -131,11 +133,20 @@ export default function Header({ onAddTask, onOpenSidebar, onOpenAuth }: HeaderP
           <>
             {/* Title */}
             <div className="flex items-center gap-2 mr-auto min-w-0">
-              {project && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: project.color }} />}
-              <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                {project?.name ?? t.sidebar.allTasks}
-              </h1>
-              <span className="text-xs text-slate-400 shrink-0">{taskCount} {t.header.tasks}</span>
+              {isNotesMode ? (
+                <>
+                  <StickyNote size={15} className="text-indigo-500 shrink-0" />
+                  <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">Ghi chú</h1>
+                </>
+              ) : (
+                <>
+                  {project && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: project.color }} />}
+                  <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                    {project?.name ?? t.sidebar.allTasks}
+                  </h1>
+                  <span className="text-xs text-slate-400 shrink-0">{taskCount} {t.header.tasks}</span>
+                </>
+              )}
             </div>
 
             {/* View switcher — desktop */}
@@ -156,40 +167,48 @@ export default function Header({ onAddTask, onOpenSidebar, onOpenAuth }: HeaderP
               })}
             </div>
 
-            {/* Search — desktop only */}
-            <div className="hidden md:flex relative">
-              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input type="search" placeholder={t.header.search} value={state.searchQuery}
-                onChange={e => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
-                className="h-8 pl-8 pr-3 w-36 focus:w-56 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all duration-300"
-              />
-            </div>
+            {/* Search — desktop only (hidden in notes mode) */}
+            {!isNotesMode && (
+              <div className="hidden md:flex relative">
+                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="search" placeholder={t.header.search} value={state.searchQuery}
+                  onChange={e => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
+                  className="h-8 pl-8 pr-3 w-36 focus:w-56 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all duration-300"
+                />
+              </div>
+            )}
 
-            {/* Mobile search icon button */}
-            <Button variant="ghost" size="icon"
-              className={cn('md:hidden relative', state.searchQuery.trim() && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
-              onClick={() => setSearchOpen(true)}>
-              <Search size={15} />
-              {state.searchQuery.trim() && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
-            </Button>
+            {/* Mobile search icon button (hidden in notes mode) */}
+            {!isNotesMode && (
+              <Button variant="ghost" size="icon"
+                className={cn('md:hidden relative', state.searchQuery.trim() && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
+                onClick={() => setSearchOpen(true)}>
+                <Search size={15} />
+                {state.searchQuery.trim() && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
+              </Button>
+            )}
 
-            {/* Filters — desktop inline toggle */}
-            <Button variant="ghost" size="icon"
-              className={cn('hidden sm:flex relative', hasFilters && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
-              onClick={() => setFiltersOpen(v => !v)}>
-              <SlidersHorizontal size={15} />
-              {hasFilters && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
-            </Button>
+            {/* Filters — desktop inline toggle (hidden in notes mode) */}
+            {!isNotesMode && (
+              <Button variant="ghost" size="icon"
+                className={cn('hidden sm:flex relative', hasFilters && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
+                onClick={() => setFiltersOpen(v => !v)}>
+                <SlidersHorizontal size={15} />
+                {hasFilters && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
+              </Button>
+            )}
 
-            {/* Filters — mobile bottom sheet toggle */}
-            <Button variant="ghost" size="icon"
-              className={cn('sm:hidden relative', hasFilters && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
-              onClick={() => setFilterSheetOpen(true)}>
-              <SlidersHorizontal size={15} />
-              {hasFilters && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
-            </Button>
+            {/* Filters — mobile bottom sheet toggle (hidden in notes mode) */}
+            {!isNotesMode && (
+              <Button variant="ghost" size="icon"
+                className={cn('sm:hidden relative', hasFilters && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
+                onClick={() => setFilterSheetOpen(true)}>
+                <SlidersHorizontal size={15} />
+                {hasFilters && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
+              </Button>
+            )}
 
-            <NotificationBell />
+            {!isNotesMode && <NotificationBell />}
 
             <Button variant="ghost" size="icon" onClick={() => dispatch({ type: 'TOGGLE_DARK_MODE' })}>
               {state.darkMode ? <Sun size={15} /> : <Moon size={15} />}
@@ -204,9 +223,15 @@ export default function Header({ onAddTask, onOpenSidebar, onOpenAuth }: HeaderP
 
             <UserMenu onOpenAuth={onOpenAuth} />
 
-            <Button variant="primary" size="sm" onClick={onAddTask}>
-              <Plus size={14} /> <span className="hidden sm:inline">{t.header.newTask}</span>
-            </Button>
+            {isNotesMode ? (
+              <Button variant="primary" size="sm" onClick={onAddNote}>
+                <Plus size={14} /> <span className="hidden sm:inline">Tạo ghi chú</span>
+              </Button>
+            ) : (
+              <Button variant="primary" size="sm" onClick={onAddTask}>
+                <Plus size={14} /> <span className="hidden sm:inline">{t.header.newTask}</span>
+              </Button>
+            )}
           </>
         )}
       </div>
@@ -239,7 +264,7 @@ export default function Header({ onAddTask, onOpenSidebar, onOpenAuth }: HeaderP
       </div>
 
       {/* Filter bar — desktop inline */}
-      {filtersOpen && (
+      {!isNotesMode && filtersOpen && (
         <div className="hidden sm:flex flex-wrap items-center gap-2 pb-3">
           <select value={state.filterPriority}
             onChange={e => dispatch({ type: 'SET_FILTER_PRIORITY', payload: e.target.value as Priority | 'all' })}
@@ -278,7 +303,7 @@ export default function Header({ onAddTask, onOpenSidebar, onOpenAuth }: HeaderP
       )}
 
       {/* Mobile filter bottom sheet */}
-      {filterSheetOpen && (
+      {!isNotesMode && filterSheetOpen && (
         <>
           {/* Backdrop */}
           <div

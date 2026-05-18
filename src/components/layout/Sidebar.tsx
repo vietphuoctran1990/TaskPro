@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText, Sun, Sunset, Calendar } from 'lucide-react'
+import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText, Sun, Sunset, Calendar, StickyNote } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { todayLocalISO, tomorrowLocalISO } from '../../lib/dateLocal'
 import { useApp } from '../../context/AppContext'
@@ -19,6 +19,12 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
   const [addingProject, setAddingProject] = useState(false)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState(PROJECT_COLORS[0])
+
+  // Notes section state
+  const [notesOpen, setNotesOpen] = useState(true)
+  const [addingNoteFolder, setAddingNoteFolder] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+  const [newFolderColor, setNewFolderColor] = useState(PROJECT_COLORS[0])
 
   const stats = useMemo(() => {
     const tasks = state.tasks
@@ -41,6 +47,12 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
     if (!newName.trim()) return
     dispatch({ type: 'ADD_PROJECT', payload: { name: newName.trim(), color: newColor, description: '', notes: '' } })
     setNewName(''); setNewColor(PROJECT_COLORS[0]); setAddingProject(false)
+  }
+
+  const handleAddNoteFolder = () => {
+    if (!newFolderName.trim()) return
+    dispatch({ type: 'ADD_NOTE_FOLDER', payload: { name: newFolderName.trim(), color: newFolderColor } })
+    setNewFolderName(''); setNewFolderColor(PROJECT_COLORS[0]); setAddingNoteFolder(false)
   }
 
   return (
@@ -169,6 +181,80 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Notes */}
+        <div className="pt-3">
+          <div className="flex items-center">
+            <button className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              onClick={() => setNotesOpen(v => !v)}>
+              <StickyNote size={12} />
+              <span className="flex-1 text-left">Ghi chú</span>
+              <ChevronDown size={12} className={cn('transition-transform', !notesOpen && '-rotate-90')} />
+            </button>
+            <button
+              onClick={() => setAddingNoteFolder(true)}
+              className="p-1 mr-1 rounded text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+              title="Thêm thư mục ghi chú">
+              <Plus size={12} />
+            </button>
+          </div>
+          {notesOpen && (
+            <div className="mt-1 space-y-0.5">
+              {/* All notes item */}
+              <button
+                onClick={() => {
+                  dispatch({ type: 'SET_VIEW_MODE', payload: 'notes' })
+                  dispatch({ type: 'SET_ACTIVE_NOTE_FOLDER', payload: null })
+                  onClose?.()
+                }}
+                className={cn('w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+                  state.viewMode === 'notes' && state.activeNoteFolderId === null
+                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800')}>
+                <StickyNote size={14} />
+                <span className="flex-1 text-left">Tất cả ghi chú</span>
+                <span className="text-xs opacity-50">{state.notes.length}</span>
+              </button>
+
+              {/* Note folder items */}
+              {state.noteFolders.map(folder => (
+                <button
+                  key={folder.id}
+                  onClick={() => {
+                    dispatch({ type: 'SET_VIEW_MODE', payload: 'notes' })
+                    dispatch({ type: 'SET_ACTIVE_NOTE_FOLDER', payload: folder.id })
+                    onClose?.()
+                  }}
+                  className={cn('w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+                    state.viewMode === 'notes' && state.activeNoteFolderId === folder.id
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800')}>
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: folder.color }} />
+                  <span className="flex-1 text-left truncate">{folder.name}</span>
+                  <span className="text-xs opacity-50">{state.notes.filter(n => n.folderId === folder.id).length}</span>
+                </button>
+              ))}
+
+              {/* Inline add folder form */}
+              {addingNoteFolder ? (
+                <div className="px-2 pt-2 pb-1 space-y-2">
+                  <Input placeholder="Tên thư mục" value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddNoteFolder(); if (e.key === 'Escape') setAddingNoteFolder(false) }} autoFocus />
+                  <div className="flex gap-1 flex-wrap">
+                    {PROJECT_COLORS.map(c => (
+                      <button key={c} className={cn('w-5 h-5 rounded-full transition-transform hover:scale-110', newFolderColor === c && 'ring-2 ring-offset-1 ring-slate-400')}
+                        style={{ backgroundColor: c }} onClick={() => setNewFolderColor(c)} />
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="primary" onClick={handleAddNoteFolder}>Thêm</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setAddingNoteFolder(false)}>{t.form.cancel}</Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
 

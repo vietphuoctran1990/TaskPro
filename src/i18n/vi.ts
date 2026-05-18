@@ -30,7 +30,7 @@ export const vi: Translations = {
     allStatuses: 'Tất cả trạng thái', allSLA: 'Tất cả SLA', clear: 'Xóa bộ lọc',
     language: 'EN', filters: 'Bộ lọc', tasks: 'công việc',
   },
-  views: { dashboard: 'Tổng quan', kanban: 'Kanban', list: 'Danh sách', calendar: 'Lịch', timeline: 'Timeline' },
+  views: { dashboard: 'Tổng quan', kanban: 'Kanban', list: 'Danh sách', calendar: 'Lịch', timeline: 'Timeline', notes: 'Ghi chú' },
   status: { todo: 'Cần làm', in_progress: 'Đang làm', in_review: 'Đang xét duyệt', done: 'Hoàn thành' },
   priority: {
     low: 'Thấp', medium: 'Trung bình', high: 'Cao', urgent: 'Khẩn cấp',

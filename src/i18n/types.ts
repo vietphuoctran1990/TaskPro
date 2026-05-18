@@ -23,7 +23,7 @@ export interface Translations {
     newTask: string; search: string; allPriorities: string; allStatuses: string
     allSLA: string; clear: string; language: string; filters: string; tasks: string
   }
-  views: { dashboard: string; kanban: string; list: string; calendar: string; timeline: string }
+  views: { dashboard: string; kanban: string; list: string; calendar: string; timeline: string; notes: string }
   status: { todo: string; in_progress: string; in_review: string; done: string }
   priority: {
     low: string; medium: string; high: string; urgent: string; allPriorities: string
