@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { ChevronDown, Check, X, Copy, Share2 } from 'lucide-react'
-import { cn } from '../../lib/utils'
+import { cn, formatRelativeTime } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
@@ -92,6 +92,12 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
   )
   const currentFolderName = currentFolder?.name ?? 'Không có thư mục'
 
+  const currentNote = useMemo(() => {
+    const id = note?.id ?? editingIdRef.current
+    if (!id) return null
+    return state.notes.find(n => n.id === id) ?? note ?? null
+  }, [note, state.notes, saveStatus])
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -116,7 +122,7 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
   }
 
   const footer = (
-    <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+    <div className="flex items-center justify-between px-7 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
       <span className={cn(
         'text-xs flex items-center gap-1.5 transition-colors',
         saveStatus === 'saved' ? 'text-emerald-600 dark:text-emerald-400' :
@@ -157,18 +163,18 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
     <Modal open={open} onClose={onClose} size="lg" footer={footer}>
       <div className="flex flex-col h-full">
         {/* Title input */}
-        <div className="px-6 pt-6 pb-2">
+        <div className="px-7 pt-7 pb-1">
           <input
             type="text"
             value={title}
             onChange={e => handleTitleChange(e.target.value)}
             placeholder="Tiêu đề ghi chú…"
-            className="w-full text-lg font-semibold text-slate-900 dark:text-slate-100 bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
+            className="w-full text-2xl sm:text-[26px] font-bold tracking-tight text-slate-900 dark:text-slate-100 bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 leading-tight"
           />
         </div>
 
-        {/* Folder selector */}
-        <div className="px-6 pb-3 relative">
+        {/* Folder selector + metadata */}
+        <div className="px-7 pb-4 flex items-center gap-3 flex-wrap relative">
           <button
             type="button"
             onClick={() => setFolderDropdownOpen(v => !v)}
@@ -189,10 +195,22 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
             <ChevronDown size={11} className={cn('transition-transform', folderDropdownOpen && 'rotate-180')} />
           </button>
 
+          {currentNote && (
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-2">
+              <span>Tạo {formatRelativeTime(currentNote.createdAt)}</span>
+              {currentNote.createdAt !== currentNote.updatedAt && (
+                <>
+                  <span className="opacity-60">·</span>
+                  <span>Sửa {formatRelativeTime(currentNote.updatedAt)}</span>
+                </>
+              )}
+            </div>
+          )}
+
           {folderDropdownOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setFolderDropdownOpen(false)} />
-              <div className="absolute left-6 top-full mt-1 z-20 w-48 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden">
+              <div className="absolute left-7 top-full mt-1 z-20 w-48 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden pop-in">
                 <button
                   type="button"
                   onClick={() => handleFolderChange('')}
@@ -222,16 +240,15 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
           )}
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-slate-100 dark:border-slate-700 mx-6" />
+        <div className="border-t border-slate-100 dark:border-slate-700 mx-7" />
 
         {/* Content textarea */}
-        <div className="flex-1 px-6 py-4">
+        <div className="flex-1 px-7 py-5">
           <textarea
             value={content}
             onChange={e => handleContentChange(e.target.value)}
             placeholder="Viết ghi chú của bạn…"
-            className="w-full h-full min-h-[400px] resize-none bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 leading-relaxed"
+            className="w-full h-full min-h-[400px] resize-none bg-transparent border-none outline-none text-[15px] text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 leading-relaxed"
           />
         </div>
       </div>

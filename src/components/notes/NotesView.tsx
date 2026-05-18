@@ -1,6 +1,6 @@
 import { useState, useMemo, memo } from 'react'
 import { StickyNote, Pin, Pencil, Trash2, Plus, LayoutGrid, List, CheckSquare, Square, FileDown, Trash } from 'lucide-react'
-import { cn } from '../../lib/utils'
+import { cn, formatRelativeTime } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import Button from '../ui/Button'
 import type { Note } from '../../types'
@@ -10,7 +10,7 @@ interface NotesViewProps {
   onEditNote: (note: Note) => void
 }
 
-function formatDate(iso: string): string {
+function formatDateForExport(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
@@ -79,7 +79,7 @@ export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
       const lines = [
         `# ${n.title || 'Ghi chú không tiêu đề'}`,
         folder ? `Thư mục: ${folder}` : null,
-        `Ngày: ${formatDate(n.updatedAt)}`,
+        `Ngày: ${formatDateForExport(n.updatedAt)}`,
         '',
         n.content || '(trống)',
       ].filter((l): l is string => l !== null)
@@ -239,15 +239,19 @@ const NoteCard = memo(function NoteCard({ note, folderName, folderColor, onEdit,
     <div
       onClick={selectMode ? onSelect : onEdit}
       className={cn(
-        'group relative flex flex-col rounded-xl border bg-white dark:bg-slate-800',
+        'group relative flex flex-col rounded-xl border bg-white dark:bg-slate-800 h-48',
+        'shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer',
         selected
           ? 'border-indigo-400 dark:border-indigo-500 ring-2 ring-indigo-200 dark:ring-indigo-700'
-          : 'border-slate-200 dark:border-slate-700',
-        'shadow-sm hover:shadow-md transition-all cursor-pointer min-h-[140px]'
+          : note.pinned
+            ? 'border-amber-300 dark:border-amber-600/60 bg-amber-50/40 dark:bg-amber-900/10'
+            : 'border-slate-200 dark:border-slate-700',
+        folderColor && 'border-l-[3px]'
       )}
+      style={folderColor ? { borderLeftColor: folderColor } : undefined}
     >
-      {/* Checkbox (select mode) or pin indicator */}
-      <div className="absolute top-2 left-2 z-10">
+      {/* Pin indicator / select checkbox */}
+      <div className="absolute top-2.5 left-3 z-10">
         {selectMode ? (
           selected
             ? <CheckSquare size={16} className="text-indigo-600 dark:text-indigo-400" />
@@ -290,27 +294,26 @@ const NoteCard = memo(function NoteCard({ note, folderName, folderColor, onEdit,
       )}
 
       {/* Body */}
-      <div className="flex-1 p-4 pt-3">
+      <div className="flex-1 px-4 pt-7 pb-2 overflow-hidden min-h-0">
         <p className={cn(
-          'text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1.5 leading-snug',
-          selectMode ? 'pl-5' : 'pr-16',
+          'text-[15px] font-semibold text-slate-800 dark:text-slate-200 mb-1 leading-tight line-clamp-2',
+          selectMode ? 'pl-5' : 'pr-14',
           !note.title && 'text-slate-400 dark:text-slate-500 font-normal italic'
         )}>
           {note.title || 'Không có tiêu đề'}
         </p>
         {note.content && (
-          <p className={cn('text-xs text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed whitespace-pre-wrap', selectMode && 'pl-5')}>
+          <p className={cn('text-xs text-slate-500 dark:text-slate-400 line-clamp-4 leading-relaxed whitespace-pre-wrap', selectMode && 'pl-5')}>
             {note.content}
           </p>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-4 pb-3 pt-1 flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700/60">
-        <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">{formatDate(note.updatedAt)}</span>
+      <div className="px-4 pb-2.5 pt-1.5 flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700/60 shrink-0">
+        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0">{formatRelativeTime(note.updatedAt)}</span>
         {folderName && (
-          <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full flex items-center gap-1">
-            {folderColor && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: folderColor }} />}
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[100px] bg-slate-100 dark:bg-slate-700/60 px-1.5 py-0.5 rounded-full">
             {folderName}
           </span>
         )}
@@ -343,12 +346,17 @@ const NoteListRow = memo(function NoteListRow({ note, folderName, folderColor, o
 
       {/* Title + preview */}
       <div className="flex-1 min-w-0">
-        <p className={cn(
-          'text-sm font-semibold truncate',
-          note.title ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500 italic font-normal'
-        )}>
-          {note.title || 'Không có tiêu đề'}
-        </p>
+        <div className="flex items-center gap-1.5">
+          {folderColor && (
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: folderColor }} />
+          )}
+          <p className={cn(
+            'text-sm font-semibold truncate',
+            note.title ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500 italic font-normal'
+          )}>
+            {note.title || 'Không có tiêu đề'}
+          </p>
+        </div>
         {note.content && (
           <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-3 leading-relaxed mt-0.5 whitespace-pre-wrap">
             {note.content}
@@ -356,17 +364,16 @@ const NoteListRow = memo(function NoteListRow({ note, folderName, folderColor, o
         )}
       </div>
 
-      {/* Folder tag */}
+      {/* Folder name — desktop only */}
       {folderName && (
-        <span className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">
-          {folderColor && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: folderColor }} />}
+        <span className="shrink-0 hidden md:flex items-center text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/60 px-1.5 py-0.5 rounded-full">
           {folderName}
         </span>
       )}
 
-      {/* Date */}
-      <span className="shrink-0 hidden sm:block text-[10px] text-slate-400 dark:text-slate-500 w-20 text-right">
-        {formatDate(note.updatedAt)}
+      {/* Relative time */}
+      <span className="shrink-0 hidden sm:block text-[10px] font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap">
+        {formatRelativeTime(note.updatedAt)}
       </span>
 
       {/* Actions */}

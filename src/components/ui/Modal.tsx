@@ -35,12 +35,12 @@ export default function Modal({ open, onClose, title, children, footer, size = '
       aria-modal="true"
     >
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm modal-backdrop"
         onClick={onClose}
       />
       <div
         className={cn(
-          'relative w-full bg-white dark:bg-slate-800 shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col',
+          'relative w-full bg-white dark:bg-slate-800 shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col modal-panel',
           'rounded-t-2xl sm:rounded-2xl',
           'max-h-[92dvh] sm:max-h-[90vh]',
           sizes[size]

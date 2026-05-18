@@ -23,6 +23,29 @@ export function formatDateTime(dateStr: string | null, timeStr: string | null): 
   return timeStr ? `${base} ${timeStr}` : base
 }
 
+export function formatRelativeTime(iso: string, language: 'vi' | 'en' = 'vi'): string {
+  const date = new Date(iso)
+  const diffMs = Date.now() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  const diffHr = Math.floor(diffMs / 3600000)
+  const diffDay = Math.floor(diffMs / 86400000)
+
+  if (language === 'vi') {
+    if (diffMin < 1) return 'Vừa xong'
+    if (diffMin < 60) return `${diffMin} phút trước`
+    if (diffHr < 24) return `${diffHr} giờ trước`
+    if (diffDay === 1) return 'Hôm qua'
+    if (diffDay < 7) return `${diffDay} ngày trước`
+    return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  if (diffHr < 24) return `${diffHr}h ago`
+  if (diffDay === 1) return 'Yesterday'
+  if (diffDay < 7) return `${diffDay}d ago`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 export function getDeadline(task: Task): Date | null {
   if (task.dueDate) {
     const time = task.dueTime ?? '23:59'

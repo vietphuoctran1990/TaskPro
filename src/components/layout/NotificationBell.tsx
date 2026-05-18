@@ -124,7 +124,7 @@ export default function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="fixed right-4 top-14 z-40 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden">
+          <div className="fixed right-4 top-14 z-40 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden pop-in">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700/50">
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t.notifications.title}</span>
