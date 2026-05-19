@@ -44,45 +44,6 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
   // Haptic on drag start (mobile)
   useEffect(() => { if (isDragging) haptic(8) }, [isDragging])
 
-  // Swipe gesture (mobile): right → done, left → delete
-  const swipeStartX = useRef<number | null>(null)
-  const swipeStartY = useRef<number | null>(null)
-  const [swipeDx, setSwipeDx] = useState(0)
-  const swipeLocked = useRef<'h' | 'v' | null>(null)
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length !== 1) return
-    swipeStartX.current = e.touches[0].clientX
-    swipeStartY.current = e.touches[0].clientY
-    swipeLocked.current = null
-  }
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (swipeStartX.current == null || swipeStartY.current == null) return
-    const dx = e.touches[0].clientX - swipeStartX.current
-    const dy = e.touches[0].clientY - swipeStartY.current
-    if (swipeLocked.current == null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-      swipeLocked.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
-    }
-    if (swipeLocked.current !== 'h') return
-    setSwipeDx(Math.max(-180, Math.min(180, dx)))
-  }
-  const handleTouchEnd = () => {
-    const dx = swipeDx
-    swipeStartX.current = null
-    swipeStartY.current = null
-    swipeLocked.current = null
-    setSwipeDx(0)
-    const threshold = 90
-    if (dx >= threshold && task.status !== 'done') {
-      haptic(20)
-      dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'done' } })
-      if (task.priority === 'urgent') burstConfetti(cardRef.current)
-    } else if (dx <= -threshold) {
-      haptic(25)
-      dispatch({ type: 'DELETE_TASK', payload: task.id })
-    }
-  }
-
   const handleMenuOpen = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (menuBtnRef.current) {
@@ -105,27 +66,9 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
-      {/* Swipe action backdrop */}
-      {swipeDx !== 0 && (
-        <div className={cn(
-          'absolute inset-0 flex items-center px-4 pointer-events-none rounded-xl',
-          swipeDx > 0 ? 'justify-start bg-emerald-500/90' : 'justify-end bg-red-500/90'
-        )}>
-          {swipeDx > 0 ? (
-            <CheckCheck size={18} className="text-white" />
-          ) : (
-            <Trash2 size={18} className="text-white" />
-          )}
-        </div>
-      )}
     <div
       ref={setRefs}
-      style={{ ...style, transform: swipeDx ? `translate3d(${swipeDx}px,0,0)` : style.transform }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
+      style={style}
       className={cn(
         'group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-l-[3px] shadow-sm hover:shadow-md hover:scale-[1.015] hover:-translate-y-0.5 transition-all duration-150 cursor-pointer select-none',
         PRIORITY_ACCENT[task.priority],
@@ -284,7 +227,6 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
           </div>
         </div>
       </div>
-    </div>
     </div>
   )
 })
