@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pin, Plus } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { localISO } from '../../lib/dateLocal'
 import { useApp } from '../../context/AppContext'
@@ -29,7 +29,7 @@ interface CalendarViewProps {
 }
 
 const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: CalendarViewProps) {
-  const { state } = useApp()
+  const { state, dispatch, finalStatusIds } = useApp()
   const t = useT()
   const today = new Date()
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
@@ -84,11 +84,11 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
       ? state.tasks.filter(tk => tk.projectId === state.activeProjectId)
       : state.tasks
     return {
-      breached: tasks.filter(tk => getSLAStatus(tk) === 'breached').length,
-      critical: tasks.filter(tk => getSLAStatus(tk) === 'critical').length,
-      at_risk:  tasks.filter(tk => getSLAStatus(tk) === 'at_risk').length,
+      breached: tasks.filter(tk => getSLAStatus(tk, finalStatusIds) === 'breached').length,
+      critical: tasks.filter(tk => getSLAStatus(tk, finalStatusIds) === 'critical').length,
+      at_risk:  tasks.filter(tk => getSLAStatus(tk, finalStatusIds) === 'at_risk').length,
     }
-  }, [state.tasks, state.activeProjectId])
+  }, [state.tasks, state.activeProjectId, finalStatusIds])
 
   return (
     <div className="flex flex-col gap-4">
@@ -193,25 +193,38 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
                 {/* Tasks */}
                 <div className="space-y-0.5">
                   {cellTasks.slice(0, 3).map(task => {
-                    const sla = getSLAStatus(task)
+                    const sla = getSLAStatus(task, finalStatusIds)
                     return (
-                      <button
-                        key={task.id}
-                        onClick={e => { e.stopPropagation(); onViewTask(task) }}
-                        className={cn(
-                          'w-full text-left px-1.5 py-0.5 rounded text-xs truncate flex items-center gap-1 border-l-2 transition-colors',
-                          'bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 shadow-sm border border-slate-100 dark:border-slate-600',
-                          PRIORITY_BORDER[task.priority],
-                          task.status === 'done' && 'opacity-50 line-through'
-                        )}
-                        title={task.title}
-                      >
-                        <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', SLA_DOT[sla])} />
-                        <span className="truncate text-slate-700 dark:text-slate-300 font-medium">{task.title}</span>
-                        {task.dueTime && (
-                          <span className="shrink-0 text-slate-400 dark:text-slate-500">{task.dueTime}</span>
-                        )}
-                      </button>
+                      <div key={task.id} className="relative group/pill">
+                        <button
+                          onClick={e => { e.stopPropagation(); onViewTask(task) }}
+                          className={cn(
+                            'w-full text-left px-1.5 py-0.5 rounded text-xs truncate flex items-center gap-1 border-l-2 transition-colors',
+                            'bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 shadow-sm border border-slate-100 dark:border-slate-600',
+                            PRIORITY_BORDER[task.priority],
+                            finalStatusIds.has(task.status) && 'opacity-50 line-through'
+                          )}
+                          title={task.title}
+                        >
+                          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', SLA_DOT[sla])} />
+                          <span className="truncate text-slate-700 dark:text-slate-300 font-medium">{task.title}</span>
+                          {task.dueTime && (
+                            <span className="shrink-0 text-slate-400 dark:text-slate-500">{task.dueTime}</span>
+                          )}
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id }) }}
+                          className={cn(
+                            'absolute right-0.5 top-0 bottom-0 flex items-center justify-center w-4 rounded transition-all z-10',
+                            task.pinned
+                              ? 'opacity-100 text-amber-500'
+                              : 'opacity-0 group-hover/pill:opacity-100 text-slate-300 hover:text-amber-500'
+                          )}
+                          title={task.pinned ? t.pin.unpin : t.pin.pin}
+                        >
+                          <Pin size={8} className={task.pinned ? 'fill-amber-400/60' : ''} />
+                        </button>
+                      </div>
                     )
                   })}
                   {cellTasks.length > 3 && (

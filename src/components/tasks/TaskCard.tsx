@@ -99,7 +99,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
               'w-6 h-6 flex items-center justify-center rounded-md transition-all',
               task.pinned
                 ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
-                : 'opacity-0 sm:opacity-0 group-hover:opacity-100 sm:group-hover:opacity-100 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
             )}
             title={task.pinned ? t.pin.unpin : t.pin.pin}
           >

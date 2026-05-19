@@ -1,4 +1,5 @@
 import { memo, useMemo, useRef } from 'react'
+import { Pin } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
@@ -27,7 +28,7 @@ function daysBetween(a: Date, b: Date) {
 }
 
 const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: TimelineViewProps) {
-  const { state, filteredTasks } = useApp()
+  const { state, dispatch, filteredTasks, finalStatusIds } = useApp()
   const t = useT()
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -87,15 +88,27 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
               {tasks.map(task => (
                 <div
                   key={task.id}
-                  className="h-10 flex items-center px-4 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
+                  className="h-10 flex items-center gap-1 px-4 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group/row"
                   onClick={() => onViewTask(task)}
                 >
                   <span className={cn(
-                    'text-sm truncate',
-                    task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'
+                    'flex-1 text-sm truncate',
+                    finalStatusIds.has(task.status) ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-300'
                   )}>
                     {task.title}
                   </span>
+                  <button
+                    onClick={e => { e.stopPropagation(); dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id }) }}
+                    className={cn(
+                      'shrink-0 w-5 h-5 flex items-center justify-center rounded transition-all',
+                      task.pinned
+                        ? 'opacity-100 text-amber-500'
+                        : 'opacity-0 group-hover/row:opacity-100 text-slate-300 hover:text-amber-500'
+                    )}
+                    title={task.pinned ? t.pin.unpin : t.pin.pin}
+                  >
+                    <Pin size={10} className={task.pinned ? 'fill-amber-400/60' : ''} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -165,8 +178,8 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
                   const endDay   = Math.min(DAYS_TOTAL - 1, daysBetween(due, rangeStart))
                   const barLeft  = startDay * DAY_W
                   const barWidth = Math.max(DAY_W, (endDay - startDay + 1) * DAY_W)
-                  const isOverdue = due < today && task.status !== 'done'
-                  const isDone    = task.status === 'done'
+                  const isDone    = finalStatusIds.has(task.status)
+                  const isOverdue = due < today && !isDone
 
                   return (
                     <div

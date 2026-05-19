@@ -1,7 +1,7 @@
 import { memo, useState, useRef, useMemo } from 'react'
 import {
   ChevronDown, ChevronUp, ChevronsUpDown,
-  MoreHorizontal, Pencil, Timer, Trash2, CheckSquare, Calendar, Rows3,
+  MoreHorizontal, Pencil, Pin, PinOff, Timer, Trash2, CheckSquare, Calendar, Rows3,
 } from 'lucide-react'
 import { cn, formatDateTime, getDeadline } from '../../lib/utils'
 import { PriorityBadge } from '../ui/Badge'
@@ -85,7 +85,7 @@ function SortHeader({ field, label, currentField, currentDir, onSort, className 
   )
 }
 
-function TaskMenu({ onEdit, onDelete, onFocus }: { onEdit: () => void; onDelete: () => void; onFocus?: () => void }) {
+function TaskMenu({ onEdit, onDelete, onPin, onFocus, pinned }: { onEdit: () => void; onDelete: () => void; onPin: () => void; onFocus?: () => void; pinned?: boolean }) {
   const t = useT()
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, right: 0 })
@@ -111,9 +111,13 @@ function TaskMenu({ onEdit, onDelete, onFocus }: { onEdit: () => void; onDelete:
             className="fixed z-50 w-36 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden pop-in"
             style={{ top: pos.top, right: pos.right }}
           >
-            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-t-xl"
               onClick={() => { setOpen(false); onEdit() }}>
               <Pencil size={13} /> {t.detail.edit}
+            </button>
+            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+              onClick={() => { setOpen(false); onPin() }}>
+              {pinned ? <><PinOff size={13} /> {t.pin.unpin}</> : <><Pin size={13} /> {t.pin.pin}</>}
             </button>
             {onFocus && (
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50"
@@ -221,6 +225,8 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                 <TaskMenu
                   onEdit={() => onEditTask(task)}
                   onDelete={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+                  onPin={() => dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id })}
+                  pinned={task.pinned}
                   onFocus={!finalStatusIds.has(task.status) && onFocusTask ? () => onFocusTask(task) : undefined}
                 />
               </div>
@@ -341,6 +347,8 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                     <TaskMenu
                       onEdit={() => onEditTask(task)}
                       onDelete={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+                      onPin={() => dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id })}
+                      pinned={task.pinned}
                       onFocus={!finalStatusIds.has(task.status) && onFocusTask ? () => onFocusTask(task) : undefined}
                     />
                   </td>
