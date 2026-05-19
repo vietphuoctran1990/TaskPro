@@ -1,5 +1,12 @@
 import { useState, useCallback } from 'react'
-import { Pencil, Trash2, Plus, X, Check, FolderOpen, Tag, CircleDot } from 'lucide-react'
+import { Pencil, Trash2, Plus, X, Check, FolderOpen, Tag, CircleDot, GripVertical } from 'lucide-react'
+import {
+  DndContext, type DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCenter,
+} from '@dnd-kit/core'
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { cn } from '../../lib/utils'
@@ -370,6 +377,30 @@ function StatusRow({ def, otherStatuses }: { def: StatusDef; otherStatuses: Stat
   )
 }
 
+// ── Sortable status row wrapper ───────────────────────────────────────────────
+function SortableStatusRow({ def, otherStatuses }: { def: StatusDef; otherStatuses: StatusDef[] }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: def.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className="flex items-center gap-0.5"
+    >
+      <button
+        {...attributes} {...listeners}
+        tabIndex={-1}
+        className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none shrink-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+        aria-label="Kéo để sắp xếp"
+      >
+        <GripVertical size={14} />
+      </button>
+      <div className="flex-1 min-w-0">
+        <StatusRow def={def} otherStatuses={otherStatuses} />
+      </div>
+    </div>
+  )
+}
+
 // ── Add status form ───────────────────────────────────────────────────────────
 function AddStatusForm({ onDone }: { onDone: () => void }) {
   const { dispatch } = useApp()
@@ -408,9 +439,10 @@ function AddStatusForm({ onDone }: { onDone: () => void }) {
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 export default function ManageModal({ open, onClose, initialTab = 'projects' }: ManageModalProps) {
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const t = useT()
   const [tab, setTab]               = useState<'projects' | 'labels' | 'statuses'>(initialTab)
+
   const [addingProject, setAddingProject] = useState(false)
   const [addingLabel, setAddingLabel]     = useState(false)
   const [addingStatus, setAddingStatus]   = useState(false)
@@ -419,6 +451,19 @@ export default function ManageModal({ open, onClose, initialTab = 'projects' }: 
   const labelTaskCount   = (lId: string) => state.tasks.filter(tk => tk.labels.includes(lId)).length
 
   const sortedStatuses = [...state.statuses].sort((a, b) => a.order - b.order)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
+  )
+
+  const handleStatusDragEnd = useCallback(({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return
+    const oldIndex = sortedStatuses.findIndex(s => s.id === active.id)
+    const newIndex = sortedStatuses.findIndex(s => s.id === over.id)
+    const reordered = arrayMove(sortedStatuses, oldIndex, newIndex)
+    dispatch({ type: 'REORDER_STATUSES', payload: reordered.map(s => s.id) })
+  }, [sortedStatuses, dispatch])
 
   return (
     <Modal open={open} onClose={onClose} size="md">
@@ -490,15 +535,19 @@ export default function ManageModal({ open, onClose, initialTab = 'projects' }: 
         )}
         {tab === 'statuses' && (
           <>
-            <div className="space-y-0.5 relative">
-              {sortedStatuses.map(s => (
-                <StatusRow
-                  key={s.id}
-                  def={s}
-                  otherStatuses={sortedStatuses.filter(o => o.id !== s.id)}
-                />
-              ))}
-            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleStatusDragEnd}>
+              <SortableContext items={sortedStatuses.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-0.5">
+                  {sortedStatuses.map(s => (
+                    <SortableStatusRow
+                      key={s.id}
+                      def={s}
+                      otherStatuses={sortedStatuses.filter(o => o.id !== s.id)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
             {addingStatus
               ? <AddStatusForm onDone={() => setAddingStatus(false)} />
               : (

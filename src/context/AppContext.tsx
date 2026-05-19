@@ -44,9 +44,10 @@ type Action =
   | { type: 'TOGGLE_PIN_TASK';    payload: string }
   | { type: 'SET_LANGUAGE';    payload: 'en' | 'vi' }
   | { type: 'SET_NOTIF_BEFORE'; payload: number[] }
-  | { type: 'ADD_STATUS';    payload: Omit<StatusDef, 'id' | 'isBuiltin'> }
-  | { type: 'UPDATE_STATUS'; payload: StatusDef }
-  | { type: 'DELETE_STATUS'; payload: { id: string; moveTo: string } }
+  | { type: 'ADD_STATUS';       payload: Omit<StatusDef, 'id' | 'isBuiltin'> }
+  | { type: 'UPDATE_STATUS';    payload: StatusDef }
+  | { type: 'DELETE_STATUS';    payload: { id: string; moveTo: string } }
+  | { type: 'REORDER_STATUSES'; payload: string[] }
   | { type: 'IMPORT_STATE';    payload: { data: AppState; mode: 'replace' | 'merge' } }
   | { type: 'ADD_NOTE';           payload: Omit<Note, 'id' | 'createdAt' | 'updatedAt'> & { id?: string } }
   | { type: 'UPDATE_NOTE';        payload: Partial<Note> & { id: string } }
@@ -235,6 +236,13 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         statuses: state.statuses.filter(s => s.id !== id),
         tasks:    state.tasks.map(t => t.status === id ? { ...t, status: moveTo, updatedAt: now } : t),
+      }
+    }
+    case 'REORDER_STATUSES': {
+      const ids = action.payload
+      return {
+        ...state,
+        statuses: state.statuses.map(s => ({ ...s, order: ids.indexOf(s.id) })),
       }
     }
     case 'ADD_NOTE':
