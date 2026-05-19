@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { CheckSquare, ChevronDown, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText, Sun, Sunset, Calendar, StickyNote } from 'lucide-react'
+import { CheckSquare, ChevronDown, CircleDot, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText, Sun, Sunset, Calendar, StickyNote } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { todayLocalISO, tomorrowLocalISO } from '../../lib/dateLocal'
 import { useApp } from '../../context/AppContext'
@@ -10,7 +10,7 @@ import type { Project } from '../../types'
 
 const PROJECT_COLORS = ['#6366f1','#0ea5e9','#f59e0b','#22c55e','#ec4899','#ef4444','#8b5cf6','#14b8a6','#f97316','#06b6d4']
 
-interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void; onManage?: (tab: 'projects' | 'labels') => void; onNotes?: (project: Project) => void }
+interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void; onManage?: (tab: 'projects' | 'labels' | 'statuses') => void; onNotes?: (project: Project) => void }
 
 export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: SidebarProps) {
   const { state, dispatch } = useApp()
@@ -181,6 +181,42 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Statuses */}
+        <div className="pt-3">
+          <div className="flex items-center">
+            <div className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              <CircleDot size={12} /><span>{t.manage.statuses}</span>
+            </div>
+            {onManage && (
+              <button onClick={() => onManage('statuses')}
+                className="p-1 mr-1 rounded text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                title={t.sidebar.manage}>
+                <Settings2 size={12} />
+              </button>
+            )}
+          </div>
+          <div className="mt-1.5 px-3 flex flex-wrap gap-1.5">
+            {[...state.statuses].sort((a, b) => a.order - b.order).map(s => {
+              const i18nStatus = t.status as Record<string, string>
+              const label = s.name || i18nStatus[s.id] || s.id
+              return (
+                <span key={s.id}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                  style={{ backgroundColor: `${s.color}22`, color: s.color }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }} />
+                  {label}
+                </span>
+              )
+            })}
+          </div>
+          {onManage && (
+            <button onClick={() => onManage('statuses')}
+              className="mt-1.5 w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
+              <Settings2 size={12} /> {t.sidebar.manage}
+            </button>
+          )}
         </div>
 
         {/* Notes */}

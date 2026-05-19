@@ -95,7 +95,7 @@ function AppShell() {
     setShowOnboarding(false)
   }
 
-  const handleManage = useCallback((tab: 'projects' | 'labels') => {
+  const handleManage = useCallback((tab: 'projects' | 'labels' | 'statuses') => {
     setManageTab(tab)
     setManageOpen(true)
     setSidebarOpen(false)
