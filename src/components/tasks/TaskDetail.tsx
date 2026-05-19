@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import {
   Calendar, CheckSquare, Clock, MessageSquare,
   Pencil, Plus, Send, Timer, Trash2, X, ExternalLink,
@@ -12,6 +12,7 @@ import { useT } from '../../i18n'
 import { useToast } from '../../context/ToastContext'
 import { cn, formatDateTime, getDeadline, getTimeRemaining } from '../../lib/utils'
 import { haptic } from '../../lib/feedback'
+import { useNow } from '../../hooks/useNow'
 import { googleCalendarUrl } from '../../lib/ical'
 import type { Task } from '../../types'
 
@@ -28,13 +29,8 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
   const { toast } = useToast()
   const [newSubtask, setNewSubtask] = useState('')
   const [newComment, setNewComment] = useState('')
-  const [, tick] = useState(0)
+  const now = useNow()
   const commentRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    const id = setInterval(() => tick(n => n + 1), 30_000)
-    return () => clearInterval(id)
-  }, [])
 
   const project = task ? state.projects.find(p => p.id === task.projectId) : null
   const labels = task ? state.labels.filter(l => task.labels.includes(l.id)) : []
@@ -133,9 +129,9 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                   </span>
                   <span className={cn(
                     'font-semibold',
-                    deadline.getTime() < Date.now() ? 'text-red-600' : 'text-indigo-600'
+                    deadline.getTime() < now ? 'text-red-600' : 'text-indigo-600'
                   )}>
-                    {deadline.getTime() < Date.now()
+                    {deadline.getTime() < now
                       ? `${t.detail.overdueBy} ${getTimeRemaining(deadline)}`
                       : `${getTimeRemaining(deadline)} ${t.detail.remaining}`
                     }

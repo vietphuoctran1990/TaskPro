@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Clock, Zap } from 'lucide-react'
 import { cn, getDeadline, getSLAStatus, getTimeRemaining } from '../../lib/utils'
 import { useT } from '../../i18n'
+import { useNow } from '../../hooks/useNow'
 import type { Task, SLAStatus } from '../../types'
 
 interface SLABadgeProps {
@@ -12,16 +12,11 @@ interface SLABadgeProps {
 
 export default function SLABadge({ task, showTimer = false, size = 'sm' }: SLABadgeProps) {
   const t = useT()
-  const [, tick] = useState(0)
-
-  useEffect(() => {
-    const id = setInterval(() => tick(n => n + 1), 30_000)
-    return () => clearInterval(id)
-  }, [])
+  const now = useNow()
 
   const status = getSLAStatus(task)
   const deadline = getDeadline(task)
-  const overdue = deadline && deadline.getTime() < Date.now()
+  const overdue = deadline && deadline.getTime() < now
 
   const CONFIG: Record<SLAStatus, { label: string; className: string; icon: React.ElementType }> = {
     on_track:  { label: t.sla.on_track,  className: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',  icon: CheckCircle2 },

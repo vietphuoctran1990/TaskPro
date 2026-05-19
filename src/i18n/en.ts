@@ -147,4 +147,14 @@ export const en: Translations = {
   pin: { pin: 'Pin to top', unpin: 'Unpin' },
   theme: { light: 'Light', dark: 'Dark', system: 'System' },
   refresh: { pulling: 'Pull down to sync', release: 'Release to sync', refreshing: 'Syncing…' },
+  shortcuts: {
+    title: 'Keyboard shortcuts',
+    groupGeneral: 'General',
+    palette: 'Open command palette',
+    showShortcuts: 'Show shortcuts',
+    closeDialog: 'Close dialog',
+    groupView: 'Navigation',
+    switchView: 'Switch view',
+    navigate: 'Navigate list',
+  },
 }

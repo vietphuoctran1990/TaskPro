@@ -81,6 +81,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
       <div className="flex items-center justify-between px-3 pt-2.5 pb-0">
         <button
           {...attributes} {...listeners}
+          aria-label="Reorder task"
           className="text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-0.5 rounded"
           onClick={e => e.stopPropagation()}
         >
@@ -117,6 +118,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
           <Button
             ref={menuBtnRef}
             variant="ghost" size="icon"
+            aria-label="More options"
             className="w-6 h-6 opacity-0 group-hover:opacity-100"
             onClick={handleMenuOpen}
           >

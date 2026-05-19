@@ -123,4 +123,14 @@ export interface Translations {
   pin: { pin: string; unpin: string }
   theme: { light: string; dark: string; system: string }
   refresh: { pulling: string; release: string; refreshing: string }
+  shortcuts: {
+    title: string
+    groupGeneral: string
+    palette: string
+    showShortcuts: string
+    closeDialog: string
+    groupView: string
+    switchView: string
+    navigate: string
+  }
 }

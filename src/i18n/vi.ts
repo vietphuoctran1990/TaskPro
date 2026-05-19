@@ -149,4 +149,14 @@ export const vi: Translations = {
   pin: { pin: 'Ghim lên đầu', unpin: 'Bỏ ghim' },
   theme: { light: 'Sáng', dark: 'Tối', system: 'Theo hệ thống' },
   refresh: { pulling: 'Kéo xuống để đồng bộ', release: 'Thả để đồng bộ', refreshing: 'Đang đồng bộ…' },
+  shortcuts: {
+    title: 'Phím tắt',
+    groupGeneral: 'Tổng quát',
+    palette: 'Mở bảng lệnh nhanh',
+    showShortcuts: 'Xem phím tắt',
+    closeDialog: 'Đóng cửa sổ',
+    groupView: 'Điều hướng',
+    switchView: 'Đổi chế độ xem',
+    navigate: 'Di chuyển trong danh sách',
+  },
 }

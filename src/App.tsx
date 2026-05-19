@@ -23,6 +23,7 @@ import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
 import OfflineToast from './components/pwa/OfflineToast'
 import CommandPalette from './components/ui/CommandPalette'
+import ShortcutsModal from './components/ui/ShortcutsModal'
 import { ToastProvider } from './context/ToastContext'
 import { usePWA } from './hooks/usePWA'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
@@ -51,15 +52,25 @@ function AppShell() {
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('taskpro-onboarded'))
   const [commandOpen, setCommandOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
 
-  // ⌘K / Ctrl+K to open command palette (and "/" to focus when no input)
+  // ⌘K → command palette · ? → shortcuts cheat sheet
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setCommandOpen(v => !v)
+        return
+      }
+      // ? only when no input/textarea/select is focused
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+        const tag = (document.activeElement as HTMLElement)?.tagName
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+          e.preventDefault()
+          setShortcutsOpen(v => !v)
+        }
       }
     }
     window.addEventListener('keydown', onKey)
@@ -271,6 +282,7 @@ function AppShell() {
         onViewTask={handleViewTask}
         onEditNote={handleEditNote}
       />
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
 

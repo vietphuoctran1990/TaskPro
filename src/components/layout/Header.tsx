@@ -1,5 +1,5 @@
 import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote, Monitor } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -43,7 +43,7 @@ function ThemeMenu() {
         <Icon size={15} />
       </Button>
       {open && (
-        <div className="absolute right-0 top-10 z-30 w-40 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden pop-in">
+        <div className="absolute right-0 top-10 z-40 w-40 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden pop-in">
           <button
             className={cn('w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors',
               !isSystem && !state.darkMode ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700')}
@@ -71,6 +71,33 @@ function ThemeMenu() {
 const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
   dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar, timeline: GanttChart, notes: StickyNote,
 }
+
+const ViewSwitcher = memo(function ViewSwitcher({ viewMode, views, t, dispatch }: {
+  viewMode: ViewMode
+  views: ViewMode[]
+  t: ReturnType<typeof import('../../i18n').useT>
+  dispatch: (a: { type: 'SET_VIEW_MODE'; payload: ViewMode }) => void
+}) {
+  return (
+    <div className="hidden sm:flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+      {views.map(v => {
+        const Icon = VIEW_ICONS[v]
+        return (
+          <button key={v} onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
+            aria-label={t.views[v]}
+            className={cn(
+              'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
+              viewMode === v ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            )}
+          >
+            <Icon size={13} />
+            <span className="hidden md:inline">{t.views[v]}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+})
 
 function UserMenu({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { user, syncing, lastSynced, signOut, syncNow } = useAuth()
@@ -106,8 +133,8 @@ function UserMenu({ onOpenAuth }: { onOpenAuth: () => void }) {
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-10 z-20 w-52 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden pop-in">
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-10 z-40 w-52 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden pop-in">
             <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-700">
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{user.email}</p>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{syncLabel}</p>
@@ -171,7 +198,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
     )}>
       {/* Top row */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 h-14">
-        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onOpenSidebar}>
+        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onOpenSidebar} aria-label="Open sidebar">
           <Menu size={18} />
         </Button>
 
@@ -217,22 +244,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             </div>
 
             {/* View switcher — desktop */}
-            <div className="hidden sm:flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
-              {views.map(v => {
-                const Icon = VIEW_ICONS[v]
-                return (
-                  <button key={v} onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
-                    className={cn(
-                      'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
-                      state.viewMode === v ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                    )}
-                  >
-                    <Icon size={13} />
-                    <span className="hidden md:inline">{t.views[v]}</span>
-                  </button>
-                )
-              })}
-            </div>
+            <ViewSwitcher viewMode={state.viewMode} views={views} t={t} dispatch={dispatch} />
 
             {/* Search — desktop only */}
             <div className="hidden md:flex relative">
@@ -244,7 +256,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             </div>
 
             {/* Mobile search icon button */}
-            <Button variant="ghost" size="icon"
+            <Button variant="ghost" size="icon" aria-label={t.header.search}
               className={cn('md:hidden relative', localSearch.trim() && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
               onClick={() => setSearchOpen(true)}>
               <Search size={15} />
@@ -253,7 +265,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
 
             {/* Filters — desktop inline toggle (hidden in notes mode) */}
             {!isNotesMode && (
-              <Button variant="ghost" size="icon"
+              <Button variant="ghost" size="icon" aria-label={t.header.filters}
                 className={cn('hidden sm:flex relative', hasFilters && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
                 onClick={() => setFiltersOpen(v => !v)}>
                 <SlidersHorizontal size={15} />
@@ -263,7 +275,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
 
             {/* Filters — mobile bottom sheet toggle (hidden in notes mode) */}
             {!isNotesMode && (
-              <Button variant="ghost" size="icon"
+              <Button variant="ghost" size="icon" aria-label={t.header.filters}
                 className={cn('sm:hidden relative', hasFilters && 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30')}
                 onClick={() => setFilterSheetOpen(true)}>
                 <SlidersHorizontal size={15} />
