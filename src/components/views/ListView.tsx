@@ -1,4 +1,4 @@
-import { memo, useState, useRef } from 'react'
+import { memo, useState, useRef, useMemo } from 'react'
 import {
   ChevronDown, ChevronUp, ChevronsUpDown,
   MoreHorizontal, Pencil, Timer, Trash2, CheckSquare, Calendar, Rows3,
@@ -11,9 +11,6 @@ import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import type { SortField, Task, Density } from '../../types'
 
-const STATUS_DOT: Record<string, string> = {
-  todo: 'bg-slate-400', in_progress: 'bg-blue-500', in_review: 'bg-violet-500', done: 'bg-emerald-500',
-}
 
 const DENSITY_ROW_PAD: Record<Density, { card: string; cell: string }> = {
   compact:     { card: 'px-4 py-2',   cell: 'px-4 py-2'    },
@@ -136,8 +133,16 @@ function TaskMenu({ onEdit, onDelete, onFocus }: { onEdit: () => void; onDelete:
 }
 
 const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onFocusTask }: ListViewProps) {
-  const { state, dispatch, filteredTasks } = useApp()
+  const { state, dispatch, filteredTasks, finalStatusIds } = useApp()
   const t = useT()
+
+  const statusMap = useMemo(() => new Map(state.statuses.map(s => [s.id, s])), [state.statuses])
+  const finalStatus  = useMemo(() => state.statuses.find(s => s.isFinal)?.id  ?? 'done', [state.statuses])
+  const firstStatus  = useMemo(() => state.statuses.find(s => !s.isFinal)?.id ?? 'todo', [state.statuses])
+  const i18nStatus   = t.status as Record<string, string>
+
+  const getStatusColor = (id: string) => statusMap.get(id)?.color ?? '#94a3b8'
+  const getStatusLabel = (id: string) => statusMap.get(id)?.name || i18nStatus[id] || id
 
   const handleSort = (field: SortField) => {
     dispatch({
@@ -148,7 +153,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
 
   const toggleDone = (task: Task, e: React.MouseEvent) => {
     e.stopPropagation()
-    dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: task.status === 'done' ? 'todo' : 'done' } })
+    dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalStatusIds.has(task.status) ? firstStatus : finalStatus } })
   }
 
   if (filteredTasks.length === 0) {
@@ -185,7 +190,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
         {filteredTasks.map(task => {
           const project = state.projects.find(p => p.id === task.projectId)
           const deadline = getDeadline(task)
-          const done = task.status === 'done'
+          const done = finalStatusIds.has(task.status)
           return (
             <div
               key={task.id}
@@ -216,15 +221,15 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                 <TaskMenu
                   onEdit={() => onEditTask(task)}
                   onDelete={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
-                  onFocus={task.status !== 'done' && onFocusTask ? () => onFocusTask(task) : undefined}
+                  onFocus={!finalStatusIds.has(task.status) && onFocusTask ? () => onFocusTask(task) : undefined}
                 />
               </div>
 
               {/* Row 2: badges + meta */}
               <div className="flex items-center flex-wrap gap-1.5 mt-1.5 pl-6">
                 <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                  <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[task.status])} />
-                  {(t.status as Record<string, string>)[task.status]}
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getStatusColor(task.status) }} />
+                  {getStatusLabel(task.status)}
                 </span>
                 <PriorityBadge priority={task.priority} />
                 <SLABadge task={task} showTimer />
@@ -273,7 +278,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
             {filteredTasks.map(task => {
               const project = state.projects.find(p => p.id === task.projectId)
               const deadline = getDeadline(task)
-              const done = task.status === 'done'
+              const done = finalStatusIds.has(task.status)
               return (
                 <tr
                   key={task.id}
@@ -310,8 +315,8 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                   </td>
                   <td className={dpad.cell}>
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
-                      <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[task.status])} />
-                      {(t.status as Record<string, string>)[task.status]}
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getStatusColor(task.status) }} />
+                      {getStatusLabel(task.status)}
                     </span>
                   </td>
                   <td className={dpad.cell}><PriorityBadge priority={task.priority} /></td>
@@ -336,7 +341,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                     <TaskMenu
                       onEdit={() => onEditTask(task)}
                       onDelete={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
-                      onFocus={task.status !== 'done' && onFocusTask ? () => onFocusTask(task) : undefined}
+                      onFocus={!finalStatusIds.has(task.status) && onFocusTask ? () => onFocusTask(task) : undefined}
                     />
                   </td>
                 </tr>

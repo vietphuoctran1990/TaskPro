@@ -44,7 +44,7 @@ function AppShell() {
   const [installDismissed, setInstallDismissed] = useState(false)
   const [syncOpen, setSyncOpen]   = useState(false)
   const [authOpen, setAuthOpen]   = useState(false)
-  const [manageTab, setManageTab] = useState<'projects' | 'labels'>('projects')
+  const [manageTab, setManageTab] = useState<'projects' | 'labels' | 'statuses'>('projects')
   const [manageOpen, setManageOpen] = useState(false)
   const [focusTask,   setFocusTask]   = useState<Task | null>(null)
   const [notesProject, setNotesProject] = useState<Project | null>(null)

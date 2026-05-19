@@ -19,7 +19,30 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const POLL_MS = 30_000 // poll every 30s for changes from other devices
+const POLL_MS = 30_000
+
+// Merge two arrays by id; for items with updatedAt, prefer the newer one
+function mergeByDate<T extends { id: string }>(local: T[], remote: T[], dateKey = 'updatedAt'): T[] {
+  const map = new Map<string, T>()
+  for (const item of local) map.set(item.id, item)
+  for (const item of remote) {
+    const existing = map.get(item.id)
+    if (!existing) {
+      map.set(item.id, item)
+    } else {
+      const lt = (existing as Record<string, unknown>)[dateKey] as string ?? ''
+      const rt = (item   as Record<string, unknown>)[dateKey] as string ?? ''
+      if (rt > lt) map.set(item.id, item)
+    }
+  }
+  return Array.from(map.values())
+}
+
+// Add cloud items not already present locally (for types without updatedAt)
+function addOnly<T extends { id: string }>(local: T[], remote: T[]): T[] {
+  const ids = new Set(local.map(i => i.id))
+  return [...local, ...remote.filter(i => !ids.has(i.id))]
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { state, dispatch } = useApp()
@@ -44,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store everything nested inside the `data` column (matches the SQL schema)
       const { error } = await supabase.from('user_state').upsert({
         user_id:    u.id,
-        data:       { tasks: s.tasks, projects: s.projects, labels: s.labels, notes: s.notes, noteFolders: s.noteFolders },
+        data:       { tasks: s.tasks, projects: s.projects, labels: s.labels, notes: s.notes, noteFolders: s.noteFolders, statuses: s.statuses },
         updated_at: new Date().toISOString(),
       })
       if (!error) {
@@ -78,15 +101,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!force && cloudMs <= localMs) return false // nothing newer
 
-      const { tasks = [], projects = [], labels = [], notes = [], noteFolders = [] } = data.data as {
+      const { tasks = [], projects = [], labels = [], notes = [], noteFolders = [], statuses = [] } = data.data as {
         tasks?: AppState['tasks'], projects?: AppState['projects'], labels?: AppState['labels'],
-        notes?: AppState['notes'], noteFolders?: AppState['noteFolders']
+        notes?: AppState['notes'], noteFolders?: AppState['noteFolders'], statuses?: AppState['statuses']
       }
 
+      // Smart merge: prefer newer updatedAt for tasks/notes; add-only for others
+      // This prevents one device from wiping another device's data
+      const cur = stateRef.current
       dispatch({
         type: 'IMPORT_STATE',
         payload: {
-          data: { ...stateRef.current, tasks, projects, labels, notes, noteFolders },
+          data: {
+            ...cur,
+            tasks:       mergeByDate(cur.tasks, tasks),
+            projects:    addOnly(cur.projects, projects),
+            labels:      addOnly(cur.labels, labels),
+            notes:       mergeByDate(cur.notes, notes),
+            noteFolders: addOnly(cur.noteFolders, noteFolders),
+            statuses:    addOnly(cur.statuses, statuses),
+          },
           mode: 'replace',
         },
       })
