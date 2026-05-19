@@ -13,19 +13,12 @@ import {
 import { arrayMove } from '@dnd-kit/sortable'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
-import TaskColumn from './TaskColumn'
+import TaskColumn, { type ColumnDef } from './TaskColumn'
 import TaskCard from './TaskCard'
-import type { Status, Task } from '../../types'
-
-const COLUMN_META: { id: Status; color: string; dotColor: string }[] = [
-  { id: 'todo',        color: 'bg-slate-100',  dotColor: 'bg-slate-400' },
-  { id: 'in_progress', color: 'bg-blue-50',    dotColor: 'bg-blue-500'  },
-  { id: 'in_review',   color: 'bg-purple-50',  dotColor: 'bg-purple-500'},
-  { id: 'done',        color: 'bg-emerald-50', dotColor: 'bg-emerald-500'},
-]
+import type { Task } from '../../types'
 
 interface TaskBoardProps {
-  onAddTask: (status: Status) => void
+  onAddTask: (statusId: string) => void
   onEditTask: (task: Task) => void
   onViewTask: (task: Task) => void
   onFocusTask?: (task: Task) => void
@@ -35,14 +28,23 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
   const { state, filteredTasks, dispatch } = useApp()
   const t = useT()
 
-  const COLUMNS = useMemo(() => COLUMN_META.map(c => ({
-    ...c,
-    label: state.columnLabels?.[c.id] ?? t.status[c.id],
-  })), [state.columnLabels, t.status])
+  const i18nStatus = t.status as Record<string, string>
 
-  const handleRenameColumn = useCallback((status: Status, label: string) => {
-    dispatch({ type: 'SET_COLUMN_LABEL', payload: { status, label } })
-  }, [dispatch])
+  const COLUMNS = useMemo((): ColumnDef[] =>
+    [...state.statuses]
+      .sort((a, b) => a.order - b.order)
+      .map(s => ({
+        id: s.id,
+        label: s.name || i18nStatus[s.id] || s.id,
+        color: s.color,
+        isFinal: s.isFinal,
+      })),
+  [state.statuses, i18nStatus])
+
+  const handleRenameColumn = useCallback((statusId: string, label: string) => {
+    const def = state.statuses.find(s => s.id === statusId)
+    if (def) dispatch({ type: 'UPDATE_STATUS', payload: { ...def, name: label } })
+  }, [dispatch, state.statuses])
   const [activeTask, setActiveTask] = useState<Task | null>(null)
 
   const sensors = useSensors(
@@ -50,19 +52,18 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
   )
 
   const tasksByStatus = useMemo(() => {
-    const map: Record<Status, Task[]> = {
-      todo: [],
-      in_progress: [],
-      in_review: [],
-      done: [],
-    }
-    filteredTasks.forEach(t => map[t.status].push(t))
-    // Pinned tasks float to top within each column, preserving relative order otherwise
-    ;(Object.keys(map) as Status[]).forEach(s => {
+    const map: Record<string, Task[]> = {}
+    COLUMNS.forEach(c => { map[c.id] = [] })
+    filteredTasks.forEach(task => {
+      if (map[task.status] !== undefined) map[task.status].push(task)
+      // tasks with obsolete/unknown status silently go to first column
+      else if (COLUMNS.length > 0) map[COLUMNS[0].id].push(task)
+    })
+    Object.keys(map).forEach(s => {
       map[s] = [...map[s]].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned))
     })
     return map
-  }, [filteredTasks])
+  }, [filteredTasks, COLUMNS])
 
   const handleDragStart = useCallback(
     ({ active }: DragStartEvent) => {

@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react'
-import { Pencil, Trash2, Plus, X, Check, FolderOpen, Tag } from 'lucide-react'
+import { Pencil, Trash2, Plus, X, Check, FolderOpen, Tag, CircleDot } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
-import type { Project, Label } from '../../types'
+import type { Project, Label, StatusDef } from '../../types'
 
 const COLORS = [
   '#6366f1','#0ea5e9','#f59e0b','#22c55e','#ec4899',
@@ -16,7 +16,7 @@ const COLORS = [
 interface ManageModalProps {
   open: boolean
   onClose: () => void
-  initialTab?: 'projects' | 'labels'
+  initialTab?: 'projects' | 'labels' | 'statuses'
 }
 
 // ── Color picker ─────────────────────────────────────────────────────────────
@@ -255,16 +255,166 @@ function AddLabelForm({ onDone }: { onDone: () => void }) {
   )
 }
 
+// ── Status row ────────────────────────────────────────────────────────────────
+function StatusRow({ def, otherStatuses }: { def: StatusDef; otherStatuses: StatusDef[] }) {
+  const { dispatch, state } = useApp()
+  const t = useT()
+  const i18nStatus = t.status as Record<string, string>
+  const [editing, setEditing] = useState(false)
+  const [name, setName]       = useState(def.name)
+  const [color, setColor]     = useState(def.color)
+  const [isFinal, setIsFinal] = useState(def.isFinal)
+  const [confirm, setConfirm] = useState(false)
+  const [moveTo, setMoveTo]   = useState(otherStatuses[0]?.id ?? '')
+
+  const taskCount = state.tasks.filter(tk => tk.status === def.id).length
+  const displayName = def.name || i18nStatus[def.id] || def.id
+
+  const save = useCallback(() => {
+    dispatch({ type: 'UPDATE_STATUS', payload: { ...def, name, color, isFinal } })
+    setEditing(false)
+  }, [dispatch, def, name, color, isFinal])
+
+  const cancel = useCallback(() => {
+    setName(def.name); setColor(def.color); setIsFinal(def.isFinal); setEditing(false)
+  }, [def])
+
+  if (editing) {
+    return (
+      <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/40 dark:bg-indigo-900/20 p-3 space-y-2.5">
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
+          <input
+            autoFocus value={name} onChange={e => setName(e.target.value)}
+            placeholder={def.isBuiltin ? (i18nStatus[def.id] || def.id) : t.manage.statusName}
+            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel() }}
+            className="flex-1 h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <ColorPicker value={color} onChange={setColor} />
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" checked={isFinal} onChange={e => setIsFinal(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+          <span className="text-sm text-slate-700 dark:text-slate-300">{t.manage.isFinal}</span>
+        </label>
+        <div className="flex gap-2">
+          <Button size="sm" variant="primary" onClick={save}>{t.manage.save}</Button>
+          <Button size="sm" variant="ghost" onClick={cancel}>{t.manage.cancel}</Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 group">
+      <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: def.color }} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{displayName}</p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          {def.isFinal && (
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+              ✓ Final
+            </span>
+          )}
+          {def.isBuiltin && (
+            <span className="text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">
+              {t.manage.builtin}
+            </span>
+          )}
+        </div>
+      </div>
+      <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button onClick={() => setEditing(true)}
+          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+          <Pencil size={13} />
+        </button>
+        {!def.isBuiltin && (
+          confirm ? (
+            <div className="flex flex-col gap-1 items-start bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2 shadow-lg absolute z-10 right-0">
+              {taskCount > 0 && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                  <span>{t.manage.moveTasksTo}</span>
+                  <select value={moveTo} onChange={e => setMoveTo(e.target.value)}
+                    className="h-6 px-2 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    {otherStatuses.map(s => (
+                      <option key={s.id} value={s.id}>{s.name || (t.status as Record<string, string>)[s.id] || s.id}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="flex gap-1">
+                <button onClick={() => { dispatch({ type: 'DELETE_STATUS', payload: { id: def.id, moveTo } }); setConfirm(false) }}
+                  className="px-2 py-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-xs font-medium">
+                  {t.manage.confirmDelete}
+                </button>
+                <button onClick={() => setConfirm(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                  <X size={13} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => { setMoveTo(otherStatuses[0]?.id ?? ''); setConfirm(true) }}
+              className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+              <Trash2 size={13} />
+            </button>
+          )
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Add status form ───────────────────────────────────────────────────────────
+function AddStatusForm({ onDone }: { onDone: () => void }) {
+  const { dispatch } = useApp()
+  const t = useT()
+  const [name, setName]     = useState('')
+  const [color, setColor]   = useState(COLORS[0])
+  const [isFinal, setIsFinal] = useState(false)
+
+  const submit = () => {
+    if (!name.trim()) return
+    dispatch({ type: 'ADD_STATUS', payload: { name: name.trim(), color, isFinal, order: 99 } })
+    setName(''); setColor(COLORS[0]); setIsFinal(false); onDone()
+  }
+
+  return (
+    <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 p-3 space-y-2.5 mt-2">
+      <input
+        autoFocus value={name} onChange={e => setName(e.target.value)}
+        placeholder={t.manage.statusName}
+        onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onDone() }}
+        className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+      <ColorPicker value={color} onChange={setColor} />
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" checked={isFinal} onChange={e => setIsFinal(e.target.checked)}
+          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+        <span className="text-sm text-slate-700 dark:text-slate-300">{t.manage.isFinal}</span>
+      </label>
+      <div className="flex gap-2">
+        <Button size="sm" variant="primary" onClick={submit} disabled={!name.trim()}>{t.manage.addStatus}</Button>
+        <Button size="sm" variant="ghost" onClick={onDone}>{t.manage.cancel}</Button>
+      </div>
+    </div>
+  )
+}
+
 // ── Main modal ────────────────────────────────────────────────────────────────
 export default function ManageModal({ open, onClose, initialTab = 'projects' }: ManageModalProps) {
   const { state } = useApp()
   const t = useT()
-  const [tab, setTab]               = useState<'projects' | 'labels'>(initialTab)
+  const [tab, setTab]               = useState<'projects' | 'labels' | 'statuses'>(initialTab)
   const [addingProject, setAddingProject] = useState(false)
   const [addingLabel, setAddingLabel]     = useState(false)
+  const [addingStatus, setAddingStatus]   = useState(false)
 
   const projectTaskCount = (pId: string) => state.tasks.filter(tk => tk.projectId === pId).length
   const labelTaskCount   = (lId: string) => state.tasks.filter(tk => tk.labels.includes(lId)).length
+
+  const sortedStatuses = [...state.statuses].sort((a, b) => a.order - b.order)
 
   return (
     <Modal open={open} onClose={onClose} size="md">
@@ -275,25 +425,20 @@ export default function ManageModal({ open, onClose, initialTab = 'projects' }: 
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-700 px-6">
-        <button
-          onClick={() => { setTab('projects'); setAddingProject(false) }}
-          className={cn('flex items-center gap-1.5 py-3 px-1 mr-6 text-sm font-medium border-b-2 -mb-px transition-colors',
-            tab === 'projects'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200')}>
-          <FolderOpen size={14} />{t.manage.projects}
-          <span className="ml-1 text-xs text-slate-400 dark:text-slate-500">({state.projects.length})</span>
-        </button>
-        <button
-          onClick={() => { setTab('labels'); setAddingLabel(false) }}
-          className={cn('flex items-center gap-1.5 py-3 px-1 text-sm font-medium border-b-2 -mb-px transition-colors',
-            tab === 'labels'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200')}>
-          <Tag size={14} />{t.manage.labels}
-          <span className="ml-1 text-xs text-slate-400 dark:text-slate-500">({state.labels.length})</span>
-        </button>
+      <div className="flex border-b border-slate-200 dark:border-slate-700 px-4 overflow-x-auto">
+        {[
+          { key: 'projects', icon: FolderOpen, label: t.manage.projects, count: state.projects.length },
+          { key: 'labels',   icon: Tag,        label: t.manage.labels,   count: state.labels.length },
+          { key: 'statuses', icon: CircleDot,  label: t.manage.statuses, count: state.statuses.length },
+        ].map(({ key, icon: Icon, label, count }) => (
+          <button key={key}
+            onClick={() => { setTab(key as typeof tab); setAddingProject(false); setAddingLabel(false); setAddingStatus(false) }}
+            className={cn('flex items-center gap-1.5 py-3 px-2 mr-4 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors',
+              tab === key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200')}>
+            <Icon size={14} />{label}
+            <span className="ml-1 text-xs text-slate-400 dark:text-slate-500">({count})</span>
+          </button>
+        ))}
       </div>
 
       {/* Content */}
@@ -335,6 +480,27 @@ export default function ManageModal({ open, onClose, initialTab = 'projects' }: 
                 <button onClick={() => setAddingLabel(true)}
                   className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-600 text-sm text-slate-400 dark:text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-colors">
                   <Plus size={14} />{t.manage.addLabel}
+                </button>
+              )}
+          </>
+        )}
+        {tab === 'statuses' && (
+          <>
+            <div className="space-y-0.5 relative">
+              {sortedStatuses.map(s => (
+                <StatusRow
+                  key={s.id}
+                  def={s}
+                  otherStatuses={sortedStatuses.filter(o => o.id !== s.id)}
+                />
+              ))}
+            </div>
+            {addingStatus
+              ? <AddStatusForm onDone={() => setAddingStatus(false)} />
+              : (
+                <button onClick={() => setAddingStatus(true)}
+                  className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-600 text-sm text-slate-400 dark:text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-colors">
+                  <Plus size={14} />{t.manage.addStatus}
                 </button>
               )}
           </>

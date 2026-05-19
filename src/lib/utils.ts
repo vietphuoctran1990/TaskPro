@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import type { Task, SLAStatus, Recurrence } from '../types'
+import type { Task, SLAStatus, Recurrence, StatusDef } from '../types'
 import { localISO } from './dateLocal'
 
 export function cn(...inputs: ClassValue[]) {
@@ -57,8 +57,10 @@ export function getDeadline(task: Task): Date | null {
   return null
 }
 
-export function getSLAStatus(task: Task): SLAStatus {
-  if (task.status === 'done') return 'completed'
+const DEFAULT_FINAL_STATUS_IDS: ReadonlySet<string> = new Set(['done'])
+
+export function getSLAStatus(task: Task, finalStatusIds: ReadonlySet<string> = DEFAULT_FINAL_STATUS_IDS): SLAStatus {
+  if (finalStatusIds.has(task.status)) return 'completed'
   const deadline = getDeadline(task)
   if (!deadline) return 'none'
   const msLeft = deadline.getTime() - Date.now()
@@ -66,6 +68,24 @@ export function getSLAStatus(task: Task): SLAStatus {
   if (msLeft < 4 * 3600_000) return 'critical'
   if (msLeft < 24 * 3600_000) return 'at_risk'
   return 'on_track'
+}
+
+/** Returns the display name for a status, falling back to the status id. */
+export function getStatusLabel(
+  statusId: string,
+  statuses: StatusDef[],
+  i18nStatus: Record<string, string>,
+): string {
+  const def = statuses.find(s => s.id === statusId)
+  if (!def) return statusId
+  if (def.name) return def.name
+  return i18nStatus[statusId] ?? statusId
+}
+
+/** Builds a status → sort-order map from StatusDef array. */
+export function buildStatusOrder(statuses: StatusDef[]): Record<string, number> {
+  const sorted = [...statuses].sort((a, b) => a.order - b.order)
+  return Object.fromEntries(sorted.map((s, i) => [s.id, i]))
 }
 
 export function getTimeRemaining(deadline: Date): string {

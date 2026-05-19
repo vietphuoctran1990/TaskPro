@@ -224,7 +224,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
               <div className="flex items-center flex-wrap gap-1.5 mt-1.5 pl-6">
                 <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                   <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[task.status])} />
-                  {t.status[task.status]}
+                  {(t.status as Record<string, string>)[task.status]}
                 </span>
                 <PriorityBadge priority={task.priority} />
                 <SLABadge task={task} showTimer />
@@ -311,7 +311,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                   <td className={dpad.cell}>
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
                       <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[task.status])} />
-                      {t.status[task.status]}
+                      {(t.status as Record<string, string>)[task.status]}
                     </span>
                   </td>
                   <td className={dpad.cell}><PriorityBadge priority={task.priority} /></td>

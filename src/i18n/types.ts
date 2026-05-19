@@ -13,11 +13,15 @@ export interface Translations {
     syncBackup: string; manage: string
   }
   manage: {
-    title: string; projects: string; labels: string
-    projectName: string; labelName: string; description: string; color: string
-    addProject: string; addLabel: string; save: string; cancel: string; delete: string; edit: string
-    confirmDelete: string; noProjects: string; noLabels: string
+    title: string; projects: string; labels: string; statuses: string
+    projectName: string; labelName: string; statusName: string; description: string; color: string
+    addProject: string; addLabel: string; addStatus: string
+    save: string; cancel: string; delete: string; edit: string
+    confirmDelete: string; noProjects: string; noLabels: string; noStatuses: string
     taskCount: (n: number) => string
+    isFinal: string       // "Mark as completed"
+    builtin: string       // badge shown on non-deletable statuses
+    moveTasksTo: string   // label for "move existing tasks to" selector
   }
   header: {
     newTask: string; search: string; allPriorities: string; allStatuses: string

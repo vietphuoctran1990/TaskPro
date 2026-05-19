@@ -7,12 +7,13 @@ import {
   type ReactNode,
 } from 'react'
 import type {
-  AppState, Task, Project, Label, Note, NoteFolder, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode,
+  AppState, Task, Project, Label, Note, NoteFolder, Priority, Status, ViewMode,
+  SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode, StatusDef,
 } from '../types'
-import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS } from '../data/defaults'
+import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS, DEFAULT_STATUSES } from '../data/defaults'
 import {
-  generateId, getSLAStatus, PRIORITY_ORDER, STATUS_ORDER, SLA_ORDER,
-  getDeadline, createNextRecurringTask,
+  generateId, getSLAStatus, PRIORITY_ORDER, SLA_ORDER,
+  getDeadline, createNextRecurringTask, buildStatusOrder,
 } from '../lib/utils'
 import { todayLocalISO, tomorrowLocalISO } from '../lib/dateLocal'
 
@@ -43,7 +44,9 @@ type Action =
   | { type: 'TOGGLE_PIN_TASK';    payload: string }
   | { type: 'SET_LANGUAGE';    payload: 'en' | 'vi' }
   | { type: 'SET_NOTIF_BEFORE'; payload: number[] }
-  | { type: 'SET_COLUMN_LABEL'; payload: { status: Status; label: string } }
+  | { type: 'ADD_STATUS';    payload: Omit<StatusDef, 'id' | 'isBuiltin'> }
+  | { type: 'UPDATE_STATUS'; payload: StatusDef }
+  | { type: 'DELETE_STATUS'; payload: { id: string; moveTo: string } }
   | { type: 'IMPORT_STATE';    payload: { data: AppState; mode: 'replace' | 'merge' } }
   | { type: 'ADD_NOTE';           payload: Omit<Note, 'id' | 'createdAt' | 'updatedAt'> & { id?: string } }
   | { type: 'UPDATE_NOTE';        payload: Partial<Note> & { id: string } }
@@ -64,12 +67,23 @@ function getInitialState(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
-      const parsed = JSON.parse(saved) as AppState
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const parsed = JSON.parse(saved) as any
       const darkModeMode = parsed.darkModeMode ?? 'system'
       const initialDark = darkModeMode === 'system' ? systemPrefersDark() : (parsed.darkMode ?? false)
+
+      // Migrate old columnLabels into StatusDef.name
+      const legacyLabels: Record<string, string> = parsed.columnLabels ?? {}
+      const rawStatuses: StatusDef[] = parsed.statuses ?? DEFAULT_STATUSES
+      const statuses = rawStatuses.map((s: StatusDef) => ({
+        ...s,
+        name: s.name || legacyLabels[s.id] || '',
+      }))
+
       return {
         ...parsed,
-        tasks: parsed.tasks.map(t => ({
+        statuses,
+        tasks: (parsed.tasks ?? []).map((t: Task) => ({
           ...t,
           comments:       t.comments       ?? [],
           dueTime:        t.dueTime        ?? null,
@@ -79,9 +93,9 @@ function getInitialState(): AppState {
           isNote:         t.isNote         ?? false,
           pinned:         t.pinned         ?? false,
         })),
-        notes:               parsed.notes               ?? [],
-        noteFolders:         parsed.noteFolders         ?? [],
-        activeNoteFolderId:  parsed.activeNoteFolderId  ?? null,
+        notes:              parsed.notes              ?? [],
+        noteFolders:        parsed.noteFolders        ?? [],
+        activeNoteFolderId: parsed.activeNoteFolderId ?? null,
         filterSLA:    parsed.filterSLA    ?? 'all',
         dateFilter:   parsed.dateFilter   ?? 'all',
         viewMode:     parsed.viewMode     ?? 'kanban',
@@ -92,7 +106,6 @@ function getInitialState(): AppState {
         density:      parsed.density      ?? 'comfortable',
         language:     parsed.language     ?? 'vi',
         notifBefore:  parsed.notifBefore  ?? [15, 30, 60],
-        columnLabels: parsed.columnLabels ?? {},
       }
     }
   } catch {}
@@ -100,6 +113,7 @@ function getInitialState(): AppState {
     tasks: DEFAULT_TASKS,
     projects: DEFAULT_PROJECTS,
     labels: DEFAULT_LABELS,
+    statuses: DEFAULT_STATUSES,
     notes: [],
     noteFolders: [],
     activeProjectId: null,
@@ -117,7 +131,6 @@ function getInitialState(): AppState {
     density: 'comfortable',
     language: 'vi',
     notifBefore: [15, 30, 60],
-    columnLabels: {},
   }
 }
 
@@ -140,11 +153,12 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, tasks: state.tasks.filter(t => t.id !== action.payload) }
     case 'MOVE_TASK': {
       const task = state.tasks.find(t => t.id === action.payload.id)
+      const targetDef = state.statuses.find(s => s.id === action.payload.status)
       const updatedTasks = state.tasks.map(t =>
         t.id === action.payload.id ? { ...t, status: action.payload.status, updatedAt: now } : t
       )
-      // Auto-spawn next occurrence when marking a recurring task done
-      if (action.payload.status === 'done' && task?.recurrence) {
+      // Auto-spawn next occurrence when moving to a final status
+      if (targetDef?.isFinal && task?.recurrence) {
         const next = createNextRecurringTask(task, now)
         if (next) return { ...state, tasks: [...updatedTasks, next] }
       }
@@ -206,9 +220,22 @@ function reducer(state: AppState, action: Action): AppState {
       }
     case 'SET_LANGUAGE':        return { ...state, language: action.payload }
     case 'SET_NOTIF_BEFORE':    return { ...state, notifBefore: action.payload }
-    case 'SET_COLUMN_LABEL': {
-      const { status, label } = action.payload
-      return { ...state, columnLabels: { ...state.columnLabels, [status]: label } }
+    case 'ADD_STATUS': {
+      const maxOrder = Math.max(0, ...state.statuses.map(s => s.order))
+      return {
+        ...state,
+        statuses: [...state.statuses, { ...action.payload, id: generateId(), isBuiltin: false, order: maxOrder + 1 }],
+      }
+    }
+    case 'UPDATE_STATUS':
+      return { ...state, statuses: state.statuses.map(s => s.id === action.payload.id ? action.payload : s) }
+    case 'DELETE_STATUS': {
+      const { id, moveTo } = action.payload
+      return {
+        ...state,
+        statuses: state.statuses.filter(s => s.id !== id),
+        tasks:    state.tasks.map(t => t.status === id ? { ...t, status: moveTo, updatedAt: now } : t),
+      }
     }
     case 'ADD_NOTE':
       return {
@@ -264,6 +291,7 @@ interface ContextValue {
   state: AppState
   dispatch: React.Dispatch<Action>
   filteredTasks: Task[]
+  finalStatusIds: ReadonlySet<string>
 }
 
 const AppContext = createContext<ContextValue | null>(null)
@@ -294,6 +322,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => mq.removeEventListener('change', onChange)
   }, [state.darkModeMode])
 
+  const finalStatusIds = useMemo(
+    () => new Set(state.statuses.filter(s => s.isFinal).map(s => s.id)),
+    [state.statuses]
+  )
+
+  const statusOrder = useMemo(() => buildStatusOrder(state.statuses), [state.statuses])
+
   const filteredTasks = useMemo(() => {
     let tasks = state.tasks.filter(t => !t.isNote)
     if (state.activeProjectId)      tasks = tasks.filter(t => t.projectId === state.activeProjectId)
@@ -303,7 +338,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     if (state.filterPriority !== 'all') tasks = tasks.filter(t => t.priority === state.filterPriority)
     if (state.filterStatus   !== 'all') tasks = tasks.filter(t => t.status   === state.filterStatus)
-    if (state.filterSLA      !== 'all') tasks = tasks.filter(t => getSLAStatus(t) === state.filterSLA)
+    if (state.filterSLA      !== 'all') tasks = tasks.filter(t => getSLAStatus(t, finalStatusIds) === state.filterSLA)
     if (state.dateFilter     !== 'all') {
       const todayStr = todayLocalISO()
       const tomorrowStr = tomorrowLocalISO()
@@ -321,22 +356,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       switch (state.sortField) {
         case 'title':    return dir * a.title.localeCompare(b.title)
         case 'priority': return dir * (PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
-        case 'status':   return dir * (STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+        case 'status':   return dir * ((statusOrder[a.status] ?? 999) - (statusOrder[b.status] ?? 999))
         case 'dueDate': {
           const da = getDeadline(a)?.getTime() ?? Infinity
           const db = getDeadline(b)?.getTime() ?? Infinity
           return dir * (da - db)
         }
-        case 'sla':      return dir * (SLA_ORDER[getSLAStatus(a)] - SLA_ORDER[getSLAStatus(b)])
-        default:         return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        case 'sla': return dir * (SLA_ORDER[getSLAStatus(a, finalStatusIds)] - SLA_ORDER[getSLAStatus(b, finalStatusIds)])
+        default:    return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
       }
     })
   }, [state.tasks, state.activeProjectId, state.searchQuery,
       state.filterPriority, state.filterStatus, state.filterSLA, state.dateFilter,
-      state.sortField, state.sortDir])
+      state.sortField, state.sortDir, finalStatusIds, statusOrder])
 
   return (
-    <AppContext.Provider value={{ state, dispatch, filteredTasks }}>
+    <AppContext.Provider value={{ state, dispatch, filteredTasks, finalStatusIds }}>
       {children}
     </AppContext.Provider>
   )

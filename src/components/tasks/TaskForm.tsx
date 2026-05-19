@@ -52,7 +52,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   const buildForm = useCallback((): FormData => ({
     title:               task?.title          ?? '',
     description:         task?.description    ?? '',
-    status:              task?.status         ?? defaultStatus,
+    status:              task?.status         ?? defaultStatus ?? (state.statuses[0]?.id ?? 'todo'),
     priority:            task?.priority       ?? 'medium',
     projectId:           task?.projectId      ?? (state.projects[0]?.id ?? ''),
     labels:              task?.labels         ?? [],
@@ -243,11 +243,14 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
         />
 
         <div className="grid grid-cols-2 gap-3">
-          <Select label={t.form.status} id="task-status" value={form.status} onChange={e => set('status', e.target.value as Status)}>
-            <option value="todo">{t.status.todo}</option>
-            <option value="in_progress">{t.status.in_progress}</option>
-            <option value="in_review">{t.status.in_review}</option>
-            <option value="done">{t.status.done}</option>
+          <Select label={t.form.status} id="task-status" value={form.status} onChange={e => set('status', e.target.value)}>
+            {state.statuses
+              .slice().sort((a, b) => a.order - b.order)
+              .map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name || (t.status as Record<string, string>)[s.id] || s.id}
+                </option>
+              ))}
           </Select>
           <Select label={t.form.priority} id="task-priority" value={form.priority} onChange={e => set('priority', e.target.value as Priority)}>
             <option value="low">{t.priority.low}</option>

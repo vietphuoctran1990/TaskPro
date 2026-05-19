@@ -97,7 +97,7 @@ export default function CommandPalette({ open, onClose, onNewTask, onNewNote, on
       out.push({
         id: `task-${task.id}`, group: t.command.groupTasks,
         label: task.title,
-        hint: t.status[task.status],
+        hint: (t.status as Record<string, string>)[task.status],
         icon: task.pinned ? Pin : CheckSquare,
         iconColor: task.status === 'done' ? 'text-emerald-500' : 'text-slate-400',
         onSelect: () => { onClose(); onViewTask(task) },

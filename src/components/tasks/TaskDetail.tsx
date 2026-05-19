@@ -79,7 +79,8 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
     onClose()
   }, [task, dispatch, onClose, toast, state.language])
 
-  const statusKeys = ['todo', 'in_progress', 'in_review', 'done'] as const
+  const statusDefs = state.statuses.slice().sort((a, b) => a.order - b.order)
+  const i18nStatus = t.status as Record<string, string>
 
   return (
     <Modal open={!!task} onClose={onClose} size="lg">
@@ -268,18 +269,19 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
           <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 rounded-b-2xl">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-slate-500 dark:text-slate-400 mr-1">{t.detail.moveTo}</span>
-              {statusKeys.map(s => (
+              {statusDefs.map(s => (
                 <button
-                  key={s}
-                  onClick={() => dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: s } })}
+                  key={s.id}
+                  onClick={() => dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: s.id } })}
+                  style={task.status === s.id ? { backgroundColor: s.color } : {}}
                   className={cn(
                     'px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
-                    task.status === s
-                      ? 'bg-indigo-600 text-white'
+                    task.status === s.id
+                      ? 'text-white'
                       : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-300 hover:text-indigo-600'
                   )}
                 >
-                  {t.status[s]}
+                  {s.name || i18nStatus[s.id] || s.id}
                 </button>
               ))}
               {onFocus && task.status !== 'done' && (

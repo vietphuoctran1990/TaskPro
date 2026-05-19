@@ -7,7 +7,7 @@ import { useT } from '../../i18n'
 import Button from '../ui/Button'
 import NotificationBell from './NotificationBell'
 import { supabase } from '../../lib/supabase'
-import type { Priority, Status, ViewMode, SLAStatus } from '../../types'
+import type { Priority, ViewMode, SLAStatus } from '../../types'
 
 interface HeaderProps {
   onAddTask: () => void
@@ -355,13 +355,14 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             <option value="low">{t.priority.lowIcon}</option>
           </select>
           <select value={state.filterStatus}
-            onChange={e => dispatch({ type: 'SET_FILTER_STATUS', payload: e.target.value as Status | 'all' })}
+            onChange={e => dispatch({ type: 'SET_FILTER_STATUS', payload: e.target.value })}
             className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
             <option value="all">{t.header.allStatuses}</option>
-            <option value="todo">{t.status.todo}</option>
-            <option value="in_progress">{t.status.in_progress}</option>
-            <option value="in_review">{t.status.in_review}</option>
-            <option value="done">{t.status.done}</option>
+            {[...state.statuses].sort((a, b) => a.order - b.order).map(s => (
+              <option key={s.id} value={s.id}>
+                {s.name || (t.status as Record<string, string>)[s.id] || s.id}
+              </option>
+            ))}
           </select>
           <select value={state.filterSLA}
             onChange={e => dispatch({ type: 'SET_FILTER_SLA', payload: e.target.value as SLAStatus | 'all' })}
@@ -410,13 +411,14 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
                 <option value="low">{t.priority.lowIcon}</option>
               </select>
               <select value={state.filterStatus}
-                onChange={e => dispatch({ type: 'SET_FILTER_STATUS', payload: e.target.value as Status | 'all' })}
+                onChange={e => dispatch({ type: 'SET_FILTER_STATUS', payload: e.target.value })}
                 className="h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer w-full">
                 <option value="all">{t.header.allStatuses}</option>
-                <option value="todo">{t.status.todo}</option>
-                <option value="in_progress">{t.status.in_progress}</option>
-                <option value="in_review">{t.status.in_review}</option>
-                <option value="done">{t.status.done}</option>
+                {[...state.statuses].sort((a, b) => a.order - b.order).map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name || (t.status as Record<string, string>)[s.id] || s.id}
+                  </option>
+                ))}
               </select>
               <select value={state.filterSLA}
                 onChange={e => dispatch({ type: 'SET_FILTER_SLA', payload: e.target.value as SLAStatus | 'all' })}

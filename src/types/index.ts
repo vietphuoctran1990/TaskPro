@@ -1,8 +1,17 @@
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
-export type Status = 'todo' | 'in_progress' | 'in_review' | 'done'
+export type Status = string           // 'todo' | 'in_progress' | 'in_review' | 'done' or any custom id
 export type ViewMode = 'dashboard' | 'kanban' | 'list' | 'calendar' | 'timeline' | 'notes'
 export type SortField = 'title' | 'priority' | 'status' | 'dueDate' | 'sla' | 'createdAt'
 export type SortDir = 'asc' | 'desc'
+
+export interface StatusDef {
+  id: string
+  name: string       // User-set label; '' = fall back to i18n for built-in statuses
+  color: string      // Hex color for column dot/header accent
+  order: number      // Column display order (ascending)
+  isFinal: boolean   // True → task counts as "done" (SLA completed, progress, recurring spawn)
+  isBuiltin: boolean // True → cannot be deleted; id is stable ('todo','in_progress','in_review','done')
+}
 
 export interface Label {
   id: string
@@ -24,8 +33,8 @@ export interface Comment {
 
 export interface Recurrence {
   type: 'daily' | 'weekly' | 'monthly'
-  interval: number        // every N days/weeks/months
-  endDate?: string        // "YYYY-MM-DD" optional
+  interval: number
+  endDate?: string
 }
 
 export interface Task {
@@ -37,16 +46,16 @@ export interface Task {
   labels: string[]
   subtasks: Subtask[]
   comments: Comment[]
-  dueDate: string | null        // "YYYY-MM-DD"
-  dueTime: string | null        // "HH:MM" — specific SLA time
-  slaHours: number | null       // max resolution time (hours from creation)
-  estimatedHours: number | null // estimated effort
+  dueDate: string | null
+  dueTime: string | null
+  slaHours: number | null
+  estimatedHours: number | null
   recurrence: Recurrence | null
   createdAt: string
   updatedAt: string
   projectId: string
-  isNote: boolean               // hidden from all task views; only shown in project notes
-  pinned?: boolean              // pinned to top of kanban column
+  isNote: boolean
+  pinned?: boolean
 }
 
 export type Density = 'compact' | 'comfortable' | 'spacious'
@@ -69,8 +78,8 @@ export interface NoteFolder {
 export interface Note {
   id: string
   title: string
-  content: string  // freeform text/markdown
-  folderId: string // '' = no folder
+  content: string
+  folderId: string
   pinned: boolean
   createdAt: string
   updatedAt: string
@@ -82,6 +91,7 @@ export interface AppState {
   tasks: Task[]
   projects: Project[]
   labels: Label[]
+  statuses: StatusDef[]
   notes: Note[]
   noteFolders: NoteFolder[]
   activeProjectId: string | null
@@ -99,7 +109,6 @@ export interface AppState {
   density: Density
   language: 'en' | 'vi'
   notifBefore: number[]
-  columnLabels: Partial<Record<Status, string>>
 }
 
 export type SLAStatus = 'on_track' | 'at_risk' | 'critical' | 'breached' | 'completed' | 'none'
