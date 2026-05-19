@@ -149,11 +149,6 @@ export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
               <CheckSquare size={14} /> Chọn
             </Button>
           )}
-
-          <Button variant="primary" size="sm" onClick={onAddNote} className="hidden sm:inline-flex">
-            <Plus size={14} />
-            <span>Tạo ghi chú</span>
-          </Button>
         </div>
       </div>
 
