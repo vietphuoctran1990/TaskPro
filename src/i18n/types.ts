@@ -112,4 +112,15 @@ export interface Translations {
     installTitle: string; installDesc: string; install: string; installing: string
     notNow: string; updateTitle: string; update: string; offline: string; backOnline: string
   }
+  command: {
+    title: string; placeholder: string; empty: string
+    groupTasks: string; groupNotes: string; groupViews: string; groupActions: string
+    actionNewTask: string; actionNewNote: string; actionToggleTheme: string; actionThemeSystem: string
+    actionToggleLanguage: string; actionSync: string
+    hint: string
+  }
+  density: { compact: string; comfortable: string; spacious: string; label: string }
+  pin: { pin: string; unpin: string }
+  theme: { light: string; dark: string; system: string }
+  refresh: { pulling: string; release: string; refreshing: string }
 }

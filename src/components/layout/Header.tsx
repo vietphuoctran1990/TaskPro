@@ -1,5 +1,5 @@
-import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote, Monitor } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -14,6 +14,58 @@ interface HeaderProps {
   onAddNote: () => void
   onOpenSidebar: () => void
   onOpenAuth: () => void
+  onOpenCommandPalette: () => void
+  scrolled: boolean
+}
+
+function ThemeMenu() {
+  const { state, dispatch } = useApp()
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  const mode = state.darkModeMode
+  const isSystem = mode === 'system'
+  const Icon = isSystem ? Monitor : state.darkMode ? Sun : Moon
+
+  return (
+    <div ref={ref} className="relative">
+      <Button variant="ghost" size="icon" onClick={() => setOpen(v => !v)} aria-label="Theme">
+        <Icon size={15} />
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-10 z-30 w-40 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden pop-in">
+          <button
+            className={cn('w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors',
+              !isSystem && !state.darkMode ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700')}
+            onClick={() => { dispatch({ type: 'SET_DARK_MODE', payload: { mode: 'manual', value: false } }); setOpen(false) }}>
+            <Sun size={13} /> {t.theme.light}
+          </button>
+          <button
+            className={cn('w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors',
+              !isSystem && state.darkMode ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700')}
+            onClick={() => { dispatch({ type: 'SET_DARK_MODE', payload: { mode: 'manual', value: true } }); setOpen(false) }}>
+            <Moon size={13} /> {t.theme.dark}
+          </button>
+          <button
+            className={cn('w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors',
+              isSystem ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700')}
+            onClick={() => { dispatch({ type: 'SET_DARK_MODE', payload: { mode: 'system' } }); setOpen(false) }}>
+            <Monitor size={13} /> {t.theme.system}
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
@@ -76,7 +128,7 @@ function UserMenu({ onOpenAuth }: { onOpenAuth: () => void }) {
   )
 }
 
-export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth }: HeaderProps) {
+export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth, onOpenCommandPalette, scrolled }: HeaderProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -113,7 +165,10 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
   }
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-0 shrink-0">
+    <header className={cn(
+      'border-b border-slate-200 dark:border-slate-700 px-4 py-0 shrink-0 transition-[background-color,backdrop-filter] duration-200 sticky top-0 z-30',
+      scrolled ? 'header-glass' : 'bg-white dark:bg-slate-900'
+    )}>
       {/* Top row */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 h-14">
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={onOpenSidebar}>
@@ -218,9 +273,11 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
 
             {!isNotesMode && <NotificationBell />}
 
-            <Button variant="ghost" size="icon" onClick={() => dispatch({ type: 'TOGGLE_DARK_MODE' })}>
-              {state.darkMode ? <Sun size={15} /> : <Moon size={15} />}
+            <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={onOpenCommandPalette} aria-label="Command palette" title="⌘K">
+              <Search size={15} />
             </Button>
+
+            <ThemeMenu />
 
             <button
               onClick={() => dispatch({ type: 'SET_LANGUAGE', payload: state.language === 'vi' ? 'en' : 'vi' })}

@@ -11,6 +11,7 @@ import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import { useToast } from '../../context/ToastContext'
 import { cn, formatDateTime, getDeadline, getTimeRemaining } from '../../lib/utils'
+import { haptic } from '../../lib/feedback'
 import { googleCalendarUrl } from '../../lib/ical'
 import type { Task } from '../../types'
 
@@ -44,6 +45,8 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
 
   const handleToggleSub = useCallback((sid: string) => {
     if (!task) return
+    const target = task.subtasks.find(s => s.id === sid)
+    if (target && !target.done) haptic(6)
     dispatch({
       type: 'UPDATE_TASK',
       payload: { id: task.id, subtasks: task.subtasks.map(s => s.id === sid ? { ...s, done: !s.done } : s) },
@@ -194,12 +197,12 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
                       <button
                         onClick={() => handleToggleSub(sub.id)}
                         className={cn(
-                          'shrink-0 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
-                          sub.done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600 hover:border-emerald-400'
+                          'shrink-0 w-4 h-4 rounded border-2 transition-all duration-150 flex items-center justify-center',
+                          sub.done ? 'bg-emerald-500 border-emerald-500 scale-105' : 'border-slate-300 dark:border-slate-600 hover:border-emerald-400'
                         )}
                       >
                         {sub.done && (
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg key={sub.id + '-check'} className="w-2.5 h-2.5 text-white check-pop" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
                         )}

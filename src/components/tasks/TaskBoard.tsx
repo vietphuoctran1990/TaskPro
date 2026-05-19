@@ -57,6 +57,10 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
       done: [],
     }
     filteredTasks.forEach(t => map[t.status].push(t))
+    // Pinned tasks float to top within each column, preserving relative order otherwise
+    ;(Object.keys(map) as Status[]).forEach(s => {
+      map[s] = [...map[s]].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned))
+    })
     return map
   }, [filteredTasks])
 

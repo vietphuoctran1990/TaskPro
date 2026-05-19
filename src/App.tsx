@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
-import { AuthProvider } from './context/AuthContext'
-import { I18nProvider } from './i18n'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { I18nProvider, useT } from './i18n'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
 import TaskBoard from './components/tasks/TaskBoard'
@@ -22,13 +22,18 @@ import PomodoroModal from './components/focus/PomodoroModal'
 import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
 import OfflineToast from './components/pwa/OfflineToast'
+import CommandPalette from './components/ui/CommandPalette'
 import { ToastProvider } from './context/ToastContext'
 import { usePWA } from './hooks/usePWA'
-import { Plus } from 'lucide-react'
+import { usePullToRefresh } from './hooks/usePullToRefresh'
+import { Plus, RefreshCw } from 'lucide-react'
+import { cn } from './lib/utils'
 import type { Status, Task, Project, Note } from './types'
 
 function AppShell() {
   const { state, dispatch } = useApp()
+  const { syncNow } = useAuth()
+  const t = useT()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
@@ -45,6 +50,34 @@ function AppShell() {
   const [noteEditorOpen, setNoteEditorOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('taskpro-onboarded'))
+  const [commandOpen, setCommandOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const mainRef = useRef<HTMLElement>(null)
+
+  // ⌘K / Ctrl+K to open command palette (and "/" to focus when no input)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setCommandOpen(v => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Scroll tracking for glassmorphism header
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    const onScroll = () => setScrolled(el.scrollTop > 4)
+    el.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Pull-to-refresh (mobile) → syncNow
+  const ptr = usePullToRefresh(mainRef, { onRefresh: () => syncNow() })
 
   const handleFinishOnboarding = () => {
     localStorage.setItem('taskpro-onboarded', '1')
@@ -111,55 +144,78 @@ function AppShell() {
       )}
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Header
           onAddTask={() => handleAddTask()}
           onAddNote={handleAddNote}
           onOpenSidebar={() => setSidebarOpen(true)}
           onOpenAuth={() => setAuthOpen(true)}
+          onOpenCommandPalette={() => setCommandOpen(true)}
+          scrolled={scrolled}
         />
 
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
-          {state.viewMode === 'kanban' && (
-            <TaskBoard
-              onAddTask={handleAddTask}
-              onEditTask={handleEditTask}
-              onViewTask={handleViewTask}
-              onFocusTask={handleFocusTask}
-            />
-          )}
-          {state.viewMode === 'list' && (
-            <ListView
-              onEditTask={handleEditTask}
-              onViewTask={handleViewTask}
-              onAddTask={() => handleAddTask()}
-              onFocusTask={handleFocusTask}
-            />
-          )}
-          {state.viewMode === 'calendar' && (
-            <CalendarView
-              onViewTask={handleViewTask}
-              onAddTask={(date) => handleAddTask('todo', date)}
-            />
-          )}
-          {state.viewMode === 'timeline' && (
-            <TimelineView
-              onViewTask={handleViewTask}
-              onAddTask={() => handleAddTask()}
-            />
-          )}
-          {state.viewMode === 'dashboard' && (
-            <DashboardView
-              onViewTask={handleViewTask}
-              onAddTask={() => handleAddTask()}
-            />
-          )}
-          {state.viewMode === 'notes' && (
-            <NotesView
-              onAddNote={handleAddNote}
-              onEditNote={handleEditNote}
-            />
-          )}
+        {/* Pull-to-refresh indicator (mobile only) */}
+        {(ptr.pulling || ptr.refreshing) && (
+          <div
+            className="ptr-indicator sm:hidden"
+            style={{
+              transform: `translateY(${Math.max(0, ptr.distance - 28)}px)`,
+              opacity: Math.min(1, ptr.distance / 60),
+              height: '56px',
+            }}
+          >
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 shadow border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
+              <RefreshCw size={12} className={cn(ptr.refreshing && 'animate-spin', !ptr.refreshing && ptr.willRefresh && 'rotate-180', 'transition-transform')} />
+              <span>
+                {ptr.refreshing ? t.refresh.refreshing : ptr.willRefresh ? t.refresh.release : t.refresh.pulling}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <main ref={mainRef} className="flex-1 overflow-auto p-4 lg:p-6">
+          <div key={state.viewMode} className="view-fade-in">
+            {state.viewMode === 'kanban' && (
+              <TaskBoard
+                onAddTask={handleAddTask}
+                onEditTask={handleEditTask}
+                onViewTask={handleViewTask}
+                onFocusTask={handleFocusTask}
+              />
+            )}
+            {state.viewMode === 'list' && (
+              <ListView
+                onEditTask={handleEditTask}
+                onViewTask={handleViewTask}
+                onAddTask={() => handleAddTask()}
+                onFocusTask={handleFocusTask}
+              />
+            )}
+            {state.viewMode === 'calendar' && (
+              <CalendarView
+                onViewTask={handleViewTask}
+                onAddTask={(date) => handleAddTask('todo', date)}
+              />
+            )}
+            {state.viewMode === 'timeline' && (
+              <TimelineView
+                onViewTask={handleViewTask}
+                onAddTask={() => handleAddTask()}
+              />
+            )}
+            {state.viewMode === 'dashboard' && (
+              <DashboardView
+                onViewTask={handleViewTask}
+                onAddTask={() => handleAddTask()}
+              />
+            )}
+            {state.viewMode === 'notes' && (
+              <NotesView
+                onAddNote={handleAddNote}
+                onEditNote={handleEditNote}
+              />
+            )}
+          </div>
         </main>
       </div>
 
@@ -206,6 +262,15 @@ function AppShell() {
           }}
         />
       )}
+
+      <CommandPalette
+        open={commandOpen}
+        onClose={() => setCommandOpen(false)}
+        onNewTask={() => handleAddTask()}
+        onNewNote={handleAddNote}
+        onViewTask={handleViewTask}
+        onEditNote={handleEditNote}
+      />
 
       {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
 

@@ -1,7 +1,7 @@
-import { memo, useState, useRef } from 'react'
+import { memo, useState, useRef, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Calendar, CheckCheck, GripVertical, MessageSquare, MoreHorizontal, Pencil, Repeat, RotateCcw, Timer, Trash2, X } from 'lucide-react'
+import { Calendar, CheckCheck, GripVertical, MessageSquare, MoreHorizontal, Pencil, Pin, PinOff, Repeat, RotateCcw, Timer, Trash2, X } from 'lucide-react'
 import { cn, formatDateTime, getDeadline, getSLAStatus } from '../../lib/utils'
 import { PriorityBadge, Badge } from '../ui/Badge'
 import SLABadge from '../sla/SLABadge'
@@ -9,6 +9,7 @@ import Button from '../ui/Button'
 import type { Task } from '../../types'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
+import { burstConfetti, haptic } from '../../lib/feedback'
 
 interface TaskCardProps {
   task: Task
@@ -30,6 +31,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
   const menuBtnRef = useRef<HTMLButtonElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
@@ -38,6 +40,48 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
   const completedSub = task.subtasks.filter(s => s.done).length
   const deadline = getDeadline(task)
   const sla = getSLAStatus(task)
+
+  // Haptic on drag start (mobile)
+  useEffect(() => { if (isDragging) haptic(8) }, [isDragging])
+
+  // Swipe gesture (mobile): right → done, left → delete
+  const swipeStartX = useRef<number | null>(null)
+  const swipeStartY = useRef<number | null>(null)
+  const [swipeDx, setSwipeDx] = useState(0)
+  const swipeLocked = useRef<'h' | 'v' | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return
+    swipeStartX.current = e.touches[0].clientX
+    swipeStartY.current = e.touches[0].clientY
+    swipeLocked.current = null
+  }
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (swipeStartX.current == null || swipeStartY.current == null) return
+    const dx = e.touches[0].clientX - swipeStartX.current
+    const dy = e.touches[0].clientY - swipeStartY.current
+    if (swipeLocked.current == null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      swipeLocked.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+    }
+    if (swipeLocked.current !== 'h') return
+    setSwipeDx(Math.max(-180, Math.min(180, dx)))
+  }
+  const handleTouchEnd = () => {
+    const dx = swipeDx
+    swipeStartX.current = null
+    swipeStartY.current = null
+    swipeLocked.current = null
+    setSwipeDx(0)
+    const threshold = 90
+    if (dx >= threshold && task.status !== 'done') {
+      haptic(20)
+      dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'done' } })
+      if (task.priority === 'urgent') burstConfetti(cardRef.current)
+    } else if (dx <= -threshold) {
+      haptic(25)
+      dispatch({ type: 'DELETE_TASK', payload: task.id })
+    }
+  }
 
   const handleMenuOpen = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -48,15 +92,46 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
     setMenuOpen(v => !v)
   }
 
+  const handleQuickDone = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'done' } })
+    haptic(12)
+    if (task.priority === 'urgent') burstConfetti(cardRef.current)
+  }
+
+  const setRefs = (node: HTMLDivElement | null) => {
+    setNodeRef(node)
+    cardRef.current = node
+  }
+
   return (
+    <div className="relative overflow-hidden rounded-xl">
+      {/* Swipe action backdrop */}
+      {swipeDx !== 0 && (
+        <div className={cn(
+          'absolute inset-0 flex items-center px-4 pointer-events-none rounded-xl',
+          swipeDx > 0 ? 'justify-start bg-emerald-500/90' : 'justify-end bg-red-500/90'
+        )}>
+          {swipeDx > 0 ? (
+            <CheckCheck size={18} className="text-white" />
+          ) : (
+            <Trash2 size={18} className="text-white" />
+          )}
+        </div>
+      )}
     <div
-      ref={setNodeRef}
-      style={style}
+      ref={setRefs}
+      style={{ ...style, transform: swipeDx ? `translate3d(${swipeDx}px,0,0)` : style.transform }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       className={cn(
         'group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-l-[3px] shadow-sm hover:shadow-md hover:scale-[1.015] hover:-translate-y-0.5 transition-all duration-150 cursor-pointer select-none',
         PRIORITY_ACCENT[task.priority],
         isDragging && 'opacity-50 shadow-xl scale-105 z-50',
-        task.status === 'done' && 'opacity-60'
+        task.status === 'done' && 'opacity-60',
+        task.pinned && 'ring-1 ring-amber-300 dark:ring-amber-500/60'
       )}
     >
       {/* Top row */}
@@ -72,7 +147,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
           {/* Quick: mark done / undo done */}
           {task.status !== 'done' ? (
             <button
-              onClick={e => { e.stopPropagation(); dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'done' } }) }}
+              onClick={handleQuickDone}
               className="w-6 h-6 flex items-center justify-center rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 active:bg-emerald-50 active:text-emerald-600 transition-all"
               title={t.status.done}
             >
@@ -115,6 +190,10 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit(task) }}>
                   <Pencil size={13} /> {t.detail.edit}
                 </button>
+                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                  onClick={e => { e.stopPropagation(); setMenuOpen(false); dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id }) }}>
+                  {task.pinned ? <><PinOff size={13} /> {t.pin.unpin}</> : <><Pin size={13} /> {t.pin.pin}</>}
+                </button>
                 {onFocus && task.status !== 'done' && (
                   <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors"
                     onClick={e => { e.stopPropagation(); setMenuOpen(false); onFocus(task) }}>
@@ -134,12 +213,15 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
 
       {/* Body */}
       <div className="px-3 pb-3" onClick={() => onView(task)}>
-        <p className={cn(
-          'text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug mb-2',
-          task.status === 'done' && 'line-through text-slate-400'
-        )}>
-          {task.title}
-        </p>
+        <div className="flex items-start gap-1.5 mb-2">
+          {task.pinned && <Pin size={11} className="text-amber-500 shrink-0 mt-0.5 fill-amber-400/60" />}
+          <p className={cn(
+            'flex-1 text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug',
+            task.status === 'done' && 'line-through text-slate-400'
+          )}>
+            {task.title}
+          </p>
+        </div>
 
         {/* Labels */}
         {labels.length > 0 && (
@@ -202,6 +284,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
           </div>
         </div>
       </div>
+    </div>
     </div>
   )
 })

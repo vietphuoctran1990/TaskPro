@@ -46,6 +46,10 @@ export default function Modal({ open, onClose, title, children, footer, size = '
           sizes[size]
         )}
       >
+        {/* Mobile drag handle (visual cue for bottom sheet) */}
+        <div className="sm:hidden shrink-0">
+          <div className="sheet-handle" aria-hidden />
+        </div>
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>

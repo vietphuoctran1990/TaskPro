@@ -46,7 +46,11 @@ export interface Task {
   updatedAt: string
   projectId: string
   isNote: boolean               // hidden from all task views; only shown in project notes
+  pinned?: boolean              // pinned to top of kanban column
 }
+
+export type Density = 'compact' | 'comfortable' | 'spacious'
+export type DarkModeMode = 'manual' | 'system'
 
 export interface Project {
   id: string
@@ -91,6 +95,8 @@ export interface AppState {
   sortField: SortField
   sortDir: SortDir
   darkMode: boolean
+  darkModeMode: DarkModeMode
+  density: Density
   language: 'en' | 'vi'
   notifBefore: number[]
   columnLabels: Partial<Record<Status, string>>

@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import type {
-  AppState, Task, Project, Label, Note, NoteFolder, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment, DateFilter,
+  AppState, Task, Project, Label, Note, NoteFolder, Priority, Status, ViewMode, SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode,
 } from '../types'
 import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS } from '../data/defaults'
 import {
@@ -38,6 +38,9 @@ type Action =
   | { type: 'SET_VIEW_MODE';   payload: ViewMode }
   | { type: 'SET_SORT';        payload: { field: SortField; dir: SortDir } }
   | { type: 'TOGGLE_DARK_MODE' }
+  | { type: 'SET_DARK_MODE';      payload: { mode: DarkModeMode; value?: boolean } }
+  | { type: 'SET_DENSITY';        payload: Density }
+  | { type: 'TOGGLE_PIN_TASK';    payload: string }
   | { type: 'SET_LANGUAGE';    payload: 'en' | 'vi' }
   | { type: 'SET_NOTIF_BEFORE'; payload: number[] }
   | { type: 'SET_COLUMN_LABEL'; payload: { status: Status; label: string } }
@@ -52,11 +55,18 @@ type Action =
 
 const STORAGE_KEY = 'taskpro_v2_state'
 
+function systemPrefersDark(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+}
+
 function getInitialState(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       const parsed = JSON.parse(saved) as AppState
+      const darkModeMode = parsed.darkModeMode ?? 'system'
+      const initialDark = darkModeMode === 'system' ? systemPrefersDark() : (parsed.darkMode ?? false)
       return {
         ...parsed,
         tasks: parsed.tasks.map(t => ({
@@ -67,6 +77,7 @@ function getInitialState(): AppState {
           estimatedHours: t.estimatedHours ?? null,
           recurrence:     t.recurrence     ?? null,
           isNote:         t.isNote         ?? false,
+          pinned:         t.pinned         ?? false,
         })),
         notes:               parsed.notes               ?? [],
         noteFolders:         parsed.noteFolders         ?? [],
@@ -76,7 +87,9 @@ function getInitialState(): AppState {
         viewMode:     parsed.viewMode     ?? 'kanban',
         sortField:    parsed.sortField    ?? 'createdAt',
         sortDir:      parsed.sortDir      ?? 'desc',
-        darkMode:     false,
+        darkMode:     initialDark,
+        darkModeMode,
+        density:      parsed.density      ?? 'comfortable',
         language:     parsed.language     ?? 'vi',
         notifBefore:  parsed.notifBefore  ?? [15, 30, 60],
         columnLabels: parsed.columnLabels ?? {},
@@ -99,7 +112,9 @@ function getInitialState(): AppState {
     viewMode: 'kanban',
     sortField: 'createdAt',
     sortDir: 'desc',
-    darkMode: false,
+    darkMode: systemPrefersDark(),
+    darkModeMode: 'system',
+    density: 'comfortable',
     language: 'vi',
     notifBefore: [15, 30, 60],
     columnLabels: {},
@@ -175,7 +190,20 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_DATE_FILTER':     return { ...state, dateFilter: action.payload }
     case 'SET_VIEW_MODE':       return { ...state, viewMode: action.payload }
     case 'SET_SORT':            return { ...state, sortField: action.payload.field, sortDir: action.payload.dir }
-    case 'TOGGLE_DARK_MODE':    return { ...state, darkMode: !state.darkMode }
+    case 'TOGGLE_DARK_MODE':    return { ...state, darkMode: !state.darkMode, darkModeMode: 'manual' }
+    case 'SET_DARK_MODE': {
+      const { mode, value } = action.payload
+      if (mode === 'system') {
+        return { ...state, darkModeMode: 'system', darkMode: value !== undefined ? value : systemPrefersDark() }
+      }
+      return { ...state, darkModeMode: 'manual', darkMode: value ?? state.darkMode }
+    }
+    case 'SET_DENSITY':         return { ...state, density: action.payload }
+    case 'TOGGLE_PIN_TASK':
+      return {
+        ...state,
+        tasks: state.tasks.map(t => t.id === action.payload ? { ...t, pinned: !t.pinned, updatedAt: now } : t),
+      }
     case 'SET_LANGUAGE':        return { ...state, language: action.payload }
     case 'SET_NOTIF_BEFORE':    return { ...state, notifBefore: action.payload }
     case 'SET_COLUMN_LABEL': {
@@ -253,6 +281,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', state.darkMode)
   }, [state.darkMode])
+
+  // Listen to system theme changes when in "system" mode
+  useEffect(() => {
+    if (state.darkModeMode !== 'system') return
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = (e: MediaQueryListEvent) => {
+      dispatch({ type: 'SET_DARK_MODE', payload: { mode: 'system', value: e.matches } })
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [state.darkModeMode])
 
   const filteredTasks = useMemo(() => {
     let tasks = state.tasks.filter(t => !t.isNote)

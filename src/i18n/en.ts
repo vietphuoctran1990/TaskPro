@@ -135,4 +135,16 @@ export const en: Translations = {
     updateTitle: 'A new version is available!', update: 'Update',
     offline: "You're offline — changes saved locally", backOnline: 'Back online',
   },
+  command: {
+    title: 'Quick commands', placeholder: 'Search or type a command…', empty: 'No results',
+    groupTasks: 'Tasks', groupNotes: 'Notes', groupViews: 'Switch view', groupActions: 'Actions',
+    actionNewTask: 'New task', actionNewNote: 'New note',
+    actionToggleTheme: 'Toggle theme', actionThemeSystem: 'Use system theme',
+    actionToggleLanguage: 'Switch language', actionSync: 'Sync now',
+    hint: '↑↓ navigate · ↵ open · Esc close',
+  },
+  density: { compact: 'Compact', comfortable: 'Comfy', spacious: 'Spacious', label: 'Density' },
+  pin: { pin: 'Pin to top', unpin: 'Unpin' },
+  theme: { light: 'Light', dark: 'Dark', system: 'System' },
+  refresh: { pulling: 'Pull down to sync', release: 'Release to sync', refreshing: 'Syncing…' },
 }

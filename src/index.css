@@ -77,6 +77,67 @@
   .card-lift { transition: transform 0.18s ease, box-shadow 0.18s ease; }
   .card-lift:hover { transform: translateY(-2px); }
 
+  /* View transition (fade+rise between view modes) */
+  @keyframes view-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .view-fade-in { animation: view-fade-in 0.22s cubic-bezier(0.32, 0.72, 0, 1); }
+
+  /* Glassmorphism header when content is scrolled */
+  .header-glass {
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    background-color: rgba(255, 255, 255, 0.72);
+    border-bottom-color: rgba(226, 232, 240, 0.6);
+  }
+  html.dark .header-glass {
+    background-color: rgba(15, 23, 42, 0.65);
+    border-bottom-color: rgba(51, 65, 85, 0.4);
+  }
+
+  /* Subtask checkbox: subtle pop on toggle to done */
+  @keyframes check-pop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    60%  { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .check-pop { animation: check-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+  /* Confetti burst (small, lightweight CSS particles) */
+  @keyframes confetti-fall {
+    0%   { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+    100% { transform: translate3d(var(--cx, 0), var(--cy, 120px), 0) rotate(var(--cr, 360deg)); opacity: 0; }
+  }
+  .confetti-piece {
+    position: absolute;
+    width: 8px; height: 12px;
+    will-change: transform, opacity;
+    animation: confetti-fall var(--cd, 900ms) cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  }
+
+  /* Density CSS variables — applied to rows in ListView */
+  .density-compact      { --row-py: 0.5rem; --row-gap: 0.625rem; }
+  .density-comfortable  { --row-py: 0.875rem; --row-gap: 1rem; }
+  .density-spacious     { --row-py: 1.25rem; --row-gap: 1.25rem; }
+
+  /* Bottom sheet drag handle */
+  .sheet-handle {
+    width: 36px; height: 4px; border-radius: 9999px;
+    background: rgba(148, 163, 184, 0.6);
+    margin: 8px auto 0;
+  }
+  html.dark .sheet-handle { background: rgba(71, 85, 105, 0.7); }
+
+  /* Pull-to-refresh indicator */
+  .ptr-indicator {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+  }
+
   /* Respect reduced motion preference */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

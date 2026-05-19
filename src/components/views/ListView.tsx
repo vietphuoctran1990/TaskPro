@@ -1,7 +1,7 @@
 import { memo, useState, useRef } from 'react'
 import {
   ChevronDown, ChevronUp, ChevronsUpDown,
-  MoreHorizontal, Pencil, Timer, Trash2, CheckSquare, Calendar,
+  MoreHorizontal, Pencil, Timer, Trash2, CheckSquare, Calendar, Rows3,
 } from 'lucide-react'
 import { cn, formatDateTime, getDeadline } from '../../lib/utils'
 import { PriorityBadge } from '../ui/Badge'
@@ -9,10 +9,47 @@ import SLABadge from '../sla/SLABadge'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
-import type { SortField, Task } from '../../types'
+import type { SortField, Task, Density } from '../../types'
 
 const STATUS_DOT: Record<string, string> = {
   todo: 'bg-slate-400', in_progress: 'bg-blue-500', in_review: 'bg-violet-500', done: 'bg-emerald-500',
+}
+
+const DENSITY_ROW_PAD: Record<Density, { card: string; cell: string }> = {
+  compact:     { card: 'px-4 py-2',   cell: 'px-4 py-2'    },
+  comfortable: { card: 'px-4 py-3',   cell: 'px-4 py-3.5'  },
+  spacious:    { card: 'px-4 py-4',   cell: 'px-4 py-5'    },
+}
+
+function DensityToggle() {
+  const { state, dispatch } = useApp()
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const opts: Density[] = ['compact', 'comfortable', 'spacious']
+  return (
+    <div ref={ref} className="relative">
+      <Button variant="ghost" size="sm" onClick={() => setOpen(v => !v)} aria-label={t.density.label}>
+        <Rows3 size={13} /> <span className="hidden sm:inline">{t.density[state.density]}</span>
+      </Button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-9 z-40 w-36 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden pop-in">
+            {opts.map(d => (
+              <button
+                key={d}
+                onClick={() => { dispatch({ type: 'SET_DENSITY', payload: d }); setOpen(false) }}
+                className={cn('w-full text-left px-3 py-2 text-sm transition-colors',
+                  state.density === d ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700')}>
+                {t.density[d]}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 interface ListViewProps {
@@ -132,8 +169,16 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
     )
   }
 
+  const dpad = DENSITY_ROW_PAD[state.density]
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/60 dark:bg-slate-800/40">
+        <span className="text-xs text-slate-500 dark:text-slate-400">{t.list.tasks(filteredTasks.length)}</span>
+        <DensityToggle />
+      </div>
 
       {/* ── MOBILE CARD LIST (hidden on md+) ─────────────────────────── */}
       <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -144,7 +189,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
           return (
             <div
               key={task.id}
-              className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+              className={cn(dpad.card, 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer')}
               onClick={() => onViewTask(task)}
             >
               {/* Row 1: checkbox + title + menu */}
@@ -235,7 +280,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                   className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group"
                   onClick={() => onViewTask(task)}
                 >
-                  <td className="px-5 py-3.5">
+                  <td className={cn('pl-5', dpad.cell)}>
                     <div className="flex items-start gap-2.5">
                       <button
                         className={cn(
@@ -263,14 +308,14 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className={dpad.cell}>
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
                       <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[task.status])} />
                       {t.status[task.status]}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5"><PriorityBadge priority={task.priority} /></td>
-                  <td className="px-4 py-3.5"><SLABadge task={task} showTimer /></td>
+                  <td className={dpad.cell}><PriorityBadge priority={task.priority} /></td>
+                  <td className={dpad.cell}><SLABadge task={task} showTimer /></td>
                   <td className="px-4 py-3.5 whitespace-nowrap text-xs text-slate-500">
                     {deadline
                       ? <span className={cn(deadline.getTime() < Date.now() && !done && 'text-red-500 font-medium')}>
@@ -279,7 +324,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                       : <span className="text-slate-300">—</span>
                     }
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className={dpad.cell}>
                     {project && (
                       <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} />
@@ -287,7 +332,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-3.5" onClick={e => e.stopPropagation()}>
+                  <td className={cn('px-3', dpad.cell)} onClick={e => e.stopPropagation()}>
                     <TaskMenu
                       onEdit={() => onEditTask(task)}
                       onDelete={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}

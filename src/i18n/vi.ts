@@ -137,4 +137,16 @@ export const vi: Translations = {
     updateTitle: 'Có phiên bản mới!', update: 'Cập nhật',
     offline: 'Đang ngoại tuyến — thay đổi đã lưu cục bộ', backOnline: 'Đã kết nối trở lại',
   },
+  command: {
+    title: 'Lệnh nhanh', placeholder: 'Tìm hoặc gõ lệnh…', empty: 'Không có kết quả',
+    groupTasks: 'Công việc', groupNotes: 'Ghi chú', groupViews: 'Chuyển chế độ', groupActions: 'Hành động',
+    actionNewTask: 'Tạo công việc mới', actionNewNote: 'Tạo ghi chú mới',
+    actionToggleTheme: 'Đổi giao diện sáng/tối', actionThemeSystem: 'Theo hệ thống',
+    actionToggleLanguage: 'Đổi ngôn ngữ', actionSync: 'Đồng bộ ngay',
+    hint: '↑↓ chọn · ↵ mở · Esc đóng',
+  },
+  density: { compact: 'Gọn', comfortable: 'Vừa', spacious: 'Rộng', label: 'Mật độ' },
+  pin: { pin: 'Ghim lên đầu', unpin: 'Bỏ ghim' },
+  theme: { light: 'Sáng', dark: 'Tối', system: 'Theo hệ thống' },
+  refresh: { pulling: 'Kéo xuống để đồng bộ', release: 'Thả để đồng bộ', refreshing: 'Đang đồng bộ…' },
 }
