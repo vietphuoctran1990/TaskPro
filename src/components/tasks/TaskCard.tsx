@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect } from 'react'
+import { memo, useState, useRef, useEffect, useMemo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Calendar, CheckCheck, GripVertical, MessageSquare, MoreHorizontal, Pencil, Pin, PinOff, Repeat, RotateCcw, Timer, Trash2, X } from 'lucide-react'
@@ -26,7 +26,7 @@ const PRIORITY_ACCENT: Record<string, string> = {
 }
 
 const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskCardProps) {
-  const { state, dispatch } = useApp()
+  const { state, dispatch, finalStatusIds } = useApp()
   const t = useT()
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
@@ -36,10 +36,14 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
+  const finalStatus = useMemo(() => state.statuses.find(s => s.isFinal)?.id  ?? 'done', [state.statuses])
+  const firstStatus = useMemo(() => state.statuses.find(s => !s.isFinal)?.id ?? 'todo', [state.statuses])
+  const isDone = finalStatusIds.has(task.status)
+
   const labels = state.labels.filter(l => task.labels.includes(l.id))
   const completedSub = task.subtasks.filter(s => s.done).length
   const deadline = getDeadline(task)
-  const sla = getSLAStatus(task)
+  const sla = getSLAStatus(task, finalStatusIds)
 
   // Haptic on drag start (mobile)
   useEffect(() => { if (isDragging) haptic(8) }, [isDragging])
@@ -55,7 +59,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
 
   const handleQuickDone = (e: React.MouseEvent) => {
     e.stopPropagation()
-    dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'done' } })
+    dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalStatus } })
     haptic(12)
     if (task.priority === 'urgent') burstConfetti(cardRef.current)
   }
@@ -70,10 +74,10 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
       ref={setRefs}
       style={style}
       className={cn(
-        'group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-l-[3px] shadow-sm hover:shadow-md hover:scale-[1.015] hover:-translate-y-0.5 transition-all duration-150 cursor-pointer select-none',
+        'group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-l-[3px] shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-shadow duration-150 cursor-pointer select-none',
         PRIORITY_ACCENT[task.priority],
         isDragging && 'opacity-50 shadow-xl scale-105 z-50',
-        task.status === 'done' && 'opacity-60',
+        isDone && 'opacity-60',
         task.pinned && 'ring-1 ring-amber-300 dark:ring-amber-500/60'
       )}
     >
@@ -88,8 +92,21 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
           <GripVertical size={13} />
         </button>
         <div className="flex items-center gap-0.5 ml-auto">
+          {/* Quick: pin / unpin — always visible when pinned */}
+          <button
+            onClick={e => { e.stopPropagation(); dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id }) }}
+            className={cn(
+              'w-6 h-6 flex items-center justify-center rounded-md transition-all',
+              task.pinned
+                ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                : 'opacity-0 sm:opacity-0 group-hover:opacity-100 sm:group-hover:opacity-100 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+            )}
+            title={task.pinned ? t.pin.unpin : t.pin.pin}
+          >
+            <Pin size={12} className={task.pinned ? 'fill-amber-400/60' : ''} />
+          </button>
           {/* Quick: mark done / undo done */}
-          {task.status !== 'done' ? (
+          {!isDone ? (
             <button
               onClick={handleQuickDone}
               className="w-6 h-6 flex items-center justify-center rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 active:bg-emerald-50 active:text-emerald-600 transition-all"
@@ -99,14 +116,14 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
             </button>
           ) : (
             <button
-              onClick={e => { e.stopPropagation(); dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'todo' } }) }}
+              onClick={e => { e.stopPropagation(); dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: firstStatus } }) }}
               className="w-6 h-6 flex items-center justify-center rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 active:bg-indigo-50 active:text-indigo-600 transition-all"
               title={t.status.todo}
             >
               <RotateCcw size={12} />
             </button>
           )}
-          {/* Quick: delete/cancel */}
+          {/* Quick: delete */}
           <button
             onClick={e => { e.stopPropagation(); dispatch({ type: 'DELETE_TASK', payload: task.id }) }}
             className="w-6 h-6 flex items-center justify-center rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-50 active:text-red-600 transition-all"
@@ -139,7 +156,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id }) }}>
                   {task.pinned ? <><PinOff size={13} /> {t.pin.unpin}</> : <><Pin size={13} /> {t.pin.pin}</>}
                 </button>
-                {onFocus && task.status !== 'done' && (
+                {onFocus && !isDone && (
                   <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors"
                     onClick={e => { e.stopPropagation(); setMenuOpen(false); onFocus(task) }}>
                     <Timer size={13} /> {t.pomodoro.focus}
@@ -162,7 +179,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
           {task.pinned && <Pin size={11} className="text-amber-500 shrink-0 mt-0.5 fill-amber-400/60" />}
           <p className={cn(
             'flex-1 text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug',
-            task.status === 'done' && 'line-through text-slate-400'
+            isDone && 'line-through text-slate-400'
           )}>
             {task.title}
           </p>

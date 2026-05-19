@@ -360,6 +360,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     return [...tasks].sort((a, b) => {
+      // Pinned tasks always appear first, regardless of sort field
+      const pin = Number(!!b.pinned) - Number(!!a.pinned)
+      if (pin !== 0) return pin
       const dir = state.sortDir === 'asc' ? 1 : -1
       switch (state.sortField) {
         case 'title':    return dir * a.title.localeCompare(b.title)

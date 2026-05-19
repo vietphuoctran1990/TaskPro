@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2, Clock, Zap } from 'lucide-react'
 import { cn, getDeadline, getSLAStatus, getTimeRemaining } from '../../lib/utils'
 import { useT } from '../../i18n'
 import { useNow } from '../../hooks/useNow'
+import { useApp } from '../../context/AppContext'
 import type { Task, SLAStatus } from '../../types'
 
 interface SLABadgeProps {
@@ -13,8 +14,9 @@ interface SLABadgeProps {
 export default function SLABadge({ task, showTimer = false, size = 'sm' }: SLABadgeProps) {
   const t = useT()
   const now = useNow()
+  const { finalStatusIds } = useApp()
 
-  const status = getSLAStatus(task)
+  const status = getSLAStatus(task, finalStatusIds)
   const deadline = getDeadline(task)
   const overdue = deadline && deadline.getTime() < now
 
