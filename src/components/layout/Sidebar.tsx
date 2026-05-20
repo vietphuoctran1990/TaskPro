@@ -56,7 +56,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
   }
 
   return (
-    <aside className={cn('flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700', mobile ? 'w-full h-full' : 'w-60 shrink-0 h-full')}>
+    <aside className={cn('flex flex-col bg-white dark:bg-[#0c1220] border-r border-slate-200/80 dark:border-slate-700/60', mobile ? 'w-full h-full' : 'w-60 shrink-0 h-full')}>
       {/* Logo */}
       <div className="flex items-center justify-between px-5 h-14 border-b border-slate-200 dark:border-slate-700 shrink-0">
         <div className="flex items-center gap-2.5">
@@ -72,44 +72,39 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
         {/* All Tasks */}
         <button
           onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'all' }); onClose?.() }}
-          className={cn('w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-            state.activeProjectId === null && state.dateFilter === 'all' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800')}>
+          className={cn('relative w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
+            state.activeProjectId === null && state.dateFilter === 'all' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80')}>
+          {state.activeProjectId === null && state.dateFilter === 'all' && <span className="absolute left-0 inset-y-1.5 w-0.5 bg-indigo-500 rounded-r-full" />}
           <LayoutDashboard size={15} />
           <span className="flex-1 text-left">{t.sidebar.allTasks}</span>
-          <span className="text-xs opacity-50">{stats.total}</span>
+          <span className="text-xs opacity-40">{stats.total}</span>
         </button>
         {/* Date filter sub-items */}
         <div className="ml-3 pl-3 border-l border-slate-100 dark:border-slate-700/50 space-y-0.5">
-          <button
-            onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'today' }); onClose?.() }}
-            className={cn('w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
-              state.activeProjectId === null && state.dateFilter === 'today' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200')}>
-            <Sun size={13} />
-            <span className="flex-1 text-left">{t.sidebar.today}</span>
-            <span className="text-xs opacity-50">{stats.today}</span>
-          </button>
-          <button
-            onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'tomorrow' }); onClose?.() }}
-            className={cn('w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
-              state.activeProjectId === null && state.dateFilter === 'tomorrow' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200')}>
-            <Sunset size={13} />
-            <span className="flex-1 text-left">{t.sidebar.tomorrow}</span>
-            <span className="text-xs opacity-50">{stats.tomorrow}</span>
-          </button>
-          <button
-            onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'upcoming' }); onClose?.() }}
-            className={cn('w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
-              state.activeProjectId === null && state.dateFilter === 'upcoming' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200')}>
-            <Calendar size={13} />
-            <span className="flex-1 text-left">{t.sidebar.upcoming}</span>
-            <span className="text-xs opacity-50">{stats.upcoming}</span>
-          </button>
+          {([
+            { key: 'today' as const,    icon: <Sun size={13} />,    label: t.sidebar.today,    count: stats.today },
+            { key: 'tomorrow' as const, icon: <Sunset size={13} />, label: t.sidebar.tomorrow, count: stats.tomorrow },
+            { key: 'upcoming' as const, icon: <Calendar size={13} />, label: t.sidebar.upcoming, count: stats.upcoming },
+          ]).map(({ key, icon, label, count }) => {
+            const isActive = state.activeProjectId === null && state.dateFilter === key
+            return (
+              <button key={key}
+                onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: key }); onClose?.() }}
+                className={cn('relative w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-150',
+                  isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-700 dark:hover:text-slate-200')}>
+                {isActive && <span className="absolute left-0 inset-y-1 w-0.5 bg-indigo-400 rounded-r-full" />}
+                {icon}
+                <span className="flex-1 text-left">{label}</span>
+                <span className="text-xs opacity-40">{count}</span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Projects */}
         <div className="pt-3">
           <div className="flex items-center">
-            <button className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            <button className="flex-1 flex items-center gap-2 px-3 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 tracking-wide hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               onClick={() => setProjectsOpen(v => !v)}>
               <FolderOpen size={12} />
               <span className="flex-1 text-left">{t.sidebar.projects}</span>
@@ -160,7 +155,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
         {/* Labels */}
         <div className="pt-3">
           <div className="flex items-center">
-            <div className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="flex-1 flex items-center gap-2 px-3 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 tracking-wide">
               <Tag size={12} /><span>{t.sidebar.labels}</span>
             </div>
             {onManage && (
@@ -186,7 +181,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
         {/* Statuses */}
         <div className="pt-3">
           <div className="flex items-center">
-            <div className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="flex-1 flex items-center gap-2 px-3 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 tracking-wide">
               <CircleDot size={12} /><span>{t.manage.statuses}</span>
             </div>
             {onManage && (
@@ -222,7 +217,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
         {/* Notes */}
         <div className="pt-3">
           <div className="flex items-center">
-            <button className="flex-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            <button className="flex-1 flex items-center gap-2 px-3 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 tracking-wide hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               onClick={() => setNotesOpen(v => !v)}>
               <StickyNote size={12} />
               <span className="flex-1 text-left">Ghi chú</span>
@@ -238,39 +233,36 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
           {notesOpen && (
             <div className="mt-1 space-y-0.5">
               {/* All notes item */}
-              <button
-                onClick={() => {
-                  dispatch({ type: 'SET_VIEW_MODE', payload: 'notes' })
-                  dispatch({ type: 'SET_ACTIVE_NOTE_FOLDER', payload: null })
-                  onClose?.()
-                }}
-                className={cn('w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
-                  state.viewMode === 'notes' && state.activeNoteFolderId === null
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800')}>
-                <StickyNote size={14} />
-                <span className="flex-1 text-left">Tất cả ghi chú</span>
-                <span className="text-xs opacity-50">{state.notes.length}</span>
-              </button>
+              {(() => {
+                const isActive = state.viewMode === 'notes' && state.activeNoteFolderId === null
+                return (
+                  <button
+                    onClick={() => { dispatch({ type: 'SET_VIEW_MODE', payload: 'notes' }); dispatch({ type: 'SET_ACTIVE_NOTE_FOLDER', payload: null }); onClose?.() }}
+                    className={cn('relative w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150',
+                      isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80')}>
+                    {isActive && <span className="absolute left-0 inset-y-1.5 w-0.5 bg-indigo-500 rounded-r-full" />}
+                    <StickyNote size={14} />
+                    <span className="flex-1 text-left">Tất cả ghi chú</span>
+                    <span className="text-xs opacity-40">{state.notes.length}</span>
+                  </button>
+                )
+              })()}
 
               {/* Note folder items */}
-              {state.noteFolders.map(folder => (
-                <button
-                  key={folder.id}
-                  onClick={() => {
-                    dispatch({ type: 'SET_VIEW_MODE', payload: 'notes' })
-                    dispatch({ type: 'SET_ACTIVE_NOTE_FOLDER', payload: folder.id })
-                    onClose?.()
-                  }}
-                  className={cn('w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
-                    state.viewMode === 'notes' && state.activeNoteFolderId === folder.id
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800')}>
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: folder.color }} />
-                  <span className="flex-1 text-left truncate">{folder.name}</span>
-                  <span className="text-xs opacity-50">{state.notes.filter(n => n.folderId === folder.id).length}</span>
-                </button>
-              ))}
+              {state.noteFolders.map(folder => {
+                const isActive = state.viewMode === 'notes' && state.activeNoteFolderId === folder.id
+                return (
+                  <button key={folder.id}
+                    onClick={() => { dispatch({ type: 'SET_VIEW_MODE', payload: 'notes' }); dispatch({ type: 'SET_ACTIVE_NOTE_FOLDER', payload: folder.id }); onClose?.() }}
+                    className={cn('relative w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150',
+                      isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80')}>
+                    {isActive && <span className="absolute left-0 inset-y-1.5 w-0.5 rounded-r-full" style={{ backgroundColor: folder.color }} />}
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: folder.color }} />
+                    <span className="flex-1 text-left truncate">{folder.name}</span>
+                    <span className="text-xs opacity-40">{state.notes.filter(n => n.folderId === folder.id).length}</span>
+                  </button>
+                )
+              })}
 
               {/* Inline add folder form */}
               {addingNoteFolder ? (
@@ -295,14 +287,14 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
       </div>
 
       {/* Stats */}
-      <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-4 space-y-3">
+      <div className="border-t border-slate-200/80 dark:border-slate-700/60 px-4 py-4 space-y-3">
         <div>
-          <div className="flex justify-between mb-1">
+          <div className="flex justify-between mb-1.5">
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t.sidebar.overallProgress}</span>
             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{stats.done}/{stats.total}</span>
           </div>
-          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-700"
               style={{ width: `${stats.total ? (stats.done / stats.total) * 100 : 0}%` }} />
           </div>
         </div>
@@ -330,8 +322,9 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
 
 function ProjectItem({ project, active, count, onClick, onNotes }: { project: Project; active: boolean; count: number; onClick: () => void; onNotes?: () => void }) {
   return (
-    <div className={cn('group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
-      active ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800')}>
+    <div className={cn('relative group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150',
+      active ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80')}>
+      {active && <span className="absolute left-0 inset-y-1.5 w-0.5 bg-indigo-500 rounded-r-full" />}
       <button onClick={onClick} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
         <span className="flex-1 truncate">{project.name}</span>

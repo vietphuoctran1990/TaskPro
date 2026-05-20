@@ -205,8 +205,8 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
 
   return (
     <header className={cn(
-      'border-b border-slate-200 dark:border-slate-700 px-4 py-0 shrink-0 transition-[background-color,backdrop-filter] duration-200 sticky top-0 z-30',
-      scrolled ? 'header-glass' : 'bg-white dark:bg-slate-900'
+      'border-b border-slate-200/80 dark:border-slate-700/60 px-4 py-0 shrink-0 transition-[background-color,backdrop-filter,box-shadow] duration-200 sticky top-0 z-30',
+      scrolled ? 'header-glass' : 'bg-white dark:bg-[#0c1220]'
     )}>
       {/* Top row */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 h-14">

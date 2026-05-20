@@ -135,7 +135,7 @@ function AppShell() {
   const handleCloseDetail = useCallback(() => setViewingTask(null), [])
 
   return (
-    <div className="flex h-[100dvh] bg-slate-50 dark:bg-slate-900 overflow-hidden">
+    <div className="flex h-[100dvh] bg-[#f1f5f9] dark:bg-[#080c15] overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex h-full">
         <Sidebar onSync={() => setSyncOpen(true)} onManage={handleManage} onNotes={setNotesProject} />
@@ -144,7 +144,7 @@ function AppShell() {
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] lg:hidden" onClick={() => setSidebarOpen(false)} />
           <div className="fixed inset-y-0 left-0 z-50 w-64 lg:hidden">
             <Sidebar mobile onClose={() => setSidebarOpen(false)}
               onSync={() => { setSidebarOpen(false); setSyncOpen(true) }}
@@ -234,7 +234,7 @@ function AppShell() {
       {/* Mobile FAB */}
       <button
         onClick={() => state.viewMode === 'notes' ? handleAddNote() : handleAddTask()}
-        className="fixed bottom-6 right-6 z-30 sm:hidden w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-30 sm:hidden w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/40 hover:shadow-2xl hover:shadow-indigo-500/50 hover:scale-105 transition-all duration-200 active:scale-95 flex items-center justify-center"
         aria-label={state.viewMode === 'notes' ? 'Tạo ghi chú' : 'Thêm công việc'}
       >
         <Plus size={24} />

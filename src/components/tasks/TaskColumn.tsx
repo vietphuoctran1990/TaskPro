@@ -52,7 +52,7 @@ const TaskColumn = memo(function TaskColumn({
   const badge = { backgroundColor: `${column.color}22`, color: column.color }
   const dropBg = isOver
     ? 'bg-indigo-50 dark:bg-indigo-900/20 border-2 border-dashed border-indigo-300 dark:border-indigo-700'
-    : 'bg-slate-50/80 dark:bg-slate-800/40'
+    : 'bg-slate-100/60 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/40'
 
   const EmptyIcon = column.isFinal ? CheckCircle2 : Plus
 

@@ -74,7 +74,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
       ref={setRefs}
       style={style}
       className={cn(
-        'group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-l-[3px] shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-shadow duration-150 cursor-pointer select-none',
+        'group bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 border-l-[3px] shadow-sm hover:shadow-lg hover:shadow-slate-200/60 dark:hover:shadow-black/20 hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-500 transition-all duration-200 cursor-pointer select-none',
         PRIORITY_ACCENT[task.priority],
         isDragging && 'opacity-50 shadow-xl scale-105 z-50',
         isDone && 'opacity-60',
