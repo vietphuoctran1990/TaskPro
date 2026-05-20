@@ -59,9 +59,6 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
       // tasks with obsolete/unknown status silently go to first column
       else if (COLUMNS.length > 0) map[COLUMNS[0].id].push(task)
     })
-    Object.keys(map).forEach(s => {
-      map[s] = [...map[s]].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned))
-    })
     return map
   }, [filteredTasks, COLUMNS])
 
