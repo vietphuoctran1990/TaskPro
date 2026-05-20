@@ -100,8 +100,13 @@ function getInitialState(): AppState {
         filterSLA:    parsed.filterSLA    ?? 'all',
         dateFilter:   parsed.dateFilter   ?? 'all',
         viewMode:     parsed.viewMode     ?? 'kanban',
-        sortField:    parsed.sortField    ?? 'createdAt',
-        sortDir:      parsed.sortDir      ?? 'desc',
+        // Migrate old default (createdAt desc) → new default (dueDate asc)
+        sortField:    (parsed.sortField === 'createdAt' && parsed.sortDir === 'desc')
+                        ? 'dueDate'
+                        : (parsed.sortField ?? 'dueDate'),
+        sortDir:      (parsed.sortField === 'createdAt' && parsed.sortDir === 'desc')
+                        ? 'asc'
+                        : (parsed.sortDir ?? 'asc'),
         darkMode:     initialDark,
         darkModeMode,
         density:      parsed.density      ?? 'comfortable',
@@ -125,8 +130,8 @@ function getInitialState(): AppState {
     filterSLA: 'all',
     dateFilter: 'all',
     viewMode: 'kanban',
-    sortField: 'createdAt',
-    sortDir: 'desc',
+    sortField: 'dueDate',
+    sortDir: 'asc',
     darkMode: systemPrefersDark(),
     darkModeMode: 'system',
     density: 'comfortable',
@@ -363,6 +368,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Pinned tasks always appear first, regardless of sort field
       const pin = Number(!!b.pinned) - Number(!!a.pinned)
       if (pin !== 0) return pin
+      // Completed tasks always appear last
+      const aDone = finalStatusIds.has(a.status) ? 1 : 0
+      const bDone = finalStatusIds.has(b.status) ? 1 : 0
+      if (aDone !== bDone) return aDone - bDone
       const dir = state.sortDir === 'asc' ? 1 : -1
       switch (state.sortField) {
         case 'title':    return dir * a.title.localeCompare(b.title)
