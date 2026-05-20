@@ -38,7 +38,8 @@ function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
-  const [viewingTask, setViewingTask] = useState<Task | null>(null)
+  const [viewingTaskId, setViewingTaskId] = useState<string | null>(null)
+  const viewingTask = viewingTaskId ? (state.tasks.find(t => t.id === viewingTaskId) ?? null) : null
   const [defaultStatus, setDefaultStatus] = useState<Status>('todo')
   const [defaultDate, setDefaultDate] = useState('')
   const [installDismissed, setInstallDismissed] = useState(false)
@@ -102,7 +103,7 @@ function AppShell() {
   }, [])
 
   const handleFocusTask = useCallback((task: Task) => {
-    setViewingTask(null)
+    setViewingTaskId(null)
     setFocusTask(task)
   }, [])
 
@@ -130,9 +131,9 @@ function AppShell() {
     setNoteEditorOpen(true)
   }, [])
 
-  const handleViewTask = useCallback((task: Task) => setViewingTask(task), [])
+  const handleViewTask = useCallback((task: Task) => setViewingTaskId(task.id), [])
   const handleCloseForm = useCallback(() => { setFormOpen(false); setEditingTask(null) }, [])
-  const handleCloseDetail = useCallback(() => setViewingTask(null), [])
+  const handleCloseDetail = useCallback(() => setViewingTaskId(null), [])
 
   return (
     <div className="flex h-[100dvh] bg-[#f1f5f9] dark:bg-[#080c15] overflow-hidden">
