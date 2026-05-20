@@ -65,13 +65,17 @@ export default function NotificationBell() {
         body: JSON.stringify({ deviceId }),
       })
       const d = await res.json()
+      const pub = d.vapid.publicKey ?? ''
+      const der = d.vapid.derivedFromPrivate ?? ''
       const lines = [
         '── VAPID ──',
         `Public key set:  ${d.vapid.publicKeySet  ? '✓' : '✗'}`,
         `Private key set: ${d.vapid.privateKeySet ? '✓' : '✗ ← MISSING in Netlify dashboard!'}`,
         `Keys valid:      ${d.vapid.keysValid ? '✓' : '✗ format error'}`,
+        `Keys MATCH pair: ${d.vapid.keysMatchPair ? '✓' : '✗ ← MISMATCH! Private key does not derive to this public key'}`,
         d.vapid.error ? `Error: ${d.vapid.error}` : '',
-        `Public key:      ${d.vapid.publicKeyPreview}`,
+        `Public key  (server):     ${pub.slice(0, 16)}…${pub.slice(-6)}`,
+        `Derived (from private):   ${der.slice(0, 16)}…${der.slice(-6)}`,
         '',
         '── Subscription ──',
         `Found on server: ${d.subscription.found ? '✓' : '✗'}`,

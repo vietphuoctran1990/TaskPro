@@ -1,6 +1,7 @@
 import { getStore } from '@netlify/blobs'
 import type { Config, Context } from '@netlify/functions'
 import webpush from 'web-push'
+import crypto from 'node:crypto'
 
 function cors() {
   return {
@@ -25,11 +26,24 @@ export default async (req: Request, context: Context) => {
   const vapidPublicSet  = !!VAPID_PUBLIC
   const vapidPrivateSet = !!VAPID_PRIVATE
   let vapidKeysValid    = false
+  let vapidKeysMatch    = false
+  let derivedPublic     = ''
   let vapidError        = ''
   if (vapidPublicSet && vapidPrivateSet) {
     try {
       webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
       vapidKeysValid = true
+      // Derive public key from private key to verify they're a matching pair
+      try {
+        const privBytes = Buffer.from(VAPID_PRIVATE.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
+        const ec = crypto.createECDH('prime256v1')
+        ec.setPrivateKey(privBytes)
+        derivedPublic = ec.getPublicKey().toString('base64')
+          .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+        vapidKeysMatch = derivedPublic === VAPID_PUBLIC
+      } catch (e) {
+        vapidError = 'derive: ' + String(e)
+      }
     } catch (e) {
       vapidError = String(e)
     }
@@ -61,12 +75,14 @@ export default async (req: Request, context: Context) => {
 
   return new Response(JSON.stringify({
     vapid: {
-      publicKeySet:  vapidPublicSet,
-      privateKeySet: vapidPrivateSet,
-      keysValid:     vapidKeysValid,
-      error:         vapidError || null,
+      publicKeySet:    vapidPublicSet,
+      privateKeySet:   vapidPrivateSet,
+      keysValid:       vapidKeysValid,
+      keysMatchPair:   vapidKeysMatch,
+      error:           vapidError || null,
       // safe to show — it's the public key
-      publicKeyPreview: VAPID_PUBLIC.slice(0, 12) + '…',
+      publicKey:           VAPID_PUBLIC,
+      derivedFromPrivate:  derivedPublic,
     },
     subscription: {
       found:         hasSubscription,
