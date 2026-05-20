@@ -16,6 +16,7 @@ interface Options {
   notifBefore: number[]
   onMarkDone: (taskId: string) => void
   userId?: string
+  finalStatusIds?: ReadonlySet<string>
 }
 
 interface Threshold {
@@ -93,13 +94,16 @@ async function syncSchedulesToServer(schedules: ScheduleItem[], userId?: string)
 
 function buildSchedulesFor(
   tasks: Task[], notifBefore: number[], t: Translations,
-  notifiedRef: { current: Set<string> }
+  notifiedRef: { current: Set<string> },
+  finalStatusIds?: ReadonlySet<string>
 ): ScheduleItem[] {
   const activeThresholds = ALL_THRESHOLDS.filter(
     th => th.minutes === 0 || notifBefore.includes(th.minutes)
   )
+  const isDone = (status: string) =>
+    finalStatusIds ? finalStatusIds.has(status) : status === 'done'
   return tasks
-    .filter(task => task.status !== 'done')
+    .filter(task => !isDone(task.status))
     .flatMap(task => {
       const deadline = getDeadline(task)
       if (!deadline) return []
@@ -117,7 +121,7 @@ function buildSchedulesFor(
     })
 }
 
-export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, userId }: Options) {
+export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, userId, finalStatusIds }: Options) {
   const notifiedRef   = useRef(new Set<string>())
   const mainTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const swRegRef      = useRef<ServiceWorkerRegistration | null>(null)
@@ -145,7 +149,7 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
     if (Notification.permission === 'granted' && swRegRef.current) {
       syncSubscriptionToServer(swRegRef.current, userId)
     }
-  }, [swReady, enabled])
+  }, [swReady, enabled, userId])
 
   // ── Listen for SW → client messages ───────────────────────────────────────
   useEffect(() => {
@@ -182,8 +186,8 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
 
   // ── Build the schedule payload ─────────────────────────────────────────────
   const buildSchedules = useCallback(
-    () => buildSchedulesFor(tasks, notifBefore, t, notifiedRef),
-    [tasks, notifBefore, t]
+    () => buildSchedulesFor(tasks, notifBefore, t, notifiedRef, finalStatusIds),
+    [tasks, notifBefore, t, finalStatusIds]
   )
 
   // ── Heartbeat: ping SW every 30 s + sync server schedule ─────────────────
@@ -202,7 +206,7 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
     send()
     const id = setInterval(send, HEARTBEAT_MS)
     return () => clearInterval(id)
-  }, [tasks, enabled, notifBefore, t, swReady, buildSchedules])
+  }, [tasks, enabled, notifBefore, t, swReady, buildSchedules, userId])
 
   // ── Main-thread exact-time scheduling (foreground precision) ──────────────
   useEffect(() => {
@@ -235,12 +239,13 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
     const reg = swRegRef.current
     if (!reg?.active) return
     const thresholds = ALL_THRESHOLDS.filter(th => th.minutes === 0 || notifBefore.includes(th.minutes))
-    tasks.filter(task => task.status === 'done').forEach(task => {
+    const isDone = (s: string) => finalStatusIds ? finalStatusIds.has(s) : s === 'done'
+    tasks.filter(task => isDone(task.status)).forEach(task => {
       thresholds.forEach(({ key }) => {
         reg.active!.postMessage({ type: 'CANCEL_NOTIFICATION', payload: { key: `${task.id}-${key}` } })
       })
     })
-  }, [tasks, notifBefore])
+  }, [tasks, notifBefore, finalStatusIds])
 
   // ── Re-subscribe to Web Push when permission changes ──────────────────────
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
@@ -254,8 +259,9 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
 
   // ── Upcoming alerts for dropdown ──────────────────────────────────────────
   const getUpcomingAlerts = useCallback((): NotifAlert[] => {
+    const isDone = (s: string) => finalStatusIds ? finalStatusIds.has(s) : s === 'done'
     return tasks
-      .filter(tk => tk.status !== 'done')
+      .filter(tk => !isDone(tk.status))
       .flatMap(task => {
         const deadline = getDeadline(task)
         if (!deadline) return []
@@ -269,7 +275,7 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
         return [{ task, label, minutesLeft: minsLeft }]
       })
       .sort((a, b) => a.minutesLeft - b.minutesLeft)
-  }, [tasks, t])
+  }, [tasks, t, finalStatusIds])
 
   return { requestPermission, getUpcomingAlerts }
 }

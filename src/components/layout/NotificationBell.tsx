@@ -1,36 +1,23 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { Bell, BellOff, CheckCircle2, X, Send } from 'lucide-react'
 import { cn, getDeadline, getTimeRemaining } from '../../lib/utils'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
-import { useNotifications } from '../../hooks/useNotifications'
-import { useAuth } from '../../context/AuthContext'
+import { useNotificationsCtx } from '../../context/NotificationsContext'
 
 const NOTIF_OPTIONS = [15, 30, 60] as const
 
 export default function NotificationBell() {
-  const { state, dispatch } = useApp()
+  const { state, dispatch, finalStatusIds } = useApp()
   const t = useT()
-  const { user } = useAuth()
   const [open, setOpen] = useState(false)
-  const [permission, setPermission] = useState<NotificationPermission>(
-    'Notification' in window ? Notification.permission : 'denied'
-  )
-
-  const { requestPermission, getUpcomingAlerts } = useNotifications({
-    tasks: state.tasks,
-    t,
-    enabled: permission === 'granted',
-    notifBefore: state.notifBefore,
-    onMarkDone: (taskId) => dispatch({ type: 'MOVE_TASK', payload: { id: taskId, status: 'done' } }),
-    userId: user?.id,
-  })
+  const { permission, requestPermission, getUpcomingAlerts } = useNotificationsCtx()
 
   const alerts = getUpcomingAlerts()
 
   const urgentCount = state.tasks.filter(task => {
-    if (task.status === 'done') return false
+    if (finalStatusIds.has(task.status)) return false
     const deadline = getDeadline(task)
     if (!deadline) return false
     const minsLeft = (deadline.getTime() - Date.now()) / 60_000
@@ -38,8 +25,7 @@ export default function NotificationBell() {
   }).length
 
   const handleEnable = useCallback(async () => {
-    const perm = await requestPermission()
-    setPermission(perm)
+    await requestPermission()
   }, [requestPermission])
 
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle')
@@ -86,12 +72,6 @@ export default function NotificationBell() {
     } catch (err) {
       alert('Debug failed: ' + String(err))
     }
-  }, [])
-
-  useEffect(() => {
-    if (!('Notification' in window)) return
-    const id = setInterval(() => setPermission(Notification.permission), 3000)
-    return () => clearInterval(id)
   }, [])
 
   const toggleNotifBefore = (minutes: number) => {
@@ -192,7 +172,10 @@ export default function NotificationBell() {
                       </div>
                       <button
                         className="shrink-0 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
-                        onClick={() => dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: 'done' } })}
+                        onClick={() => {
+                          const finalId = state.statuses.find(s => s.isFinal)?.id ?? 'done'
+                          dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalId } })
+                        }}
                         title={t.notifications.markDone}
                       >
                         <CheckCircle2 size={14} />

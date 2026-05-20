@@ -25,6 +25,7 @@ import OfflineToast from './components/pwa/OfflineToast'
 import CommandPalette from './components/ui/CommandPalette'
 import ShortcutsModal from './components/ui/ShortcutsModal'
 import { ToastProvider } from './context/ToastContext'
+import { NotificationsProvider } from './context/NotificationsContext'
 import { usePWA } from './hooks/usePWA'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { Plus, RefreshCw } from 'lucide-react'
@@ -304,7 +305,9 @@ export default function App() {
       <AuthProvider>
         <I18nProvider>
           <ToastProvider>
-            <AppShell />
+            <NotificationsProvider>
+              <AppShell />
+            </NotificationsProvider>
           </ToastProvider>
         </I18nProvider>
       </AuthProvider>

@@ -36,7 +36,11 @@ export default async (req: Request, context: Context) => {
     if (!subJson) return new Response(JSON.stringify({ ok: false, error: 'No subscription found for this device' }),
       { status: 404, headers: { ...cors(), 'Content-Type': 'application/json' } })
 
-    const subscription = JSON.parse(subJson) as webpush.PushSubscription
+    // Handle both old format (raw subscription) and new format ({ subscription, userId })
+    const parsed = JSON.parse(subJson) as Record<string, unknown>
+    const subscription = (parsed.subscription && 'userId' in parsed)
+      ? (parsed.subscription as webpush.PushSubscription)
+      : (parsed as unknown as webpush.PushSubscription)
 
     await webpush.sendNotification(
       subscription,
