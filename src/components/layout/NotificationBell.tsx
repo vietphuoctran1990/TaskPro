@@ -41,12 +41,47 @@ export default function NotificationBell() {
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok && data.ok) setTestStatus('ok')
-      else { console.error('[test-push] failed:', data); setTestStatus('fail') }
+      else {
+        const errMsg = data?.error ?? data?.message ?? JSON.stringify(data)
+        console.error('[test-push] failed:', data)
+        alert(`Push thất bại (HTTP ${data?.statusCode ?? '?'}):\n${errMsg}`)
+        setTestStatus('fail')
+      }
     } catch (err) {
       console.error('[test-push] error:', err)
+      alert('Lỗi kết nối: ' + String(err))
       setTestStatus('fail')
     }
     setTimeout(() => setTestStatus('idle'), 4000)
+  }, [])
+
+  const handleCheckConfig = useCallback(async () => {
+    const deviceId = localStorage.getItem('taskpro-device-id')
+    if (!deviceId) { alert('No deviceId found'); return }
+    try {
+      const res  = await fetch('/api/check-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId }),
+      })
+      const d = await res.json()
+      const lines = [
+        '── VAPID ──',
+        `Public key set:  ${d.vapid.publicKeySet  ? '✓' : '✗'}`,
+        `Private key set: ${d.vapid.privateKeySet ? '✓' : '✗ ← MISSING in Netlify dashboard!'}`,
+        `Keys valid:      ${d.vapid.keysValid ? '✓' : '✗ format error'}`,
+        d.vapid.error ? `Error: ${d.vapid.error}` : '',
+        `Public key:      ${d.vapid.publicKeyPreview}`,
+        '',
+        '── Subscription ──',
+        `Found on server: ${d.subscription.found ? '✓' : '✗'}`,
+        `Format:          ${d.subscription.format}`,
+        `Endpoint:        ${d.subscription.endpointStart}…`,
+      ].filter(l => l !== '')
+      alert(lines.join('\n'))
+    } catch (err) {
+      alert('Check-config error: ' + String(err))
+    }
   }, [])
 
   const handleDebug = useCallback(async () => {
@@ -212,12 +247,18 @@ export default function NotificationBell() {
 
             {/* Footer */}
             {permission === 'granted' && (
-              <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-2 text-xs text-slate-400 dark:text-slate-500">
+              <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                <button
+                  onClick={handleCheckConfig}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-amber-300 hover:text-amber-600 transition-colors"
+                >
+                  Check config
+                </button>
                 <button
                   onClick={handleDebug}
                   className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                 >
-                  Check server
+                  Schedules
                 </button>
                 <button
                   onClick={handleTestPush}
