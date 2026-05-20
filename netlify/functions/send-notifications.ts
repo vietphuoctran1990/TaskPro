@@ -73,8 +73,6 @@ export default async () => {
             const alreadyFired = await store.get(firedKey)
             if (alreadyFired) return
 
-            await store.set(firedKey, '1')
-
             try {
               await webpush.sendNotification(
                 subscription,
@@ -90,14 +88,18 @@ export default async () => {
                   TTL: 4 * 60 * 60, // retry for 4h if device offline
                 }
               )
+              // Mark fired only after successful delivery — transient errors will be retried next cron run
+              await store.set(firedKey, '1')
               console.log(`[notify] sent push "${s.title}" → device ${deviceId}`)
             } catch (err) {
               const status = (err as { statusCode?: number })?.statusCode
               if (status === 404 || status === 410) {
-                // Subscription expired/invalid — remove it so we stop trying
+                // Subscription expired/invalid — mark fired + remove so we stop retrying
+                await store.set(firedKey, '1')
                 await store.delete(key)
                 console.warn(`[notify] removed dead subscription for device ${deviceId} (${status})`)
               } else {
+                // Transient error — don't mark fired, next cron run will retry
                 console.error(`[notify] push failed for device ${deviceId}:`, err)
               }
             }

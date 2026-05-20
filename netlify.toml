@@ -5,9 +5,14 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
-  VITE_VAPID_PUBLIC_KEY = "BISAgARXQkWD0G6lgiZ_ygj_5crrflt8tqsnK35V1ULh5iS3-5PRV_-cX8n_dC3uThxx3J6hQvlz-oq2MiQmbLY"
+  # VAPID public key (safe to commit — it's public)
+  # Must match VAPID_PRIVATE_KEY set in Netlify dashboard → Site settings → Env vars
+  VITE_VAPID_PUBLIC_KEY = "BOrM-NrB2ATzuFf9ZZChGXIUO8XEJHXNVy0qa9ib2Y9J3X7oL8m0OeB6aG6jvk1rHa3g-_jt9FlVRIPoARfMpP4"
+  VAPID_PUBLIC_KEY      = "BOrM-NrB2ATzuFf9ZZChGXIUO8XEJHXNVy0qa9ib2Y9J3X7oL8m0OeB6aG6jvk1rHa3g-_jt9FlVRIPoARfMpP4"
+  VAPID_SUBJECT         = "mailto:admin@taskpro.app"
   VITE_SUPABASE_URL = "https://scixtscuoyhjsnpzvbvm.supabase.co"
   VITE_SUPABASE_ANON_KEY = "sb_publishable_aoAEihnFjLkRISPgC7dI3Q_ULkybnEo"
+  # VAPID_PRIVATE_KEY → set in Netlify dashboard only (never commit)
 
 [functions]
   directory = "netlify/functions"
