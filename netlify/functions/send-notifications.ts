@@ -1,6 +1,14 @@
 import { getStore } from '@netlify/blobs'
 import type { Config } from '@netlify/functions'
 import webpush from 'web-push'
+import crypto from 'node:crypto'
+
+function deriveVapidPublicKey(privateKeyB64url: string): string {
+  const priv = Buffer.from(privateKeyB64url.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
+  const ec = crypto.createECDH('prime256v1')
+  ec.setPrivateKey(priv)
+  return ec.getPublicKey().toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
 
 interface SchedulePayload {
   key: string
@@ -11,8 +19,8 @@ interface SchedulePayload {
   requireInteraction: boolean
 }
 
-const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  ?? ''
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? ''
+const VAPID_PUBLIC  = VAPID_PRIVATE ? deriveVapidPublicKey(VAPID_PRIVATE) : (process.env.VAPID_PUBLIC_KEY ?? '')
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT     ?? 'mailto:admin@taskpro.app'
 
 export default async () => {
