@@ -91,6 +91,8 @@ export const vi: Translations = {
     done: (n) => `${n} hoàn thành`,
     reports: 'Báo cáo', monthlyTrend: 'Xu hướng 4 tuần', byPriority: 'Theo mức độ', completionRate: 'Tỷ lệ hoàn thành',
     week: (n) => `T${n}`,
+    totalNotes: 'Tổng ghi chú', notesToday: 'Cập nhật hôm nay', notesFolders: 'Thư mục',
+    notesSection: 'Ghi chú', recentNotes: 'Gần đây', untitledNote: '(Chưa có tiêu đề)',
   },
   onboarding: {
     step1Title: 'Chào mừng đến TaskPro! 👋', step1Desc: 'Quản lý công việc thông minh, theo dõi tiến độ và không bỏ lỡ deadline nào.',

@@ -74,6 +74,8 @@ export interface Translations {
     done: (n: number) => string
     reports: string; monthlyTrend: string; byPriority: string; completionRate: string
     week: (n: number) => string
+    totalNotes: string; notesToday: string; notesFolders: string
+    notesSection: string; recentNotes: string; untitledNote: string
   }
   onboarding: {
     step1Title: string; step1Desc: string

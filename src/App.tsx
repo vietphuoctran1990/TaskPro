@@ -218,6 +218,7 @@ function AppShell() {
               <DashboardView
                 onViewTask={handleViewTask}
                 onAddTask={() => handleAddTask()}
+                onViewNote={handleEditNote}
               />
             )}
             {state.viewMode === 'notes' && (

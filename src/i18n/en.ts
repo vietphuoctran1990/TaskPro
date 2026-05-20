@@ -89,6 +89,8 @@ export const en: Translations = {
     done: (n) => `${n} done`,
     reports: 'Reports', monthlyTrend: '4-Week Trend', byPriority: 'By Priority', completionRate: 'Completion Rate',
     week: (n) => `W${n}`,
+    totalNotes: 'Total Notes', notesToday: 'Updated Today', notesFolders: 'Folders',
+    notesSection: 'Notes', recentNotes: 'Recent', untitledNote: '(Untitled)',
   },
   onboarding: {
     step1Title: 'Welcome to TaskPro! 👋', step1Desc: 'Smart task management, track progress and never miss a deadline.',

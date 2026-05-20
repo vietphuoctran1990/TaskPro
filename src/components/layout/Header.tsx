@@ -1,5 +1,5 @@
 import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote, Monitor } from 'lucide-react'
-import { useState, useEffect, useRef, memo } from 'react'
+import { useState, useEffect, useRef, memo, Fragment } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -82,17 +82,29 @@ const ViewSwitcher = memo(function ViewSwitcher({ viewMode, views, t, dispatch }
     <div className="hidden sm:flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
       {views.map(v => {
         const Icon = VIEW_ICONS[v]
+        const isNotes = v === 'notes'
+        const isActive = viewMode === v
         return (
-          <button key={v} onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
-            aria-label={t.views[v]}
-            className={cn(
-              'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
-              viewMode === v ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            )}
-          >
-            <Icon size={13} />
-            <span className="hidden md:inline">{t.views[v]}</span>
-          </button>
+          <Fragment key={v}>
+            {isNotes && <span className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-0.5 self-center shrink-0" />}
+            <button
+              onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
+              aria-label={t.views[v]}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
+                isActive
+                  ? isNotes
+                    ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 shadow-sm'
+                    : 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-400 shadow-sm'
+                  : isNotes
+                    ? 'text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              )}
+            >
+              <Icon size={13} />
+              <span className="hidden md:inline">{t.views[v]}</span>
+            </button>
+          </Fragment>
         )
       })}
     </div>
@@ -317,15 +329,30 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
 
       {/* Mobile view tabs */}
       <div className="sm:hidden flex items-center gap-2 mb-2">
-        <div className="flex gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 w-fit">
+        <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 w-fit">
           {views.map(v => {
             const Icon = VIEW_ICONS[v]
+            const isNotes = v === 'notes'
+            const isActive = state.viewMode === v
             return (
-              <button key={v} onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
-                className={cn('flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors',
-                  state.viewMode === v ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400')}>
-                <Icon size={12} />
-              </button>
+              <Fragment key={v}>
+                {isNotes && <span className="w-px h-4 bg-slate-300 dark:bg-slate-600 self-center mx-0.5 shrink-0" />}
+                <button
+                  onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
+                  className={cn(
+                    'flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors',
+                    isActive
+                      ? isNotes
+                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 shadow-sm'
+                        : 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-400 shadow-sm'
+                      : isNotes
+                        ? 'text-amber-600 dark:text-amber-500'
+                        : 'text-slate-500 dark:text-slate-400'
+                  )}
+                >
+                  <Icon size={12} />
+                </button>
+              </Fragment>
             )
           })}
         </div>

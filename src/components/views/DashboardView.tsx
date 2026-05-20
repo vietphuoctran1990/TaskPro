@@ -1,18 +1,19 @@
 import { memo, useMemo } from 'react'
-import { AlertTriangle, Calendar, CheckCircle2, Clock, TrendingUp, BarChart3 } from 'lucide-react'
+import { AlertTriangle, Calendar, CheckCircle2, Clock, FileText, StickyNote, TrendingUp, BarChart3 } from 'lucide-react'
 import { cn, getDeadline, getSLAStatus, getTimeRemaining } from '../../lib/utils'
 import { localISO, todayLocalISO } from '../../lib/dateLocal'
 import SLABadge from '../sla/SLABadge'
 import { PriorityBadge } from '../ui/Badge'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
-import type { Task } from '../../types'
+import type { Note, Task } from '../../types'
 import type { Translations } from '../../i18n/types'
 import Button from '../ui/Button'
 
 interface DashboardViewProps {
   onViewTask: (task: Task) => void
   onAddTask: () => void
+  onViewNote?: (note: Note) => void
 }
 
 function DonutChart({ pct, color, darkMode }: { pct: number; color: string; darkMode?: boolean }) {
@@ -56,14 +57,14 @@ function StatCard({
   )
 }
 
-function WeeklyTrend({ tasks, t }: { tasks: Task[]; language?: string; t: Translations }) {
+function WeeklyTrend({ tasks, finalStatusIds, t }: { tasks: Task[]; finalStatusIds: ReadonlySet<string>; language?: string; t: Translations }) {
   const weeks = Array.from({ length: 4 }, (_, i) => {
     const weekStart = new Date()
     weekStart.setDate(weekStart.getDate() - weekStart.getDay() - (3 - i) * 7)
     const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000)
     const startStr = localISO(weekStart)
     const endStr   = localISO(weekEnd)
-    const done  = tasks.filter(t => t.status === 'done' && t.updatedAt.slice(0, 10) >= startStr && t.updatedAt.slice(0, 10) <= endStr).length
+    const done  = tasks.filter(t => finalStatusIds.has(t.status) && t.updatedAt.slice(0, 10) >= startStr && t.updatedAt.slice(0, 10) <= endStr).length
     const total = tasks.filter(t => t.createdAt.slice(0, 10) >= startStr && t.createdAt.slice(0, 10) <= endStr).length
     const label = t.dashboard.week(i + 1)
     const isCurrent = i === 3
@@ -100,12 +101,12 @@ const PRIORITY_META = [
   { key: 'low',    label: 'Low',    color: '#94a3b8' },
 ] as const
 
-function PriorityBreakdown({ tasks }: { tasks: Task[] }) {
+function PriorityBreakdown({ tasks, finalStatusIds }: { tasks: Task[]; finalStatusIds: ReadonlySet<string> }) {
   return (
     <div className="space-y-3">
       {PRIORITY_META.map(({ key, label, color }) => {
         const all  = tasks.filter(t => t.priority === key)
-        const done = all.filter(t => t.status === 'done').length
+        const done = all.filter(t => finalStatusIds.has(t.status)).length
         const pct  = all.length ? Math.round((done / all.length) * 100) : 0
         return (
           <div key={key}>
@@ -129,8 +130,8 @@ function PriorityBreakdown({ tasks }: { tasks: Task[] }) {
   )
 }
 
-const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: DashboardViewProps) {
-  const { state, filteredTasks } = useApp()
+const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onViewNote }: DashboardViewProps) {
+  const { state, filteredTasks, finalStatusIds } = useApp()
   const t = useT()
 
   const today = todayLocalISO()
@@ -138,21 +139,35 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
   const stats = useMemo(() => {
     const total      = filteredTasks.length
     const inProgress = filteredTasks.filter(t => t.status === 'in_progress').length
-    const doneTotal  = filteredTasks.filter(t => t.status === 'done').length
-    const doneToday  = filteredTasks.filter(t => t.status === 'done' && t.updatedAt.slice(0, 10) === today).length
-    const breached   = filteredTasks.filter(t => getSLAStatus(t) === 'breached').length
+    const doneTotal  = filteredTasks.filter(t => finalStatusIds.has(t.status)).length
+    const doneToday  = filteredTasks.filter(t => finalStatusIds.has(t.status) && t.updatedAt.slice(0, 10) === today).length
+    const breached   = filteredTasks.filter(t => getSLAStatus(t, finalStatusIds) === 'breached').length
     return { total, inProgress, doneTotal, doneToday, breached }
-  }, [filteredTasks, today])
+  }, [filteredTasks, finalStatusIds, today])
 
   const slaHealth = useMemo(() => {
-    const nonDone = filteredTasks.filter(t => t.status !== 'done')
+    const nonDone = filteredTasks.filter(t => !finalStatusIds.has(t.status))
     if (!nonDone.length) return { pct: 100, onTrack: 0, atRisk: 0, critical: 0, breached: 0 }
-    const onTrack  = nonDone.filter(t => getSLAStatus(t) === 'on_track').length
-    const atRisk   = nonDone.filter(t => getSLAStatus(t) === 'at_risk').length
-    const critical = nonDone.filter(t => getSLAStatus(t) === 'critical').length
-    const breached = nonDone.filter(t => getSLAStatus(t) === 'breached').length
+    const onTrack  = nonDone.filter(t => getSLAStatus(t, finalStatusIds) === 'on_track').length
+    const atRisk   = nonDone.filter(t => getSLAStatus(t, finalStatusIds) === 'at_risk').length
+    const critical = nonDone.filter(t => getSLAStatus(t, finalStatusIds) === 'critical').length
+    const breached = nonDone.filter(t => getSLAStatus(t, finalStatusIds) === 'breached').length
     return { pct: Math.round((onTrack / nonDone.length) * 100), onTrack, atRisk, critical, breached }
-  }, [filteredTasks])
+  }, [filteredTasks, finalStatusIds])
+
+  const noteStats = useMemo(() => {
+    const total   = state.notes.length
+    const todayN  = state.notes.filter(n => n.updatedAt.slice(0, 10) === today).length
+    const folders = state.noteFolders.length
+    return { total, todayN, folders }
+  }, [state.notes, state.noteFolders, today])
+
+  const recentNotes = useMemo(() =>
+    [...state.notes]
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, 4),
+    [state.notes]
+  )
 
   const weekData = useMemo(() => {
     const locale = state.language === 'vi' ? 'vi-VN' : 'en-US'
@@ -160,32 +175,32 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
       const d = new Date()
       d.setDate(d.getDate() - (6 - i))
       const dayStr = localISO(d)
-      const count  = filteredTasks.filter(t => t.status === 'done' && t.updatedAt.slice(0, 10) === dayStr).length
+      const count  = filteredTasks.filter(t => finalStatusIds.has(t.status) && t.updatedAt.slice(0, 10) === dayStr).length
       const label  = d.toLocaleDateString(locale, { weekday: 'short' })
       const isToday = dayStr === today
       return { label, count, isToday }
     })
-  }, [filteredTasks, state.language, today])
+  }, [filteredTasks, finalStatusIds, state.language, today])
   const maxWeek = Math.max(...weekData.map(d => d.count), 1)
 
   const upcoming = useMemo(() =>
     filteredTasks
-      .filter(t => t.status !== 'done' && getDeadline(t))
+      .filter(t => !finalStatusIds.has(t.status) && getDeadline(t))
       .sort((a, b) => getDeadline(a)!.getTime() - getDeadline(b)!.getTime())
       .slice(0, 6),
-    [filteredTasks]
+    [filteredTasks, finalStatusIds]
   )
 
   const projectStats = useMemo(() =>
     state.projects
       .map(p => {
         const tasks = filteredTasks.filter(t => t.projectId === p.id)
-        const done  = tasks.filter(t => t.status === 'done').length
+        const done  = tasks.filter(t => finalStatusIds.has(t.status)).length
         return { project: p, total: tasks.length, done }
       })
       .filter(p => p.total > 0)
       .sort((a, b) => b.total - a.total),
-    [state.projects, filteredTasks]
+    [state.projects, filteredTasks, finalStatusIds]
   )
 
   const donutColor =
@@ -222,6 +237,65 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
           iconBg="bg-gradient-to-br from-red-500 to-orange-500"
           icon={<AlertTriangle size={20} />}
         />
+      </div>
+
+      {/* Notes overview */}
+      <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/50 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-white shrink-0">
+              <StickyNote size={15} />
+            </div>
+            <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300">{t.dashboard.notesSection}</h3>
+          </div>
+          {recentNotes.length > 0 && (
+            <span className="text-xs text-amber-600 dark:text-amber-500 font-medium">{t.dashboard.recentNotes}</span>
+          )}
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* 3 mini-stats */}
+          <div className="grid grid-cols-3 gap-3 sm:w-56 shrink-0">
+            {[
+              { label: t.dashboard.totalNotes,   value: noteStats.total   },
+              { label: t.dashboard.notesToday,   value: noteStats.todayN  },
+              { label: t.dashboard.notesFolders, value: noteStats.folders },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-white/70 dark:bg-slate-800/50 rounded-xl p-2.5 text-center">
+                <p className="text-xl font-bold text-amber-700 dark:text-amber-300 leading-none">{value}</p>
+                <p className="text-[10px] text-amber-600/70 dark:text-amber-500 mt-1 leading-tight">{label}</p>
+              </div>
+            ))}
+          </div>
+          {/* Recent notes list */}
+          {recentNotes.length > 0 ? (
+            <div className="flex-1 min-w-0 space-y-1.5">
+              {recentNotes.map(note => (
+                <button
+                  key={note.id}
+                  onClick={() => onViewNote?.(note)}
+                  className={cn(
+                    'w-full flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/70 dark:bg-slate-800/50 text-left transition-colors',
+                    onViewNote ? 'hover:bg-white dark:hover:bg-slate-700/80 cursor-pointer' : 'cursor-default'
+                  )}
+                >
+                  <FileText size={12} className="text-amber-500 shrink-0" />
+                  <span className="flex-1 text-xs font-medium text-amber-800 dark:text-amber-300 truncate">
+                    {note.title || t.dashboard.untitledNote}
+                  </span>
+                  <span className="text-[10px] text-amber-500/70 dark:text-amber-600 shrink-0">
+                    {note.updatedAt.slice(5, 10).replace('-', '/')}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center py-3">
+              <p className="text-xs text-amber-500/70 dark:text-amber-600">
+                {state.language === 'vi' ? 'Chưa có ghi chú nào' : 'No notes yet'}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Weekly activity + SLA health */}
@@ -306,7 +380,7 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
                   >
                     <div className={cn(
                       'mt-1 w-2 h-2 rounded-full shrink-0',
-                      overdue ? 'bg-red-500' : getSLAStatus(task) === 'critical' ? 'bg-orange-500' : 'bg-amber-400'
+                      overdue ? 'bg-red-500' : getSLAStatus(task, finalStatusIds) === 'critical' ? 'bg-orange-500' : 'bg-amber-400'
                     )} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{task.title}</p>
@@ -363,12 +437,12 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask }: Das
         {/* 4-week trend */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">{t.dashboard.monthlyTrend}</h3>
-          <WeeklyTrend tasks={filteredTasks} language={state.language} t={t} />
+          <WeeklyTrend tasks={filteredTasks} finalStatusIds={finalStatusIds} language={state.language} t={t} />
         </div>
         {/* Priority breakdown */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">{t.dashboard.byPriority}</h3>
-          <PriorityBreakdown tasks={filteredTasks} />
+          <PriorityBreakdown tasks={filteredTasks} finalStatusIds={finalStatusIds} />
         </div>
       </div>
     </div>
