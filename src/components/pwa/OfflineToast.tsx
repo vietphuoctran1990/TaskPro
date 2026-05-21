@@ -29,7 +29,7 @@ export default function OfflineToast({ isOnline }: OfflineToastProps) {
   if (!visible && !showReconnected) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed bottom-safe right-4 z-50 animate-in slide-in-from-bottom-4 duration-300">
       <div
         className={cn(
           'flex items-center gap-2.5 px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium text-white',

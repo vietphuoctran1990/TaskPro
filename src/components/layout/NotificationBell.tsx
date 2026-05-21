@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Bell, BellOff, CheckCircle2, X, Send } from 'lucide-react'
-import { cn, getDeadline, getTimeRemaining } from '../../lib/utils'
+import { Bell, BellOff, CheckCircle2, X, Send, Smartphone } from 'lucide-react'
+import { cn, getDeadline, getTimeRemaining, isIOSDevice, isInstalledPWA } from '../../lib/utils'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
@@ -23,6 +23,8 @@ export default function NotificationBell() {
     const minsLeft = (deadline.getTime() - Date.now()) / 60_000
     return minsLeft <= 60
   }).length
+
+  const isIOSNonStandalone = isIOSDevice() && !isInstalledPWA()
 
   const handleEnable = useCallback(async () => {
     await requestPermission()
@@ -169,7 +171,15 @@ export default function NotificationBell() {
             {/* Permission banner */}
             {permission !== 'granted' && (
               <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
-                {permission === 'denied' ? (
+                {isIOSNonStandalone ? (
+                  <div className="flex items-start gap-2">
+                    <Smartphone size={14} className="text-indigo-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{t.notifications.iosInstall}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t.notifications.iosInstallDesc}</p>
+                    </div>
+                  </div>
+                ) : permission === 'denied' ? (
                   <p className="text-xs text-slate-600 dark:text-slate-400">{t.notifications.denied}</p>
                 ) : (
                   <div className="flex items-center justify-between gap-2">

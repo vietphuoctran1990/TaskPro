@@ -7,6 +7,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** True when running on iPhone/iPad (including iPad with desktop UA) */
+export function isIOSDevice(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+/** True when the app is installed to home screen and running in standalone mode */
+export function isInstalledPWA(): boolean {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as { standalone?: boolean }).standalone === true
+}
+
 export function generateId(): string {
   return Math.random().toString(36).slice(2, 11)
 }

@@ -114,6 +114,7 @@ export interface Translations {
     markRead: string; markAllRead: string
     permissionGranted: string; upcomingCount: (n: number) => string
     notifyBefore: string; min15: string; min30: string; hour1: string
+    iosInstall: string; iosInstallDesc: string
   }
   pwa: {
     installTitle: string; installDesc: string; install: string; installing: string

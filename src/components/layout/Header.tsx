@@ -459,7 +459,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
               </select>
             </div>
             {/* Sheet footer actions */}
-            <div className="flex gap-2 px-4 pb-6 pt-2">
+            <div className="flex gap-2 px-4 pt-2" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}>
               <Button variant="ghost" size="sm" className="flex-1 text-red-500 hover:bg-red-50 justify-center"
                 onClick={() => { clearAllFilters(); setFilterSheetOpen(false) }}>
                 {t.header.clear}

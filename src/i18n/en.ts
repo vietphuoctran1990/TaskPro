@@ -137,6 +137,8 @@ export const en: Translations = {
     permissionGranted: 'Notifications enabled!',
     upcomingCount: (n) => `${n} upcoming deadline${n !== 1 ? 's' : ''}`,
     notifyBefore: 'Remind before', min15: '15 min', min30: '30 min', hour1: '1 hour',
+    iosInstall: 'Install app to use notifications',
+    iosInstallDesc: 'Tap Share → "Add to Home Screen", then open from there.',
   },
   pwa: {
     installTitle: 'Install TaskPro', installDesc: 'Add to your home screen for the best experience.',

@@ -139,6 +139,8 @@ export const vi: Translations = {
     permissionGranted: 'Đã bật thông báo!',
     upcomingCount: (n) => `${n} deadline sắp đến`,
     notifyBefore: 'Nhắc trước', min15: '15 phút', min30: '30 phút', hour1: '1 giờ',
+    iosInstall: 'Cài app để dùng thông báo',
+    iosInstallDesc: 'Nhấn Chia sẻ → "Thêm vào Màn hình chính", rồi mở từ đó.',
   },
   pwa: {
     installTitle: 'Cài đặt TaskPro', installDesc: 'Thêm vào màn hình chính để trải nghiệm tốt nhất.',

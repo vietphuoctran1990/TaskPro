@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import type { Task } from '../types'
 import type { Translations } from '../i18n/types'
-import { getDeadline } from '../lib/utils'
+import { getDeadline, isIOSDevice, isInstalledPWA } from '../lib/utils'
 
 export type NotifAlert = {
   task: Task
@@ -54,6 +54,11 @@ function getDeviceId(): string {
 async function syncSubscriptionToServer(reg: ServiceWorkerRegistration, userId?: string) {
   if (!VAPID_PUBLIC_KEY) {
     console.warn('[push] VITE_VAPID_PUBLIC_KEY not set — push disabled')
+    return
+  }
+  // iOS Safari only supports Web Push in standalone (installed PWA) mode
+  if (isIOSDevice() && !isInstalledPWA()) {
+    console.warn('[push] iOS Safari without home screen install — push not supported')
     return
   }
   try {
@@ -250,12 +255,14 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
   // ── Re-subscribe to Web Push when permission changes ──────────────────────
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
     if (!('Notification' in window)) return 'denied'
+    // On iOS without standalone mode, push won't work regardless of permission
+    if (isIOSDevice() && !isInstalledPWA()) return 'denied'
     const perm = await Notification.requestPermission()
     if (perm === 'granted' && swRegRef.current) {
       await syncSubscriptionToServer(swRegRef.current, userId)
     }
     return perm
-  }, [])
+  }, [userId])
 
   // ── Upcoming alerts for dropdown ──────────────────────────────────────────
   const getUpcomingAlerts = useCallback((): NotifAlert[] => {
