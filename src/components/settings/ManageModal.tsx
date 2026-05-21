@@ -45,6 +45,41 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
   )
 }
 
+// ── Shared edit/delete action buttons ────────────────────────────────────────
+function RowActions({
+  onEdit, onDelete, confirm, onConfirm, onCancelConfirm, confirmLabel, canDelete = true,
+}: {
+  onEdit: () => void; onDelete: () => void; confirm: boolean
+  onConfirm: () => void; onCancelConfirm: () => void
+  confirmLabel: string; canDelete?: boolean
+}) {
+  return (
+    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+      <button onClick={onEdit}
+        className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+        <Pencil size={13} />
+      </button>
+      {canDelete && (confirm ? (
+        <div className="flex items-center gap-1">
+          <button onClick={onConfirm}
+            className="p-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-xs font-medium px-2">
+            {confirmLabel}
+          </button>
+          <button onClick={onCancelConfirm}
+            className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <X size={13} />
+          </button>
+        </div>
+      ) : (
+        <button onClick={onDelete}
+          className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+          <Trash2 size={13} />
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ── Project row ───────────────────────────────────────────────────────────────
 function ProjectRow({ project, taskCount }: { project: Project; taskCount: number }) {
   const { dispatch } = useApp()
@@ -97,29 +132,14 @@ function ProjectRow({ project, taskCount }: { project: Project; taskCount: numbe
         {project.description && <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{project.description}</p>}
       </div>
       <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
-      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-        <button onClick={() => setEditing(true)}
-          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-          <Pencil size={13} />
-        </button>
-        {confirm ? (
-          <div className="flex items-center gap-1">
-            <button onClick={() => dispatch({ type: 'DELETE_PROJECT', payload: project.id })}
-              className="p-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-xs font-medium px-2">
-              {t.manage.confirmDelete}
-            </button>
-            <button onClick={() => setConfirm(false)}
-              className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-              <X size={13} />
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => setConfirm(true)}
-            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-            <Trash2 size={13} />
-          </button>
-        )}
-      </div>
+      <RowActions
+        onEdit={() => setEditing(true)}
+        onDelete={() => setConfirm(true)}
+        confirm={confirm}
+        onConfirm={() => dispatch({ type: 'DELETE_PROJECT', payload: project.id })}
+        onCancelConfirm={() => setConfirm(false)}
+        confirmLabel={t.manage.confirmDelete}
+      />
     </div>
   )
 }
@@ -169,29 +189,14 @@ function LabelRow({ label, taskCount }: { label: Label; taskCount: number }) {
       </span>
       <span className="flex-1" />
       <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
-      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-        <button onClick={() => setEditing(true)}
-          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-          <Pencil size={13} />
-        </button>
-        {confirm ? (
-          <div className="flex items-center gap-1">
-            <button onClick={() => dispatch({ type: 'DELETE_LABEL', payload: label.id })}
-              className="p-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-xs font-medium px-2">
-              {t.manage.confirmDelete}
-            </button>
-            <button onClick={() => setConfirm(false)}
-              className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-              <X size={13} />
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => setConfirm(true)}
-            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-            <Trash2 size={13} />
-          </button>
-        )}
-      </div>
+      <RowActions
+        onEdit={() => setEditing(true)}
+        onDelete={() => setConfirm(true)}
+        confirm={confirm}
+        onConfirm={() => dispatch({ type: 'DELETE_LABEL', payload: label.id })}
+        onCancelConfirm={() => setConfirm(false)}
+        confirmLabel={t.manage.confirmDelete}
+      />
     </div>
   )
 }
@@ -361,18 +366,15 @@ function StatusRow({ def, otherStatuses }: { def: StatusDef; otherStatuses: Stat
         </div>
       </div>
       <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
-      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-        <button onClick={() => setEditing(true)}
-          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-          <Pencil size={13} />
-        </button>
-        {!def.isBuiltin && (
-          <button onClick={() => { setMoveTo(otherStatuses[0]?.id ?? ''); setConfirm(true) }}
-            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-            <Trash2 size={13} />
-          </button>
-        )}
-      </div>
+      <RowActions
+        onEdit={() => setEditing(true)}
+        onDelete={() => { setMoveTo(otherStatuses[0]?.id ?? ''); setConfirm(true) }}
+        confirm={false}
+        onConfirm={() => {}}
+        onCancelConfirm={() => {}}
+        confirmLabel=""
+        canDelete={!def.isBuiltin}
+      />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Bell, BellOff, CheckCircle2, X, Send } from 'lucide-react'
 import { cn, getDeadline, getTimeRemaining } from '../../lib/utils'
 import Button from '../ui/Button'
@@ -29,6 +29,9 @@ export default function NotificationBell() {
   }, [requestPermission])
 
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle')
+  const testTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(testTimerRef.current), [])
+
   const handleTestPush = useCallback(async () => {
     setTestStatus('sending')
     try {
@@ -52,7 +55,8 @@ export default function NotificationBell() {
       alert('Lỗi kết nối: ' + String(err))
       setTestStatus('fail')
     }
-    setTimeout(() => setTestStatus('idle'), 4000)
+    clearTimeout(testTimerRef.current)
+    testTimerRef.current = setTimeout(() => setTestStatus('idle'), 4000)
   }, [])
 
   const handleCheckConfig = useCallback(async () => {

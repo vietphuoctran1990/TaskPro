@@ -46,23 +46,32 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     finalStatusIds,
   })
 
+  // Prune dismissed IDs that no longer appear in alerts (completed or deadline passed)
+  useEffect(() => {
+    setDismissedIds(prev => {
+      if (prev.size === 0) return prev
+      const currentIds = new Set(rawGetAlerts().map(a => a.task.id))
+      const pruned = new Set([...prev].filter(id => currentIds.has(id)))
+      return pruned.size === prev.size ? prev : pruned
+    })
+  }, [rawGetAlerts])
+
   const requestPermission = useCallback(async () => {
     const perm = await rawRequest()
     setPermission(perm)
     return perm
   }, [rawRequest])
 
-  const getUpcomingAlerts = useCallback((): NotifAlert[] => {
-    return rawGetAlerts().filter(a => !dismissedIds.has(a.task.id))
-  }, [rawGetAlerts, dismissedIds])
+  const getUpcomingAlerts = useCallback((): NotifAlert[] =>
+    rawGetAlerts().filter(a => !dismissedIds.has(a.task.id)),
+  [rawGetAlerts, dismissedIds])
 
   const dismissAlert = useCallback((taskId: string) => {
     setDismissedIds(prev => new Set([...prev, taskId]))
   }, [])
 
   const dismissAllAlerts = useCallback(() => {
-    const all = rawGetAlerts().map(a => a.task.id)
-    setDismissedIds(new Set(all))
+    setDismissedIds(new Set(rawGetAlerts().map(a => a.task.id)))
   }, [rawGetAlerts])
 
   return (
