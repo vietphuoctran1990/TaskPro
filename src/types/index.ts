@@ -87,6 +87,15 @@ export interface Note {
 
 export type DateFilter = 'all' | 'today' | 'tomorrow' | 'upcoming'
 
+export interface DeletedIds {
+  tasks:       Record<string, number>
+  projects:    Record<string, number>
+  labels:      Record<string, number>
+  notes:       Record<string, number>
+  noteFolders: Record<string, number>
+  statuses:    Record<string, number>
+}
+
 export interface AppState {
   tasks: Task[]
   projects: Project[]
@@ -109,6 +118,7 @@ export interface AppState {
   density: Density
   language: 'en' | 'vi'
   notifBefore: number[]
+  _deletedIds?: DeletedIds
 }
 
 export type SLAStatus = 'on_track' | 'at_risk' | 'critical' | 'breached' | 'completed' | 'none'

@@ -8,7 +8,7 @@ import {
 } from 'react'
 import type {
   AppState, Task, Project, Label, Note, NoteFolder, Priority, Status, ViewMode,
-  SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode, StatusDef,
+  SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode, StatusDef, DeletedIds,
 } from '../types'
 import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS, DEFAULT_STATUSES } from '../data/defaults'
 import {
@@ -58,6 +58,22 @@ type Action =
   | { type: 'SET_ACTIVE_NOTE_FOLDER'; payload: string | null }
 
 const STORAGE_KEY = 'taskpro_v2_state'
+const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+
+function tombstone(ids: AppState['_deletedIds'], key: keyof DeletedIds, id: string): DeletedIds {
+  const now = Date.now()
+  const base: DeletedIds = { tasks: {}, projects: {}, labels: {}, notes: {}, noteFolders: {}, statuses: {}, ...(ids ?? {}) }
+  return { ...base, [key]: { ...base[key], [id]: now } }
+}
+
+function pruneTombstones(ids: AppState['_deletedIds']): AppState['_deletedIds'] {
+  if (!ids) return ids
+  const cutoff = Date.now() - TOMBSTONE_TTL_MS
+  const prune = (rec: Record<string, number>) =>
+    Object.fromEntries(Object.entries(rec).filter(([, ts]) => ts > cutoff))
+  return { tasks: prune(ids.tasks), projects: prune(ids.projects), labels: prune(ids.labels),
+           notes: prune(ids.notes), noteFolders: prune(ids.noteFolders), statuses: prune(ids.statuses) }
+}
 
 function systemPrefersDark(): boolean {
   if (typeof window === 'undefined' || !window.matchMedia) return false
@@ -112,6 +128,7 @@ function getInitialState(): AppState {
         density:      parsed.density      ?? 'comfortable',
         language:     parsed.language     ?? 'vi',
         notifBefore:  parsed.notifBefore  ?? [15, 30, 60],
+        _deletedIds:  pruneTombstones(parsed._deletedIds),
       }
     }
   } catch {}
@@ -156,7 +173,7 @@ function reducer(state: AppState, action: Action): AppState {
         ),
       }
     case 'DELETE_TASK':
-      return { ...state, tasks: state.tasks.filter(t => t.id !== action.payload) }
+      return { ...state, tasks: state.tasks.filter(t => t.id !== action.payload), _deletedIds: tombstone(state._deletedIds, 'tasks', action.payload) }
     case 'MOVE_TASK': {
       const task = state.tasks.find(t => t.id === action.payload.id)
       const targetDef = state.statuses.find(s => s.id === action.payload.status)
@@ -191,6 +208,7 @@ function reducer(state: AppState, action: Action): AppState {
         projects: state.projects.filter(p => p.id !== action.payload),
         tasks: state.tasks.map(t => t.projectId === action.payload ? { ...t, projectId: '' } : t),
         activeProjectId: state.activeProjectId === action.payload ? null : state.activeProjectId,
+        _deletedIds: tombstone(state._deletedIds, 'projects', action.payload),
       }
     case 'ADD_LABEL':
       return { ...state, labels: [...state.labels, { ...action.payload, id: action.payload.id ?? generateId() }] }
@@ -201,6 +219,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         labels: state.labels.filter(l => l.id !== action.payload),
         tasks: state.tasks.map(t => ({ ...t, labels: t.labels.filter(lid => lid !== action.payload) })),
+        _deletedIds: tombstone(state._deletedIds, 'labels', action.payload),
       }
     case 'SET_ACTIVE_PROJECT':  return { ...state, activeProjectId: action.payload }
     case 'SET_SEARCH':          return { ...state, searchQuery: action.payload }
@@ -241,6 +260,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         statuses: state.statuses.filter(s => s.id !== id),
         tasks:    state.tasks.map(t => t.status === id ? { ...t, status: moveTo, updatedAt: now } : t),
+        _deletedIds: tombstone(state._deletedIds, 'statuses', id),
       }
     }
     case 'REORDER_STATUSES': {
@@ -261,7 +281,7 @@ function reducer(state: AppState, action: Action): AppState {
         notes: state.notes.map(n => n.id === action.payload.id ? { ...n, ...action.payload, updatedAt: now } : n),
       }
     case 'DELETE_NOTE':
-      return { ...state, notes: state.notes.filter(n => n.id !== action.payload) }
+      return { ...state, notes: state.notes.filter(n => n.id !== action.payload), _deletedIds: tombstone(state._deletedIds, 'notes', action.payload) }
     case 'ADD_NOTE_FOLDER':
       return { ...state, noteFolders: [...state.noteFolders, { ...action.payload, id: generateId() }] }
     case 'UPDATE_NOTE_FOLDER':
@@ -272,6 +292,7 @@ function reducer(state: AppState, action: Action): AppState {
         noteFolders: state.noteFolders.filter(f => f.id !== action.payload),
         notes: state.notes.map(n => n.folderId === action.payload ? { ...n, folderId: '' } : n),
         activeNoteFolderId: state.activeNoteFolderId === action.payload ? null : state.activeNoteFolderId,
+        _deletedIds: tombstone(state._deletedIds, 'noteFolders', action.payload),
       }
     case 'SET_ACTIVE_NOTE_FOLDER':
       return { ...state, activeNoteFolderId: action.payload }

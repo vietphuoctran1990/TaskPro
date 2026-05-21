@@ -4,7 +4,7 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useApp } from './AppContext'
-import type { AppState } from '../types'
+import type { AppState, DeletedIds } from '../types'
 
 interface AuthContextValue {
   user:       User | null
@@ -21,11 +21,25 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 const POLL_MS = 30_000
 
-// Merge two arrays by id; for items with updatedAt, prefer the newer one
-function mergeByDate<T extends { id: string }>(local: T[], remote: T[], dateKey = 'updatedAt'): T[] {
+// Merge tombstones from two sources; union of both
+function mergeTombstones(a?: Partial<DeletedIds>, b?: Partial<DeletedIds>): DeletedIds {
+  const merge = (x?: Record<string, number>, y?: Record<string, number>) => ({ ...(x ?? {}), ...(y ?? {}) })
+  return {
+    tasks:       merge(a?.tasks,       b?.tasks),
+    projects:    merge(a?.projects,    b?.projects),
+    labels:      merge(a?.labels,      b?.labels),
+    notes:       merge(a?.notes,       b?.notes),
+    noteFolders: merge(a?.noteFolders, b?.noteFolders),
+    statuses:    merge(a?.statuses,    b?.statuses),
+  }
+}
+
+// Merge two arrays by id; prefer newer updatedAt. Skip items present in tombstones.
+function mergeByDate<T extends { id: string }>(local: T[], remote: T[], deleted: Record<string, number> = {}, dateKey = 'updatedAt'): T[] {
   const map = new Map<string, T>()
   for (const item of local) map.set(item.id, item)
   for (const item of remote) {
+    if (deleted[item.id]) continue
     const existing = map.get(item.id)
     if (!existing) {
       map.set(item.id, item)
@@ -38,10 +52,10 @@ function mergeByDate<T extends { id: string }>(local: T[], remote: T[], dateKey 
   return Array.from(map.values())
 }
 
-// Add cloud items not already present locally (for types without updatedAt)
-function addOnly<T extends { id: string }>(local: T[], remote: T[]): T[] {
+// Add cloud items not already present locally. Skip items present in tombstones.
+function addOnly<T extends { id: string }>(local: T[], remote: T[], deleted: Record<string, number> = {}): T[] {
   const ids = new Set(local.map(i => i.id))
-  return [...local, ...remote.filter(i => !ids.has(i.id))]
+  return [...local, ...remote.filter(i => !ids.has(i.id) && !deleted[i.id])]
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -67,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store everything nested inside the `data` column (matches the SQL schema)
       const { error } = await supabase.from('user_state').upsert({
         user_id:    u.id,
-        data:       { tasks: s.tasks, projects: s.projects, labels: s.labels, notes: s.notes, noteFolders: s.noteFolders, statuses: s.statuses },
+        data:       { tasks: s.tasks, projects: s.projects, labels: s.labels, notes: s.notes, noteFolders: s.noteFolders, statuses: s.statuses, _deletedIds: s._deletedIds },
         updated_at: new Date().toISOString(),
       })
       if (!error) {
@@ -101,25 +115,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!force && cloudMs <= localMs) return false // nothing newer
 
-      const { tasks = [], projects = [], labels = [], notes = [], noteFolders = [], statuses = [] } = data.data as {
+      const { tasks = [], projects = [], labels = [], notes = [], noteFolders = [], statuses = [], _deletedIds: cloudDeleted } = data.data as {
         tasks?: AppState['tasks'], projects?: AppState['projects'], labels?: AppState['labels'],
-        notes?: AppState['notes'], noteFolders?: AppState['noteFolders'], statuses?: AppState['statuses']
+        notes?: AppState['notes'], noteFolders?: AppState['noteFolders'], statuses?: AppState['statuses'],
+        _deletedIds?: Partial<DeletedIds>
       }
 
-      // Smart merge: prefer newer updatedAt for tasks/notes; add-only for others
-      // This prevents one device from wiping another device's data
-      const cur = stateRef.current
+      const cur     = stateRef.current
+      const deleted = mergeTombstones(cur._deletedIds, cloudDeleted)
+
       dispatch({
         type: 'IMPORT_STATE',
         payload: {
           data: {
             ...cur,
-            tasks:       mergeByDate(cur.tasks, tasks),
-            projects:    addOnly(cur.projects, projects),
-            labels:      addOnly(cur.labels, labels),
-            notes:       mergeByDate(cur.notes, notes),
-            noteFolders: addOnly(cur.noteFolders, noteFolders),
-            statuses:    addOnly(cur.statuses, statuses),
+            tasks:       mergeByDate(cur.tasks,       tasks,       deleted.tasks),
+            projects:    addOnly(cur.projects,         projects,    deleted.projects),
+            labels:      addOnly(cur.labels,           labels,      deleted.labels),
+            notes:       mergeByDate(cur.notes,        notes,       deleted.notes),
+            noteFolders: addOnly(cur.noteFolders,      noteFolders, deleted.noteFolders),
+            statuses:    addOnly(cur.statuses,         statuses,    deleted.statuses),
+            _deletedIds: deleted,
           },
           mode: 'replace',
         },
