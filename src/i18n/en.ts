@@ -133,6 +133,7 @@ export const en: Translations = {
     dueIn60: 'Due in ~1 hour', dueIn30: 'Due in ~30 minutes', dueIn15: 'Due in ~15 minutes',
     overdue: 'Overdue', dueSoon: 'Task due soon',
     notifTitle: (label) => label, markDone: 'Mark Done', viewTask: 'View task',
+    markRead: 'Mark as read', markAllRead: 'Mark all read',
     permissionGranted: 'Notifications enabled!',
     upcomingCount: (n) => `${n} upcoming deadline${n !== 1 ? 's' : ''}`,
     notifyBefore: 'Remind before', min15: '15 min', min30: '30 min', hour1: '1 hour',

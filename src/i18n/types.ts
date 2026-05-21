@@ -111,6 +111,7 @@ export interface Translations {
     title: string; enable: string; denied: string; noUpcoming: string
     dueIn60: string; dueIn30: string; dueIn15: string; overdue: string; dueSoon: string
     notifTitle: (label: string) => string; markDone: string; viewTask: string
+    markRead: string; markAllRead: string
     permissionGranted: string; upcomingCount: (n: number) => string
     notifyBefore: string; min15: string; min30: string; hour1: string
   }

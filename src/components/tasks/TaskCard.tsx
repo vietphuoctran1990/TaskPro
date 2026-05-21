@@ -136,7 +136,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
             ref={menuBtnRef}
             variant="ghost" size="icon"
             aria-label="More options"
-            className="w-6 h-6 opacity-0 group-hover:opacity-100"
+            className="w-6 h-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
             onClick={handleMenuOpen}
           >
             <MoreHorizontal size={13} />

@@ -97,7 +97,7 @@ function ProjectRow({ project, taskCount }: { project: Project; taskCount: numbe
         {project.description && <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{project.description}</p>}
       </div>
       <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         <button onClick={() => setEditing(true)}
           className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
           <Pencil size={13} />
@@ -169,7 +169,7 @@ function LabelRow({ label, taskCount }: { label: Label; taskCount: number }) {
       </span>
       <span className="flex-1" />
       <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         <button onClick={() => setEditing(true)}
           className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
           <Pencil size={13} />
@@ -361,7 +361,7 @@ function StatusRow({ def, otherStatuses }: { def: StatusDef; otherStatuses: Stat
         </div>
       </div>
       <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{t.manage.taskCount(taskCount)}</span>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         <button onClick={() => setEditing(true)}
           className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
           <Pencil size={13} />

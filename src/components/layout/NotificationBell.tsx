@@ -12,7 +12,7 @@ export default function NotificationBell() {
   const { state, dispatch, finalStatusIds } = useApp()
   const t = useT()
   const [open, setOpen] = useState(false)
-  const { permission, requestPermission, getUpcomingAlerts } = useNotificationsCtx()
+  const { permission, requestPermission, getUpcomingAlerts, dismissAlert, dismissAllAlerts } = useNotificationsCtx()
 
   const alerts = getUpcomingAlerts()
 
@@ -149,7 +149,12 @@ export default function NotificationBell() {
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t.notifications.title}</span>
               <div className="flex items-center gap-1">
                 {alerts.length > 0 && (
-                  <span className="text-xs text-slate-400">{t.notifications.upcomingCount(alerts.length)}</span>
+                  <button
+                    onClick={() => dismissAllAlerts()}
+                    className="text-xs text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                  >
+                    {t.notifications.markAllRead}
+                  </button>
                 )}
                 <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => setOpen(false)}>
                   <X size={12} />
@@ -209,16 +214,25 @@ export default function NotificationBell() {
                           )}
                         </div>
                       </div>
-                      <button
-                        className="shrink-0 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
-                        onClick={() => {
-                          const finalId = state.statuses.find(s => s.isFinal)?.id ?? 'done'
-                          dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalId } })
-                        }}
-                        title={t.notifications.markDone}
-                      >
-                        <CheckCircle2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          className="text-xs text-emerald-600 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
+                          onClick={() => {
+                            const finalId = state.statuses.find(s => s.isFinal)?.id ?? 'done'
+                            dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalId } })
+                          }}
+                          title={t.notifications.markDone}
+                        >
+                          <CheckCircle2 size={14} />
+                        </button>
+                        <button
+                          className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                          onClick={() => dismissAlert(task.id)}
+                          title={t.notifications.markRead}
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
                     </div>
                   )
                 })

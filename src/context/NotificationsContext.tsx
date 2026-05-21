@@ -8,6 +8,8 @@ interface NotificationsCtx {
   permission: NotificationPermission
   requestPermission: () => Promise<NotificationPermission>
   getUpcomingAlerts: () => NotifAlert[]
+  dismissAlert: (taskId: string) => void
+  dismissAllAlerts: () => void
 }
 
 const Ctx = createContext<NotificationsCtx | null>(null)
@@ -20,6 +22,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const [permission, setPermission] = useState<NotificationPermission>(
     'Notification' in window ? Notification.permission : 'denied'
   )
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!('Notification' in window)) return
@@ -33,7 +36,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     dispatch({ type: 'MOVE_TASK', payload: { id: taskId, status: finalStatusId } })
   }, [dispatch, finalStatusId])
 
-  const { requestPermission: rawRequest, getUpcomingAlerts } = useNotifications({
+  const { requestPermission: rawRequest, getUpcomingAlerts: rawGetAlerts } = useNotifications({
     tasks: state.tasks,
     t,
     enabled: permission === 'granted',
@@ -49,8 +52,21 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     return perm
   }, [rawRequest])
 
+  const getUpcomingAlerts = useCallback((): NotifAlert[] => {
+    return rawGetAlerts().filter(a => !dismissedIds.has(a.task.id))
+  }, [rawGetAlerts, dismissedIds])
+
+  const dismissAlert = useCallback((taskId: string) => {
+    setDismissedIds(prev => new Set([...prev, taskId]))
+  }, [])
+
+  const dismissAllAlerts = useCallback(() => {
+    const all = rawGetAlerts().map(a => a.task.id)
+    setDismissedIds(new Set(all))
+  }, [rawGetAlerts])
+
   return (
-    <Ctx.Provider value={{ permission, requestPermission, getUpcomingAlerts }}>
+    <Ctx.Provider value={{ permission, requestPermission, getUpcomingAlerts, dismissAlert, dismissAllAlerts }}>
       {children}
     </Ctx.Provider>
   )

@@ -135,6 +135,7 @@ export const vi: Translations = {
     dueIn60: 'Đến hạn sau ~1 giờ', dueIn30: 'Đến hạn sau ~30 phút', dueIn15: 'Đến hạn sau ~15 phút',
     overdue: 'Đã trễ hạn', dueSoon: 'Công việc sắp đến hạn',
     notifTitle: (label) => label, markDone: 'Đánh dấu xong', viewTask: 'Xem công việc',
+    markRead: 'Đánh dấu đã đọc', markAllRead: 'Đọc tất cả',
     permissionGranted: 'Đã bật thông báo!',
     upcomingCount: (n) => `${n} deadline sắp đến`,
     notifyBefore: 'Nhắc trước', min15: '15 phút', min30: '30 phút', hour1: '1 giờ',
