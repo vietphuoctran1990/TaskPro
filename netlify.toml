@@ -7,8 +7,8 @@
   NPM_FLAGS = "--legacy-peer-deps"
   # VAPID public key (safe to commit — it's public)
   # Must match VAPID_PRIVATE_KEY set in Netlify dashboard → Site settings → Env vars
-  VITE_VAPID_PUBLIC_KEY = "BOrM-NrB2ATzuFf9ZZChGXIUO8XEJHXNVy0qa9ib2Y9J3X7oL8m0OeB6aG6jvk1rHa3g-_jt9FlVRIPoARfMpP4"
-  VAPID_PUBLIC_KEY      = "BOrM-NrB2ATzuFf9ZZChGXIUO8XEJHXNVy0qa9ib2Y9J3X7oL8m0OeB6aG6jvk1rHa3g-_jt9FlVRIPoARfMpP4"
+  VITE_VAPID_PUBLIC_KEY = "BLCYTzUfRwLnnYU3OgbavY22ebjf8TZRFj-D0D1RdcBbtfclNBf7900NemlFZ62DgHaANxEg2tERuPXQXK4A2xU"
+  VAPID_PUBLIC_KEY      = "BLCYTzUfRwLnnYU3OgbavY22ebjf8TZRFj-D0D1RdcBbtfclNBf7900NemlFZ62DgHaANxEg2tERuPXQXK4A2xU"
   VAPID_SUBJECT         = "mailto:admin@taskpro.app"
   VITE_SUPABASE_URL = "https://scixtscuoyhjsnpzvbvm.supabase.co"
   VITE_SUPABASE_ANON_KEY = "sb_publishable_aoAEihnFjLkRISPgC7dI3Q_ULkybnEo"
