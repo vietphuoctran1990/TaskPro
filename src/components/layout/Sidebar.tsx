@@ -71,10 +71,10 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {/* All Tasks */}
         <button
-          onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'all' }); onClose?.() }}
+          onClick={() => { if (state.viewMode === 'notes') dispatch({ type: 'SET_VIEW_MODE', payload: 'kanban' }); dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: 'all' }); onClose?.() }}
           className={cn('relative w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
-            state.activeProjectId === null && state.dateFilter === 'all' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80')}>
-          {state.activeProjectId === null && state.dateFilter === 'all' && <span className="absolute left-0 inset-y-1.5 w-0.5 bg-indigo-500 rounded-r-full" />}
+            state.viewMode !== 'notes' && state.activeProjectId === null && state.dateFilter === 'all' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80')}>
+          {state.viewMode !== 'notes' && state.activeProjectId === null && state.dateFilter === 'all' && <span className="absolute left-0 inset-y-1.5 w-0.5 bg-indigo-500 rounded-r-full" />}
           <LayoutDashboard size={15} />
           <span className="flex-1 text-left">{t.sidebar.allTasks}</span>
           <span className="text-xs opacity-40">{stats.total}</span>
@@ -86,10 +86,10 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
             { key: 'tomorrow' as const, icon: <Sunset size={13} />, label: t.sidebar.tomorrow, count: stats.tomorrow },
             { key: 'upcoming' as const, icon: <Calendar size={13} />, label: t.sidebar.upcoming, count: stats.upcoming },
           ]).map(({ key, icon, label, count }) => {
-            const isActive = state.activeProjectId === null && state.dateFilter === key
+            const isActive = state.viewMode !== 'notes' && state.activeProjectId === null && state.dateFilter === key
             return (
               <button key={key}
-                onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: key }); onClose?.() }}
+                onClick={() => { if (state.viewMode === 'notes') dispatch({ type: 'SET_VIEW_MODE', payload: 'kanban' }); dispatch({ type: 'SET_ACTIVE_PROJECT', payload: null }); dispatch({ type: 'SET_DATE_FILTER', payload: key }); onClose?.() }}
                 className={cn('relative w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-150',
                   isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-700 dark:hover:text-slate-200')}>
                 {isActive && <span className="absolute left-0 inset-y-1 w-0.5 bg-indigo-400 rounded-r-full" />}
@@ -122,9 +122,9 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
             <div className="mt-1 space-y-0.5">
               {state.projects.map(p => (
                 <ProjectItem key={p.id} project={p}
-                  active={state.activeProjectId === p.id}
+                  active={state.viewMode !== 'notes' && state.activeProjectId === p.id}
                   count={state.tasks.filter(tk => tk.projectId === p.id).length}
-                  onClick={() => { dispatch({ type: 'SET_ACTIVE_PROJECT', payload: p.id }); dispatch({ type: 'SET_DATE_FILTER', payload: 'all' }); onClose?.() }}
+                  onClick={() => { if (state.viewMode === 'notes') dispatch({ type: 'SET_VIEW_MODE', payload: 'kanban' }); dispatch({ type: 'SET_ACTIVE_PROJECT', payload: p.id }); dispatch({ type: 'SET_DATE_FILTER', payload: 'all' }); onClose?.() }}
                   onNotes={onNotes ? () => onNotes(p) : undefined} />
               ))}
               {addingProject ? (
