@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, type ReactNode } from 'react'
 import {
   ChevronDown, Check, X, Copy, Share2,
-  Bold, Italic, Minus, ImagePlus, Eye, EyeOff, List,
+  Bold, Italic, Minus, ImagePlus, Eye, Pencil, List,
 } from 'lucide-react'
 import { cn, formatRelativeTime } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
@@ -148,8 +148,8 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
       setTitle(note.title)
       setContent(note.content)
       setFolderId(note.folderId)
-      // Open in preview when the note already contains images (much friendlier than a wall of base64)
-      setPreviewMode(/!\[[^\]]*\]\([^)]+\)/.test(note.content))
+      // Default to preview for any note that has content
+      setPreviewMode(note.content.trim().length > 0)
     } else {
       editingIdRef.current = null
       setTitle('')
@@ -389,52 +389,64 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
         <div className="border-t border-slate-100 dark:border-slate-700 mx-7" />
 
         {/* Formatting toolbar */}
-        <div className="flex items-center justify-between px-4 py-1 border-b border-slate-100 dark:border-slate-700/60 shrink-0">
-          <div className="flex items-center gap-0.5">
-            <ToolbarBtn title="In đậm (Ctrl+B)" onClick={() => insertAtCursor('**', '**', 'in đậm')}>
-              <Bold size={13} />
-            </ToolbarBtn>
-            <ToolbarBtn title="In nghiêng (Ctrl+I)" onClick={() => insertAtCursor('*', '*', 'in nghiêng')}>
-              <Italic size={13} />
-            </ToolbarBtn>
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-600 mx-1" />
-            <ToolbarBtn title="Tiêu đề 1" onClick={() => insertAtCursor('\n# ', '', 'Tiêu đề 1')}>
-              <span className="text-[11px] font-bold leading-none">H1</span>
-            </ToolbarBtn>
-            <ToolbarBtn title="Tiêu đề 2" onClick={() => insertAtCursor('\n## ', '', 'Tiêu đề 2')}>
-              <span className="text-[11px] font-bold leading-none">H2</span>
-            </ToolbarBtn>
-            <ToolbarBtn title="Tiêu đề 3" onClick={() => insertAtCursor('\n### ', '', 'Tiêu đề 3')}>
-              <span className="text-[11px] font-bold leading-none">H3</span>
-            </ToolbarBtn>
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-600 mx-1" />
-            <ToolbarBtn title="Danh sách" onClick={() => insertAtCursor('\n- ', '', 'Mục danh sách')}>
-              <List size={13} />
-            </ToolbarBtn>
-            <ToolbarBtn title="Đường kẻ ngang" onClick={() => insertAtCursor('\n---\n', '')}>
-              <Minus size={13} />
-            </ToolbarBtn>
-          </div>
+        <div className="flex items-center justify-between px-4 py-1 border-b border-slate-100 dark:border-slate-700/60 shrink-0 min-h-[36px]">
+          {previewMode ? (
+            // Preview mode: only show Edit button
+            <div className="flex items-center gap-1.5 w-full justify-end">
+              <button
+                type="button"
+                onMouseDown={e => { e.preventDefault(); setPreviewMode(false) }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm"
+              >
+                <Pencil size={12} />
+                Chỉnh sửa
+              </button>
+            </div>
+          ) : (
+            // Edit mode: full formatting toolbar
+            <>
+              <div className="flex items-center gap-0.5">
+                <ToolbarBtn title="In đậm (Ctrl+B)" onClick={() => insertAtCursor('**', '**', 'in đậm')}>
+                  <Bold size={13} />
+                </ToolbarBtn>
+                <ToolbarBtn title="In nghiêng (Ctrl+I)" onClick={() => insertAtCursor('*', '*', 'in nghiêng')}>
+                  <Italic size={13} />
+                </ToolbarBtn>
+                <div className="w-px h-4 bg-slate-200 dark:bg-slate-600 mx-1" />
+                <ToolbarBtn title="Tiêu đề 1" onClick={() => insertAtCursor('\n# ', '', 'Tiêu đề 1')}>
+                  <span className="text-[11px] font-bold leading-none">H1</span>
+                </ToolbarBtn>
+                <ToolbarBtn title="Tiêu đề 2" onClick={() => insertAtCursor('\n## ', '', 'Tiêu đề 2')}>
+                  <span className="text-[11px] font-bold leading-none">H2</span>
+                </ToolbarBtn>
+                <ToolbarBtn title="Tiêu đề 3" onClick={() => insertAtCursor('\n### ', '', 'Tiêu đề 3')}>
+                  <span className="text-[11px] font-bold leading-none">H3</span>
+                </ToolbarBtn>
+                <div className="w-px h-4 bg-slate-200 dark:bg-slate-600 mx-1" />
+                <ToolbarBtn title="Danh sách" onClick={() => insertAtCursor('\n- ', '', 'Mục danh sách')}>
+                  <List size={13} />
+                </ToolbarBtn>
+                <ToolbarBtn title="Đường kẻ ngang" onClick={() => insertAtCursor('\n---\n', '')}>
+                  <Minus size={13} />
+                </ToolbarBtn>
+              </div>
 
-          <div className="flex items-center gap-1">
-            <ToolbarBtn title="Chèn ảnh — tải lên, dán (Ctrl+V) hoặc kéo thả" onClick={() => imageInputRef.current?.click()}>
-              <ImagePlus size={13} />
-            </ToolbarBtn>
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-600 mx-0.5" />
-            <button
-              type="button"
-              onMouseDown={e => { e.preventDefault(); setPreviewMode(v => !v) }}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium transition-colors',
-                previewMode
-                  ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
-                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700',
-              )}
-            >
-              {previewMode ? <EyeOff size={12} /> : <Eye size={12} />}
-              {previewMode ? 'Soạn thảo' : 'Xem trước'}
-            </button>
-          </div>
+              <div className="flex items-center gap-1">
+                <ToolbarBtn title="Chèn ảnh — tải lên, dán (Ctrl+V) hoặc kéo thả" onClick={() => imageInputRef.current?.click()}>
+                  <ImagePlus size={13} />
+                </ToolbarBtn>
+                <div className="w-px h-4 bg-slate-200 dark:bg-slate-600 mx-0.5" />
+                <button
+                  type="button"
+                  onMouseDown={e => { e.preventDefault(); setPreviewMode(true) }}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <Eye size={12} />
+                  Xem trước
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Editor / Preview area */}
