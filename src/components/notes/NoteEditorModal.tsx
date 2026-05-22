@@ -148,14 +148,16 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
       setTitle(note.title)
       setContent(note.content)
       setFolderId(note.folderId)
+      // Open in preview when the note already contains images (much friendlier than a wall of base64)
+      setPreviewMode(/!\[[^\]]*\]\([^)]+\)/.test(note.content))
     } else {
       editingIdRef.current = null
       setTitle('')
       setContent('')
       setFolderId(defaultFolderId)
+      setPreviewMode(false)
     }
     setSaveStatus('idle')
-    setPreviewMode(false)
   }, [open, note, defaultFolderId])
 
   // ── Auto-save (debounced 600ms) ──────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useState, useMemo, memo } from 'react'
-import { StickyNote, Pin, Pencil, Trash2, Plus, LayoutGrid, List, CheckSquare, Square, FileDown, Trash } from 'lucide-react'
+import { StickyNote, Pin, Pencil, Trash2, Plus, LayoutGrid, List, CheckSquare, Square, FileDown, Trash, ImageIcon } from 'lucide-react'
 import { cn, formatRelativeTime } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import Button from '../ui/Button'
@@ -13,6 +13,21 @@ interface NotesViewProps {
 function formatDateForExport(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+/**
+ * Strip markdown image syntax from content and capture the first image src.
+ * Replaces `![alt](src)` with a short placeholder so the preview stays readable.
+ */
+function previewFromContent(content: string): { text: string; firstImage: string | null; imageCount: number } {
+  let firstImage: string | null = null
+  let imageCount = 0
+  const text = content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt: string, src: string) => {
+    if (!firstImage) firstImage = src
+    imageCount += 1
+    return alt ? `📷 ${alt}` : '📷'
+  })
+  return { text, firstImage, imageCount }
 }
 
 export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
@@ -230,11 +245,12 @@ interface NoteItemProps {
 }
 
 const NoteCard = memo(function NoteCard({ note, folderName, folderColor, onEdit, onDelete, onTogglePin, selectMode, selected, onSelect }: NoteItemProps) {
+  const { text: previewText, firstImage, imageCount } = previewFromContent(note.content)
   return (
     <div
       onClick={selectMode ? onSelect : onEdit}
       className={cn(
-        'group relative flex flex-col rounded-xl border bg-white dark:bg-slate-800 h-48',
+        'group relative flex flex-col rounded-xl border bg-white dark:bg-slate-800 h-48 overflow-hidden',
         'shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer',
         selected
           ? 'border-indigo-400 dark:border-indigo-500 ring-2 ring-indigo-200 dark:ring-indigo-700'
@@ -245,14 +261,26 @@ const NoteCard = memo(function NoteCard({ note, folderName, folderColor, onEdit,
       )}
       style={folderColor ? { borderLeftColor: folderColor } : undefined}
     >
+      {/* Image thumbnail (if note contains images) */}
+      {firstImage && (
+        <div className="relative h-20 w-full shrink-0 bg-slate-100 dark:bg-slate-700 overflow-hidden">
+          <img src={firstImage} alt="" className="w-full h-full object-cover" loading="lazy" />
+          {imageCount > 1 && (
+            <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-medium backdrop-blur-sm">
+              +{imageCount - 1}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Pin indicator / select checkbox */}
       <div className="absolute top-2.5 left-3 z-10">
         {selectMode ? (
           selected
-            ? <CheckSquare size={16} className="text-indigo-600 dark:text-indigo-400" />
-            : <Square size={16} className="text-slate-400" />
+            ? <CheckSquare size={16} className="text-indigo-600 dark:text-indigo-400 drop-shadow-sm" />
+            : <Square size={16} className="text-slate-400 drop-shadow-sm" />
         ) : note.pinned ? (
-          <Pin size={12} className="text-amber-500 fill-amber-500" />
+          <Pin size={12} className="text-amber-500 fill-amber-500 drop-shadow-sm" />
         ) : null}
       </div>
 
@@ -289,17 +317,22 @@ const NoteCard = memo(function NoteCard({ note, folderName, folderColor, onEdit,
       )}
 
       {/* Body */}
-      <div className="flex-1 px-4 pt-7 pb-2 overflow-hidden min-h-0">
+      <div className={cn('flex-1 px-4 pb-2 overflow-hidden min-h-0', firstImage ? 'pt-2' : 'pt-7')}>
         <p className={cn(
           'text-[15px] font-semibold text-slate-800 dark:text-slate-200 mb-1 leading-tight line-clamp-2',
-          selectMode ? 'pl-5' : 'pr-14',
+          selectMode && !firstImage ? 'pl-5' : '',
+          !firstImage ? 'pr-14' : '',
           !note.title && 'text-slate-400 dark:text-slate-500 font-normal italic'
         )}>
           {note.title || 'Không có tiêu đề'}
         </p>
-        {note.content && (
-          <p className={cn('text-xs text-slate-500 dark:text-slate-400 line-clamp-4 leading-relaxed whitespace-pre-wrap', selectMode && 'pl-5')}>
-            {note.content}
+        {previewText && (
+          <p className={cn(
+            'text-xs text-slate-500 dark:text-slate-400 leading-relaxed whitespace-pre-wrap',
+            firstImage ? 'line-clamp-2' : 'line-clamp-4',
+            selectMode && !firstImage && 'pl-5'
+          )}>
+            {previewText}
           </p>
         )}
       </div>
@@ -318,6 +351,7 @@ const NoteCard = memo(function NoteCard({ note, folderName, folderColor, onEdit,
 })
 
 const NoteListRow = memo(function NoteListRow({ note, folderName, folderColor, onEdit, onDelete, onTogglePin, selectMode, selected, onSelect }: NoteItemProps) {
+  const { text: previewText, firstImage, imageCount } = previewFromContent(note.content)
   return (
     <div
       onClick={selectMode ? onSelect : onEdit}
@@ -339,6 +373,18 @@ const NoteListRow = memo(function NoteListRow({ note, folderName, folderColor, o
         )}
       </div>
 
+      {/* Image thumbnail */}
+      {firstImage && (
+        <div className="relative shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700">
+          <img src={firstImage} alt="" className="w-full h-full object-cover" loading="lazy" />
+          {imageCount > 1 && (
+            <span className="absolute bottom-0 right-0 px-1 rounded-tl-md bg-black/60 text-white text-[9px] font-medium">
+              +{imageCount - 1}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Title + preview */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
@@ -351,10 +397,15 @@ const NoteListRow = memo(function NoteListRow({ note, folderName, folderColor, o
           )}>
             {note.title || 'Không có tiêu đề'}
           </p>
+          {imageCount > 0 && !firstImage && (
+            <span className="shrink-0 flex items-center text-slate-400 dark:text-slate-500" title={`${imageCount} ảnh`}>
+              <ImageIcon size={11} />
+            </span>
+          )}
         </div>
-        {note.content && (
+        {previewText && (
           <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-3 leading-relaxed mt-0.5 whitespace-pre-wrap">
-            {note.content}
+            {previewText}
           </p>
         )}
       </div>
