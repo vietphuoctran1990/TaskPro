@@ -9,6 +9,7 @@ import { useT } from '../../i18n'
 import type { Note, Task } from '../../types'
 import type { Translations } from '../../i18n/types'
 import Button from '../ui/Button'
+import WeatherWidget from '../weather/WeatherWidget'
 
 interface DashboardViewProps {
   onViewTask: (task: Task) => void
@@ -211,6 +212,9 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onVie
 
   return (
     <div className="space-y-4 pb-4">
+      {/* Weather */}
+      <WeatherWidget />
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
