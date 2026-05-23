@@ -29,15 +29,25 @@ export function statusDisplayName(
   return s.id
 }
 
+/** Strip base64 image data from note content for AI context (too large to send). */
+function noteSnippet(content: string, maxLen = 200): string {
+  return content
+    .replace(/!\[[^\]]*\]\(data:[^)]+\)/g, '[ảnh]')
+    .replace(/\n+/g, ' ')
+    .trim()
+    .slice(0, maxLen)
+}
+
 /** Build the full context object to send to /api/ai-chat. */
 export function buildAIContext(
   state: AppState,
   finalStatusIds: ReadonlySet<string>,
   maxTasks = 30,
 ) {
-  const today   = todayLocalISO()
-  const projMap = Object.fromEntries(state.projects.map(p => [p.id, p.name]))
-  const lang    = state.language
+  const today      = todayLocalISO()
+  const projMap    = Object.fromEntries(state.projects.map(p => [p.id, p.name]))
+  const folderMap  = Object.fromEntries(state.noteFolders.map(f => [f.id, f.name]))
+  const lang       = state.language
 
   // Sort: active (overdue → high-prio → rest) first, then done tasks
   const active = state.tasks
@@ -51,16 +61,18 @@ export function buildAIContext(
   const done = state.tasks.filter(t => finalStatusIds.has(t.status))
 
   const tasks = [...active, ...done].slice(0, maxTasks).map(t => ({
-    title:       t.title,
-    status:      t.status,
-    statusLabel: statusDisplayName(
+    title:          t.title,
+    status:         t.status,
+    statusLabel:    statusDisplayName(
       { id: t.status, name: state.statuses.find(s => s.id === t.status)?.name ?? '' },
       lang,
     ),
-    isDone:      finalStatusIds.has(t.status),
-    priority:    t.priority,
-    dueDate:     t.dueDate ?? null,
-    projectName: projMap[t.projectId] ?? '',
+    isDone:         finalStatusIds.has(t.status),
+    priority:       t.priority,
+    dueDate:        t.dueDate ?? null,
+    projectName:    projMap[t.projectId] ?? '',
+    description:    t.description ? t.description.replace(/\n+/g, ' ').slice(0, 120) : undefined,
+    subtasksCount:  t.subtasks.length || undefined,
   }))
 
   const statuses = state.statuses.map(s => ({
@@ -69,6 +81,18 @@ export function buildAIContext(
     isFinal: Boolean(s.isFinal),
   }))
 
+  // Pinned first, then by most recently updated, max 15 notes
+  const notes = [...state.notes]
+    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 15)
+    .map(n => ({
+      title:     n.title,
+      folder:    folderMap[n.folderId] ?? '',
+      pinned:    n.pinned,
+      snippet:   noteSnippet(n.content),
+      updatedAt: n.updatedAt.slice(0, 10),
+    }))
+
   return {
     today,
     language:       lang,
@@ -76,5 +100,7 @@ export function buildAIContext(
     statuses,
     projects:       state.projects.map(p => ({ id: p.id, name: p.name })),
     tasks,
+    notes,
+    noteFolders:    state.noteFolders.map(f => ({ id: f.id, name: f.name })),
   }
 }
