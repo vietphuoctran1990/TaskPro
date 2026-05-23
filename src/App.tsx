@@ -24,6 +24,7 @@ import UpdateBanner from './components/pwa/UpdateBanner'
 import OfflineToast from './components/pwa/OfflineToast'
 import CommandPalette from './components/ui/CommandPalette'
 import ShortcutsModal from './components/ui/ShortcutsModal'
+import AIChatPanel from './components/ai/AIChatPanel'
 import { ToastProvider } from './context/ToastContext'
 import { NotificationsProvider } from './context/NotificationsContext'
 import { usePWA } from './hooks/usePWA'
@@ -233,13 +234,13 @@ function AppShell() {
         </main>
       </div>
 
-      {/* Mobile FAB */}
+      {/* Mobile FAB — offset right to avoid AI chat button */}
       <button
         onClick={() => state.viewMode === 'notes' ? handleAddNote() : handleAddTask()}
-        className="fixed bottom-6 right-6 z-30 sm:hidden w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/40 hover:shadow-2xl hover:shadow-indigo-500/50 hover:scale-105 transition-all duration-200 active:scale-95 flex items-center justify-center"
+        className="fixed bottom-6 right-24 z-30 sm:hidden w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/40 hover:shadow-2xl hover:shadow-indigo-500/50 hover:scale-105 transition-all duration-200 active:scale-95 flex items-center justify-center"
         aria-label={state.viewMode === 'notes' ? 'Tạo ghi chú' : 'Thêm công việc'}
       >
-        <Plus size={24} />
+        <Plus size={20} />
       </button>
 
       {/* Modals */}
@@ -288,6 +289,9 @@ function AppShell() {
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
+
+      {/* AI floating chat */}
+      <AIChatPanel />
 
       {/* PWA UI */}
       {needRefresh && <UpdateBanner onUpdate={() => updateServiceWorker()} />}

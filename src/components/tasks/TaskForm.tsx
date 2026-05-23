@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react'
-import { Calendar, Clock, Timer, Repeat, Plus, Check, Trash2 } from 'lucide-react'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { Calendar, Clock, Timer, Repeat, Plus, Check, Trash2, Sparkles, X } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import InlineCreate from '../ui/InlineCreate'
@@ -78,6 +78,47 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   const [addingProject, setAddingProject] = useState(false)
   const [addingLabel,   setAddingLabel]   = useState(false)
   const [newSubtask,    setNewSubtask]    = useState('')
+  const [aiSuggestion,  setAISuggestion]  = useState<{ description: string; priority: string; estimatedHours: number | null; subtasks: string[] } | null>(null)
+  const [aiLoading,     setAILoading]     = useState(false)
+  const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Smart fill: debounce on title change
+  useEffect(() => {
+    if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+    if (!task && form.title.trim().length >= 8) {
+      aiTimerRef.current = setTimeout(async () => {
+        setAILoading(true)
+        try {
+          const res = await fetch('/api/ai-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'smartfill', title: form.title.trim() }),
+          })
+          if (res.ok) {
+            const data = await res.json()
+            setAISuggestion(data)
+          }
+        } catch { /* ignore */ }
+        finally { setAILoading(false) }
+      }, 900)
+    } else {
+      setAISuggestion(null)
+    }
+    return () => { if (aiTimerRef.current) clearTimeout(aiTimerRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.title])
+
+  const applyAISuggestion = () => {
+    if (!aiSuggestion) return
+    if (aiSuggestion.description && !form.description) set('description', aiSuggestion.description)
+    if (aiSuggestion.priority) set('priority', aiSuggestion.priority as FormData['priority'])
+    if (aiSuggestion.estimatedHours) set('estimatedHours', String(aiSuggestion.estimatedHours))
+    if (aiSuggestion.subtasks?.length) {
+      const newSubs = aiSuggestion.subtasks.map(t => ({ id: crypto.randomUUID(), title: t, done: false }))
+      setForm(prev => ({ ...prev, subtasks: [...prev.subtasks, ...newSubs] }))
+    }
+    setAISuggestion(null)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -191,12 +232,62 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
       }
     >
       <div className="px-6 py-5 space-y-4">
-        <Input
-          label={t.form.title} id="task-title" placeholder={t.form.titlePlaceholder}
-          value={form.title} onChange={e => set('title', e.target.value)}
-          error={errors.title} autoFocus
-          onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-        />
+        <div>
+          <Input
+            label={t.form.title} id="task-title" placeholder={t.form.titlePlaceholder}
+            value={form.title} onChange={e => set('title', e.target.value)}
+            error={errors.title} autoFocus
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+          />
+          {/* AI Smart Fill suggestion */}
+          {!task && (aiLoading || aiSuggestion) && (
+            <div className="mt-2 rounded-xl border border-violet-200 dark:border-violet-800/50 bg-violet-50 dark:bg-violet-900/20 px-3 py-2.5 text-xs">
+              {aiLoading ? (
+                <div className="flex items-center gap-1.5 text-violet-500 dark:text-violet-400">
+                  <Sparkles size={12} className="animate-pulse" />
+                  <span>AI đang gợi ý…</span>
+                </div>
+              ) : aiSuggestion && (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="flex items-center gap-1 font-semibold text-violet-700 dark:text-violet-300">
+                      <Sparkles size={12} /> Gợi ý từ AI
+                    </span>
+                    <button onClick={() => setAISuggestion(null)} className="text-slate-400 hover:text-slate-600">
+                      <X size={12} />
+                    </button>
+                  </div>
+                  <div className="space-y-1 text-slate-600 dark:text-slate-400">
+                    {aiSuggestion.description && (
+                      <p><span className="font-medium text-slate-700 dark:text-slate-300">Mô tả:</span> {aiSuggestion.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {aiSuggestion.priority && (
+                        <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600">
+                          Ưu tiên: <strong>{aiSuggestion.priority}</strong>
+                        </span>
+                      )}
+                      {aiSuggestion.estimatedHours && (
+                        <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600">
+                          ~{aiSuggestion.estimatedHours}h
+                        </span>
+                      )}
+                    </div>
+                    {aiSuggestion.subtasks?.length > 0 && (
+                      <p><span className="font-medium text-slate-700 dark:text-slate-300">Subtasks:</span> {aiSuggestion.subtasks.join(' · ')}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={applyAISuggestion}
+                    className="mt-2 w-full py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium transition-colors"
+                  >
+                    Áp dụng gợi ý
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Subtasks */}
         <div className="flex flex-col gap-1.5">
