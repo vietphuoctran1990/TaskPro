@@ -19,7 +19,7 @@ interface DashboardViewProps {
   onViewNote?: (note: Note) => void
 }
 
-function DonutChart({ pct, color, darkMode }: { pct: number; color: string; darkMode?: boolean }) {
+const DonutChart = memo(function DonutChart({ pct, color, darkMode }: { pct: number; color: string; darkMode?: boolean }) {
   const r = 34
   const circ = 2 * Math.PI * r
   const offset = circ - (pct / 100) * circ
@@ -38,9 +38,9 @@ function DonutChart({ pct, color, darkMode }: { pct: number; color: string; dark
       <text x="44" y="48" textAnchor="middle" fontSize="15" fontWeight="700" fill={color}>{pct}%</text>
     </svg>
   )
-}
+})
 
-function StatCard({
+const StatCard = memo(function StatCard({
   label, value, sub, gradient, iconBg, icon,
 }: {
   label: string; value: number | string; sub?: string
@@ -58,9 +58,9 @@ function StatCard({
       </div>
     </div>
   )
-}
+})
 
-function WeeklyTrend({ tasks, finalStatusIds, t }: { tasks: Task[]; finalStatusIds: ReadonlySet<string>; language?: string; t: Translations }) {
+const WeeklyTrend = memo(function WeeklyTrend({ tasks, finalStatusIds, t }: { tasks: Task[]; finalStatusIds: ReadonlySet<string>; language?: string; t: Translations }) {
   const weeks = Array.from({ length: 4 }, (_, i) => {
     const weekStart = new Date()
     weekStart.setDate(weekStart.getDate() - weekStart.getDay() - (3 - i) * 7)
@@ -95,7 +95,7 @@ function WeeklyTrend({ tasks, finalStatusIds, t }: { tasks: Task[]; finalStatusI
       ))}
     </div>
   )
-}
+})
 
 const PRIORITY_META = [
   { key: 'urgent', label: 'Urgent', color: '#ef4444' },
@@ -104,7 +104,7 @@ const PRIORITY_META = [
   { key: 'low',    label: 'Low',    color: '#94a3b8' },
 ] as const
 
-function PriorityBreakdown({ tasks, finalStatusIds }: { tasks: Task[]; finalStatusIds: ReadonlySet<string> }) {
+const PriorityBreakdown = memo(function PriorityBreakdown({ tasks, finalStatusIds }: { tasks: Task[]; finalStatusIds: ReadonlySet<string> }) {
   return (
     <div className="space-y-3">
       {PRIORITY_META.map(({ key, label, color }) => {
@@ -131,7 +131,7 @@ function PriorityBreakdown({ tasks, finalStatusIds }: { tasks: Task[]; finalStat
       })}
     </div>
   )
-}
+})
 
 const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onViewNote }: DashboardViewProps) {
   const { state, filteredTasks, finalStatusIds } = useApp()

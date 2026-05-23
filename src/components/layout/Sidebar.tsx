@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { CheckSquare, ChevronDown, CircleDot, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText, Sun, Sunset, Calendar, StickyNote } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { todayLocalISO, tomorrowLocalISO } from '../../lib/dateLocal'
@@ -320,7 +320,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
   )
 }
 
-function ProjectItem({ project, active, count, onClick, onNotes }: { project: Project; active: boolean; count: number; onClick: () => void; onNotes?: () => void }) {
+const ProjectItem = memo(function ProjectItem({ project, active, count, onClick, onNotes }: { project: Project; active: boolean; count: number; onClick: () => void; onNotes?: () => void }) {
   return (
     <div className={cn('relative group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150',
       active ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80')}>
@@ -342,13 +342,13 @@ function ProjectItem({ project, active, count, onClick, onNotes }: { project: Pr
       )}
     </div>
   )
-}
+})
 
-function StatChip({ icon, label, value, className }: { icon: React.ReactNode; label: string; value: number; className: string }) {
+const StatChip = memo(function StatChip({ icon, label, value, className }: { icon: React.ReactNode; label: string; value: number; className: string }) {
   return (
     <div className={cn('flex flex-col items-center gap-0.5 px-1.5 py-1.5 rounded-lg border text-center', className)}>
       <div className="flex items-center gap-0.5 font-bold text-sm">{icon}{value}</div>
       <span className="text-[10px] leading-none opacity-75">{label}</span>
     </div>
   )
-}
+})

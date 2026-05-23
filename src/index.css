@@ -3,7 +3,29 @@
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
 
-  html { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  html {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    /* Prevent font-size bump on iOS rotation */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Remove iOS tap highlight on all elements */
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* Fast single-tap, prevent double-tap zoom on interactive elements */
+  button, a, label, [role="button"], select {
+    touch-action: manipulation;
+  }
+
+  /* Allow normal text selection inside inputs */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Prevent scroll chaining / bounce leaking into parent */
+  .overflow-auto, .overflow-y-auto { overscroll-behavior: contain; }
 
   body {
     margin: 0;
@@ -69,21 +91,37 @@
     to   { opacity: 1; transform: scale(1) translateY(0); }
   }
   @keyframes modal-sheet-in {
-    from { transform: translateY(100%); }
-    to   { transform: translateY(0); }
+    from { transform: translate3d(0, 100%, 0); }
+    to   { transform: translate3d(0, 0, 0); }
   }
   .modal-backdrop { animation: modal-backdrop-in 0.18s ease-out; }
-  .modal-panel    { animation: modal-sheet-in 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
+  .modal-panel    {
+    animation: modal-sheet-in 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform;
+  }
   @media (min-width: 640px) {
-    .modal-panel  { animation: modal-panel-in 0.18s ease-out; }
+    .modal-panel  {
+      animation: modal-panel-in 0.2s ease-out;
+      will-change: transform, opacity;
+    }
   }
 
   /* Smoother dropdown reveals */
   @keyframes pop-in {
-    from { opacity: 0; transform: scale(0.95) translateY(-4px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
+    from { opacity: 0; transform: scale3d(0.95, 0.95, 1) translateY(-4px); }
+    to   { opacity: 1; transform: scale3d(1, 1, 1) translateY(0); }
   }
-  .pop-in { animation: pop-in 0.15s ease-out; transform-origin: top; }
+  .pop-in { animation: pop-in 0.15s ease-out; transform-origin: top; will-change: transform, opacity; }
+
+  /* Floating panel slide-up (AI Chat, tooltips) */
+  @keyframes panel-slide-up {
+    from { opacity: 0; transform: translateY(14px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .panel-slide-up {
+    animation: panel-slide-up 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform, opacity;
+  }
 
   /* Subtle elevation transition for cards */
   .card-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
@@ -95,7 +133,10 @@
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  .view-fade-in { animation: view-fade-in 0.22s cubic-bezier(0.32, 0.72, 0, 1); }
+  .view-fade-in {
+    animation: view-fade-in 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform, opacity;
+  }
 
   /* Glassmorphism header when content is scrolled */
   .header-glass {

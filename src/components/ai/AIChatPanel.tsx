@@ -112,14 +112,28 @@ export default function AIChatPanel() {
 
   return (
     <>
+      {/* ── Mobile backdrop (tap to close) ── */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
       {/* ── Panel ── */}
       {open && (
         <div className={cn(
-          'fixed bottom-24 right-4 sm:right-6 z-50',
+          /* Mobile: above bottom-nav FABs */
+          'fixed bottom-40 right-4 z-50',
+          /* sm+: still above FAB but less offset needed (FAB moves to bottom-24) */
+          'sm:bottom-40 sm:right-6',
+          /* lg+: no bottom nav, FAB at bottom-6 so panel at bottom-24 */
+          'lg:bottom-24 lg:right-6',
           'w-[calc(100vw-2rem)] sm:w-[380px]',
-          'max-h-[75dvh] flex flex-col',
+          'max-h-[55dvh] sm:max-h-[60dvh] lg:max-h-[75dvh]',
+          'flex flex-col',
           'bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700',
-          'animate-in slide-in-from-bottom-4 duration-200',
+          'panel-slide-up',
         )}>
           {/* Header */}
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100 dark:border-slate-700 shrink-0">
@@ -203,9 +217,12 @@ export default function AIChatPanel() {
         onClick={() => setOpen(v => !v)}
         title="AI Trợ lý"
         className={cn(
-          'fixed bottom-6 right-6 z-50 sm:bottom-6 sm:right-6',
+          /* Mobile/tablet: above bottom nav */
+          'fixed bottom-24 right-4 z-50',
+          /* lg+: no bottom nav, standard position */
+          'lg:bottom-6 lg:right-6',
           'w-14 h-14 rounded-full flex items-center justify-center shadow-xl',
-          'transition-all duration-200 active:scale-95',
+          'transition-all duration-200 active:scale-90',
           open
             ? 'bg-slate-700 dark:bg-slate-600 hover:bg-slate-800 dark:hover:bg-slate-500 scale-95'
             : 'bg-gradient-to-br from-violet-500 to-indigo-600 hover:shadow-indigo-500/40 hover:shadow-2xl hover:scale-105',

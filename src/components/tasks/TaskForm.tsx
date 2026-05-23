@@ -82,9 +82,10 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   const [aiLoading,     setAILoading]     = useState(false)
   const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Smart fill: debounce on title change
+  // Smart fill: debounce on title change, with AbortController to cancel stale requests
   useEffect(() => {
     if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+    const controller = new AbortController()
     if (!task && form.title.trim().length >= 8) {
       aiTimerRef.current = setTimeout(async () => {
         setAILoading(true)
@@ -93,18 +94,23 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ type: 'smartfill', title: form.title.trim() }),
+            signal: controller.signal,
           })
           if (res.ok) {
             const data = await res.json()
             setAISuggestion(data)
           }
-        } catch { /* ignore */ }
-        finally { setAILoading(false) }
+        } catch (e) {
+          if (e instanceof Error && e.name !== 'AbortError') console.error('[SmartFill]', e)
+        } finally { setAILoading(false) }
       }, 900)
     } else {
       setAISuggestion(null)
     }
-    return () => { if (aiTimerRef.current) clearTimeout(aiTimerRef.current) }
+    return () => {
+      if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+      controller.abort()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.title])
 
