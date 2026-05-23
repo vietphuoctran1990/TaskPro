@@ -11,24 +11,40 @@ function getClient() {
 }
 
 function buildSystem(ctx: Record<string, unknown>): string {
-  const today   = (ctx?.today as string) ?? new Date().toISOString().slice(0, 10)
-  const lang    = ctx?.language === 'en' ? 'English' : 'Tiếng Việt'
-  const tasks   = (ctx?.tasks as Record<string, unknown>[]) ?? []
-  const projs   = (ctx?.projects as Record<string, unknown>[]) ?? []
-  const projMap = Object.fromEntries(projs.map(p => [p.id, p.name]))
+  const today    = (ctx?.today as string) ?? new Date().toISOString().slice(0, 10)
+  const lang     = ctx?.language === 'en' ? 'English' : 'Tiếng Việt'
+  const tasks    = (ctx?.tasks    as Record<string, unknown>[]) ?? []
+  const projs    = (ctx?.projects as Record<string, unknown>[]) ?? []
+  const statuses = (ctx?.statuses as Record<string, unknown>[]) ?? []
+  const finalIds = new Set((ctx?.finalStatusIds as string[] | undefined) ?? ['done'])
 
-  const taskLines = tasks.slice(0, 25).map(t =>
-    `- [${t.status}|${t.priority}] ${t.title}${t.dueDate ? ` (hạn ${t.dueDate})` : ''}${t.projectId && projMap[t.projectId as string] ? ` / ${projMap[t.projectId as string]}` : ''}`
-  ).join('\n') || '(chưa có task)'
+  // Build human-readable status name map
+  const statusLabel: Record<string, string> = {}
+  for (const s of statuses) {
+    statusLabel[s.id as string] = s.name as string || s.id as string
+  }
+
+  const taskLines = tasks.slice(0, 25).map(t => {
+    const done    = t.isDone === true || finalIds.has(t.status as string)
+    const label   = done ? '✅ Hoàn thành' : (statusLabel[t.status as string] || t.status as string)
+    const overdue = !done && t.dueDate && (t.dueDate as string) < today ? ' ⚠️ QUÁ HẠN' : ''
+    return `- [${label}|${t.priority}] ${t.title}${t.dueDate ? ` (hạn ${t.dueDate}${overdue})` : ''}${t.projectName ? ` / ${t.projectName}` : ''}`
+  }).join('\n') || '(chưa có task)'
+
+  const statusInfo = statuses.length > 0
+    ? `\nCÁC TRẠNG THÁI: ${statuses.map(s => `${s.name as string}${s.isFinal ? ' [hoàn thành]' : ''}`).join(', ')}`
+    : ''
 
   return `Bạn là trợ lý AI tích hợp trong ứng dụng quản lý công việc TaskPro. Trả lời bằng ${lang}, ngắn gọn và thực tế.
 
-NGÀY HÔM NAY: ${today}
+NGÀY HÔM NAY: ${today}${statusInfo}
 DỰ ÁN: ${projs.map(p => p.name).join(', ') || '(chưa có)'}
 TASKS ĐANG CÓ:
 ${taskLines}
 
 NGUYÊN TẮC:
+- Task có "✅ Hoàn thành" là đã xong — KHÔNG tính là đang làm hay cần làm
+- Task có "⚠️ QUÁ HẠN" là đã trễ deadline, cần xử lý ưu tiên cao
 - Tham chiếu đúng tên task/dự án từ dữ liệu trên khi người dùng hỏi
 - Gợi ý ưu tiên dựa trên deadline và mức độ ưu tiên thực tế
 - Dùng markdown (bold, bullet) cho câu trả lời dài
@@ -78,21 +94,28 @@ async function handleChat(body: Record<string, unknown>): Promise<Response> {
 // ── Daily Briefing ────────────────────────────────────────────────────────────
 
 async function handleBriefing(body: Record<string, unknown>): Promise<Response> {
-  const client  = getClient()
-  const ctx     = (body.context as Record<string, unknown>) ?? {}
-  const today   = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
-  const tasks   = (ctx.tasks  as Record<string, unknown>[]) ?? []
+  const client   = getClient()
+  const ctx      = (body.context as Record<string, unknown>) ?? {}
+  const today    = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
+  const tasks    = (ctx.tasks  as Record<string, unknown>[]) ?? []
+  const finalIds = new Set((ctx.finalStatusIds as string[] | undefined) ?? ['done'])
 
-  const todayList   = tasks.filter(t => t.dueDate === today)
-  const overdue     = tasks.filter(t => t.dueDate && (t.dueDate as string) < today && t.status !== 'done')
-  const highPrio    = tasks.filter(t => (t.priority === 'urgent' || t.priority === 'high') && t.status !== 'done')
-  const inProgress  = tasks.filter(t => t.status === 'in_progress')
+  // Use isDone flag if available, otherwise fall back to finalIds set
+  const isTaskDone = (t: Record<string, unknown>) =>
+    t.isDone === true || finalIds.has(t.status as string)
+
+  const active     = tasks.filter(t => !isTaskDone(t))
+  const todayList  = active.filter(t => t.dueDate === today)
+  const overdue    = active.filter(t => t.dueDate && (t.dueDate as string) < today)
+  const highPrio   = active.filter(t => t.priority === 'urgent' || t.priority === 'high')
+  const doneToday  = tasks.filter(t => isTaskDone(t) && t.dueDate === today)
 
   const prompt = `Hôm nay ${today}.
 Tasks hôm nay (${todayList.length}): ${todayList.map(t => t.title).join(', ') || 'không có'}
 Quá hạn (${overdue.length}): ${overdue.map(t => t.title).join(', ') || 'không có'}
-Đang làm (${inProgress.length}): ${inProgress.slice(0,5).map(t => t.title).join(', ') || 'không có'}
-Ưu tiên cao (${highPrio.length}): ${highPrio.slice(0,5).map(t => t.title).join(', ') || 'không có'}
+Đang hoạt động (${active.length} tổng): ${active.slice(0, 5).map(t => `${t.title} [${t.status}]`).join(', ') || 'không có'}
+Đã hoàn thành hôm nay (${doneToday.length}): ${doneToday.map(t => t.title).join(', ') || 'không có'}
+Ưu tiên cao/khẩn (${highPrio.length}): ${highPrio.slice(0, 5).map(t => t.title).join(', ') || 'không có'}
 
 Viết briefing buổi sáng ngắn gọn (~120 từ):
 1. Tóm tắt nhanh bức tranh hôm nay (1-2 câu)
@@ -116,11 +139,12 @@ Dùng markdown. Thân thiện, tích cực.`
 // ── Priority Insights ─────────────────────────────────────────────────────────
 
 async function handlePriorities(body: Record<string, unknown>): Promise<Response> {
-  const client = getClient()
-  const ctx    = (body.context as Record<string, unknown>) ?? {}
-  const today  = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
-  const tasks  = ((ctx.tasks as Record<string, unknown>[]) ?? [])
-    .filter(t => t.status !== 'done').slice(0, 15)
+  const client   = getClient()
+  const ctx      = (body.context as Record<string, unknown>) ?? {}
+  const today    = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
+  const finalIds = new Set((ctx.finalStatusIds as string[] | undefined) ?? ['done'])
+  const tasks    = ((ctx.tasks as Record<string, unknown>[]) ?? [])
+    .filter(t => !(t.isDone === true || finalIds.has(t.status as string))).slice(0, 15)
 
   const list = tasks.map((t, i) =>
     `${i+1}. [${t.priority}] "${t.title}"${t.dueDate ? `, hạn: ${t.dueDate}` : ''}${t.projectName ? `, proj: ${t.projectName}` : ''}`

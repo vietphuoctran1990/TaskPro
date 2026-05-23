@@ -7,15 +7,20 @@ import { todayLocalISO } from '../../lib/dateLocal'
 interface TopTask  { title: string; reason: string }
 interface Insights { topTasks: TopTask[]; warnings: string[]; tip: string }
 
-function buildContext(state: ReturnType<typeof useApp>['state']) {
+function buildContext(
+  state: ReturnType<typeof useApp>['state'],
+  finalStatusIds: ReadonlySet<string>,
+) {
   const today   = todayLocalISO()
   const projMap = Object.fromEntries(state.projects.map(p => [p.id, p.name]))
   return {
     today,
-    language: state.language,
-    projects: state.projects.map(p => ({ id: p.id, name: p.name })),
-    tasks: state.tasks
-      .filter(t => t.status !== 'done')
+    language:      state.language,
+    finalStatusIds: [...finalStatusIds],
+    statuses:      state.statuses.map(s => ({ id: s.id, name: s.name || s.id, isFinal: s.isFinal ?? false })),
+    projects:      state.projects.map(p => ({ id: p.id, name: p.name })),
+    tasks:         state.tasks
+      .filter(t => !finalStatusIds.has(t.status))   // exclude completed using real finalStatusIds
       .slice(0, 15)
       .map(t => ({
         title:       t.title,
@@ -28,7 +33,7 @@ function buildContext(state: ReturnType<typeof useApp>['state']) {
 }
 
 export default function PriorityInsights() {
-  const { state }    = useApp()
+  const { state, finalStatusIds } = useApp()
   const [data,     setData]     = useState<Insights | null>(null)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState<string | null>(null)
@@ -40,7 +45,7 @@ export default function PriorityInsights() {
       const res = await fetch('/api/ai-chat', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ type: 'priorities', context: buildContext(state) }),
+        body:    JSON.stringify({ type: 'priorities', context: buildContext(state, finalStatusIds) }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json() as Insights

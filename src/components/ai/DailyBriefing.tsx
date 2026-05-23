@@ -13,16 +13,22 @@ function saveCache(today: string, text: string) {
   try { localStorage.setItem(CACHE_PREFIX + today, text) } catch {}
 }
 
-function buildContext(state: ReturnType<typeof useApp>['state']) {
+function buildContext(
+  state: ReturnType<typeof useApp>['state'],
+  finalStatusIds: ReadonlySet<string>,
+) {
   const today   = todayLocalISO()
   const projMap = Object.fromEntries(state.projects.map(p => [p.id, p.name]))
   return {
     today,
-    language: state.language,
-    projects: state.projects.map(p => ({ id: p.id, name: p.name })),
-    tasks: state.tasks.slice(0, 30).map(t => ({
+    language:      state.language,
+    finalStatusIds: [...finalStatusIds],
+    statuses:      state.statuses.map(s => ({ id: s.id, name: s.name || s.id, isFinal: s.isFinal ?? false })),
+    projects:      state.projects.map(p => ({ id: p.id, name: p.name })),
+    tasks:         state.tasks.slice(0, 30).map(t => ({
       title:       t.title,
       status:      t.status,
+      isDone:      finalStatusIds.has(t.status),
       priority:    t.priority,
       dueDate:     t.dueDate,
       projectName: projMap[t.projectId] ?? '',
@@ -47,7 +53,7 @@ function renderMd(text: string): string {
 }
 
 export default function DailyBriefing() {
-  const { state }  = useApp()
+  const { state, finalStatusIds } = useApp()
   const today      = todayLocalISO()
   const [text,     setText]    = useState<string | null>(() => loadCached(today))
   const [loading,  setLoading] = useState(false)
@@ -66,7 +72,7 @@ export default function DailyBriefing() {
       const res = await fetch('/api/ai-chat', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ type: 'briefing', context: buildContext(state) }),
+        body:    JSON.stringify({ type: 'briefing', context: buildContext(state, finalStatusIds) }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const { content } = await res.json() as { content: string }
