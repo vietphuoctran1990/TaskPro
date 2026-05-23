@@ -92,9 +92,12 @@ function getInitialState(): AppState {
       // Migrate old columnLabels into StatusDef.name
       const legacyLabels: Record<string, string> = parsed.columnLabels ?? {}
       const rawStatuses: StatusDef[] = parsed.statuses ?? DEFAULT_STATUSES
+      // Migrate: ensure isFinal is always boolean — old data may lack this field.
+      // 'done' is the only builtin status that defaults to isFinal=true.
       const statuses = rawStatuses.map((s: StatusDef) => ({
         ...s,
-        name: s.name || legacyLabels[s.id] || '',
+        name:    s.name || legacyLabels[s.id] || '',
+        isFinal: (s.isFinal != null) ? Boolean(s.isFinal) : (s.id === 'done'),
       }))
 
       return {

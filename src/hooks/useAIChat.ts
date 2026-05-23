@@ -1,36 +1,12 @@
 import { useState, useCallback, useRef } from 'react'
 import { useApp } from '../context/AppContext'
-import { todayLocalISO } from '../lib/dateLocal'
+import { buildAIContext } from '../lib/aiContext'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   streaming?: boolean
   error?: boolean
-}
-
-function buildContext(
-  state: ReturnType<typeof useApp>['state'],
-  finalStatusIds: ReadonlySet<string>,
-) {
-  const today   = todayLocalISO()
-  const projMap = Object.fromEntries(state.projects.map(p => [p.id, p.name]))
-  return {
-    today,
-    language:      state.language,
-    finalStatusIds: [...finalStatusIds],
-    statuses:      state.statuses.map(s => ({ id: s.id, name: s.name || s.id, isFinal: s.isFinal ?? false })),
-    projects:      state.projects.map(p => ({ id: p.id, name: p.name })),
-    tasks:         state.tasks.slice(0, 25).map(t => ({
-      id:          t.id,
-      title:       t.title,
-      status:      t.status,
-      isDone:      finalStatusIds.has(t.status),
-      priority:    t.priority,
-      dueDate:     t.dueDate,
-      projectName: projMap[t.projectId] ?? '',
-    })),
-  }
 }
 
 export function useAIChat() {
@@ -56,7 +32,7 @@ export function useAIChat() {
       const res = await fetch('/api/ai-chat', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ type: 'chat', messages: apiHistory, context: buildContext(state, finalStatusIds) }),
+        body:    JSON.stringify({ type: 'chat', messages: apiHistory, context: buildAIContext(state, finalStatusIds) }),
         signal:  ctrl.signal,
       })
 

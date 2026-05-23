@@ -26,7 +26,7 @@ function buildSystem(ctx: Record<string, unknown>): string {
 
   const taskLines = tasks.slice(0, 25).map(t => {
     const done    = t.isDone === true || finalIds.has(t.status as string)
-    const label   = done ? '✅ Hoàn thành' : (statusLabel[t.status as string] || t.status as string)
+    const label   = done ? '✅ Hoàn thành' : ((t.statusLabel as string) || statusLabel[t.status as string] || t.status as string)
     const overdue = !done && t.dueDate && (t.dueDate as string) < today ? ' ⚠️ QUÁ HẠN' : ''
     return `- [${label}|${t.priority}] ${t.title}${t.dueDate ? ` (hạn ${t.dueDate}${overdue})` : ''}${t.projectName ? ` / ${t.projectName}` : ''}`
   }).join('\n') || '(chưa có task)'
