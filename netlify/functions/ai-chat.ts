@@ -24,41 +24,64 @@ function buildSystem(ctx: Record<string, unknown>): string {
     statusLabel[s.id as string] = s.name as string || s.id as string
   }
 
-  const taskLines = tasks.slice(0, 25).map(t => {
+  // ── Tasks ──────────────────────────────────────────────────────────────────
+  const taskLines = tasks.map(t => {
     const done    = t.isDone === true || finalIds.has(t.status as string)
     const label   = done ? '✅ Hoàn thành' : ((t.statusLabel as string) || statusLabel[t.status as string] || t.status as string)
     const overdue = !done && t.dueDate && (t.dueDate as string) < today ? ' ⚠️ QUÁ HẠN' : ''
-    const desc    = t.description ? ` — ${t.description}` : ''
-    return `- [${label}|${t.priority}] ${t.title}${t.dueDate ? ` (hạn ${t.dueDate}${overdue})` : ''}${t.projectName ? ` / ${t.projectName}` : ''}${desc}`
+    const time    = t.dueTime ? ` ${t.dueTime}` : ''
+    const est     = t.estimatedHours ? ` (~${t.estimatedHours}h)` : ''
+
+    const lines: string[] = [
+      `- [${label}|${t.priority}] ${t.title}${t.dueDate ? ` (hạn ${t.dueDate}${time}${overdue})` : ''}${t.projectName ? ` / ${t.projectName}` : ''}${est}`,
+    ]
+    if (t.description) {
+      lines.push(`  📝 ${t.description as string}`)
+    }
+    if (Array.isArray(t.subtasks) && t.subtasks.length > 0) {
+      for (const s of t.subtasks as Array<{ title: string; done: boolean }>) {
+        lines.push(`  ${s.done ? '  ☑' : '  ☐'} ${s.title}`)
+      }
+    }
+    if (Array.isArray(t.comments) && t.comments.length > 0) {
+      for (const c of t.comments as Array<{ text: string; at: string }>) {
+        lines.push(`  💬 [${c.at}] ${c.text}`)
+      }
+    }
+    return lines.join('\n')
   }).join('\n') || '(chưa có task)'
 
   const statusInfo = statuses.length > 0
     ? `\nCÁC TRẠNG THÁI: ${statuses.map(s => `${s.name as string}${s.isFinal ? ' [hoàn thành]' : ''}`).join(', ')}`
     : ''
 
-  const noteLines = notes.slice(0, 10).map(n => {
+  // ── Notes ──────────────────────────────────────────────────────────────────
+  const noteBlocks = notes.map((n, i) => {
     const pin    = n.pinned ? '📌 ' : ''
     const folder = n.folder ? ` [${n.folder as string}]` : ''
-    const snip   = n.snippet ? `: ${(n.snippet as string).slice(0, 150)}` : ''
-    return `- ${pin}"${n.title as string}"${folder} (${n.updatedAt as string})${snip}`
-  }).join('\n')
+    const header = `[Ghi chú ${i + 1}] ${pin}${n.title as string}${folder} · ${n.updatedAt as string}`
+    const body   = (n.content as string).trim() || '(trống)'
+    return `${header}\n${body}`
+  }).join('\n\n---\n\n')
 
   const noteSection = notes.length > 0
-    ? `\nGHI CHÚ (${notes.length}):\n${noteLines}`
+    ? `\n\n== GHI CHÚ (${notes.length}) ==\n${noteBlocks}`
     : ''
 
   return `Bạn là trợ lý AI tích hợp trong ứng dụng quản lý công việc TaskPro. Trả lời bằng ${lang}, ngắn gọn và thực tế.
 
 NGÀY HÔM NAY: ${today}${statusInfo}
 DỰ ÁN: ${projs.map(p => p.name).join(', ') || '(chưa có)'}
-TASKS ĐANG CÓ:
+
+== TASKS (${tasks.length}) ==
 ${taskLines}${noteSection}
 
 NGUYÊN TẮC:
-- Task có "✅ Hoàn thành" là đã xong — KHÔNG tính là đang làm hay cần làm
-- Task có "⚠️ QUÁ HẠN" là đã trễ deadline, cần xử lý ưu tiên cao
-- Tham chiếu đúng tên task/dự án/ghi chú từ dữ liệu trên khi người dùng hỏi
-- Gợi ý ưu tiên dựa trên deadline và mức độ ưu tiên thực tế
+- Task "✅ Hoàn thành" là đã xong — KHÔNG tính là đang làm hay cần làm
+- Task "⚠️ QUÁ HẠN" là trễ deadline, ưu tiên xử lý cao
+- Tham chiếu chính xác tên task/dự án/ghi chú từ dữ liệu trên
+- Có thể trích dẫn nội dung subtask, comment, ghi chú khi người dùng hỏi
+- Gợi ý ưu tiên dựa trên deadline và mức ưu tiên thực tế
 - Dùng markdown (bold, bullet) cho câu trả lời dài
 - Giữ giọng thân thiện, chuyên nghiệp`
 }
