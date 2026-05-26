@@ -1,13 +1,21 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenAI } from '@google/genai'
 import type { Config } from '@netlify/functions'
 import { CORS_HEADERS, optionsResponse } from '../lib/utils'
 
-const MODEL = 'claude-haiku-4-5-20251001'
+const MODEL = 'gemini-2.5-flash'
 
 function getClient() {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) throw new Error('ANTHROPIC_API_KEY not configured')
-  return new Anthropic({ apiKey: key })
+  const key = process.env.GEMINI_API_KEY
+  if (!key) throw new Error('GEMINI_API_KEY not configured')
+  return new GoogleGenAI({ apiKey: key })
+}
+
+// Convert Anthropic-style messages to Gemini contents format
+function toGeminiContents(messages: Array<{ role: string; content: string }>) {
+  return messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }))
 }
 
 function buildSystem(ctx: Record<string, unknown>): string {
@@ -35,9 +43,7 @@ function buildSystem(ctx: Record<string, unknown>): string {
     const lines: string[] = [
       `- [${label}|${t.priority}] ${t.title}${t.dueDate ? ` (hạn ${t.dueDate}${time}${overdue})` : ''}${t.projectName ? ` / ${t.projectName}` : ''}${est}`,
     ]
-    if (t.description) {
-      lines.push(`  📝 ${t.description as string}`)
-    }
+    if (t.description) lines.push(`  📝 ${t.description as string}`)
     if (Array.isArray(t.subtasks) && t.subtasks.length > 0) {
       for (const s of t.subtasks as Array<{ title: string; done: boolean }>) {
         lines.push(`  ${s.done ? '  ☑' : '  ☐'} ${s.title}`)
@@ -86,34 +92,51 @@ NGUYÊN TẮC:
 - Giữ giọng thân thiện, chuyên nghiệp`
 }
 
+// ── Shared helper for non-streaming requests ──────────────────────────────
+
+async function generate(
+  ai: GoogleGenAI,
+  system: string,
+  prompt: string,
+  maxOutputTokens: number,
+): Promise<string> {
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    config: { systemInstruction: system, maxOutputTokens },
+  })
+  return response.text ?? ''
+}
+
 // ── Streaming chat ────────────────────────────────────────────────────────────
 
 async function handleChat(body: Record<string, unknown>): Promise<Response> {
-  const client   = getClient()
-  const messages = (body.messages as Anthropic.Messages.MessageParam[]) ?? []
+  const ai       = getClient()
+  const messages = (body.messages as Array<{ role: string; content: string }>) ?? []
   const context  = (body.context  as Record<string, unknown>) ?? {}
+  const system   = buildSystem(context)
 
-  const stream = client.messages.stream({
-    model: MODEL, max_tokens: 1024,
-    system: buildSystem(context),
-    messages,
+  const contents = toGeminiContents(messages)
+
+  const stream = await ai.models.generateContentStream({
+    model: MODEL,
+    contents,
+    config: { systemInstruction: system, maxOutputTokens: 1024 },
   })
 
   const enc = new TextEncoder()
   const readable = new ReadableStream({
     async start(ctrl) {
       try {
-        for await (const ev of stream) {
-          if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') {
-            ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ text: ev.delta.text })}\n\n`))
-          }
+        for await (const chunk of stream) {
+          const text = chunk.text
+          if (text) ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ text })}\n\n`))
         }
         ctrl.enqueue(enc.encode('data: [DONE]\n\n'))
       } finally {
         ctrl.close()
       }
     },
-    cancel() { stream.abort() },
   })
 
   return new Response(readable, {
@@ -129,7 +152,7 @@ async function handleChat(body: Record<string, unknown>): Promise<Response> {
 // ── Daily Briefing ────────────────────────────────────────────────────────────
 
 async function handleBriefing(body: Record<string, unknown>): Promise<Response> {
-  const client   = getClient()
+  const ai       = getClient()
   const ctx      = (body.context as Record<string, unknown>) ?? {}
   const today    = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
   const tasks    = (ctx.tasks  as Record<string, unknown>[]) ?? []
@@ -158,13 +181,7 @@ Viết briefing buổi sáng ngắn gọn (~120 từ):
 
 Dùng markdown. Thân thiện, tích cực.`
 
-  const msg = await client.messages.create({
-    model: MODEL, max_tokens: 512,
-    system: buildSystem(ctx),
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const content = msg.content[0].type === 'text' ? msg.content[0].text : ''
+  const content = await generate(ai, buildSystem(ctx), prompt, 512)
   return new Response(JSON.stringify({ content }), {
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   })
@@ -173,7 +190,7 @@ Dùng markdown. Thân thiện, tích cực.`
 // ── Priority Insights ─────────────────────────────────────────────────────────
 
 async function handlePriorities(body: Record<string, unknown>): Promise<Response> {
-  const client   = getClient()
+  const ai       = getClient()
   const ctx      = (body.context as Record<string, unknown>) ?? {}
   const today    = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
   const finalIds = new Set((ctx.finalStatusIds as string[] | undefined) ?? ['done'])
@@ -198,13 +215,7 @@ topTasks: tối đa 5 tasks cần làm trước nhất, lý do ngắn (1 câu)
 warnings: tối đa 3 cảnh báo (quá hạn, deadline gần, tasks bị block...)
 tip: 1 mẹo productivity hôm nay`
 
-  const msg = await client.messages.create({
-    model: MODEL, max_tokens: 600,
-    system: buildSystem(ctx),
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const text = msg.content[0].type === 'text' ? msg.content[0].text : '{}'
+  const text = await generate(ai, buildSystem(ctx), prompt, 600)
   let parsed: Record<string, unknown> = { topTasks: [], warnings: [], tip: '' }
   try {
     const m = text.match(/\{[\s\S]*\}/)
@@ -219,9 +230,9 @@ tip: 1 mẹo productivity hôm nay`
 // ── Smart Fill ────────────────────────────────────────────────────────────────
 
 async function handleSmartFill(body: Record<string, unknown>): Promise<Response> {
-  const client = getClient()
-  const title  = (body.title as string) ?? ''
-  const ctx    = (body.context as Record<string, unknown>) ?? {}
+  const ai    = getClient()
+  const title = (body.title as string) ?? ''
+  const ctx   = (body.context as Record<string, unknown>) ?? {}
 
   const prompt = `Task title: "${title}"
 
@@ -234,13 +245,7 @@ Gợi ý thông tin cho task này. JSON hợp lệ (không markdown):
 }
 subtasks: tối đa 4 items, chỉ khi cần thiết (task đủ phức tạp)`
 
-  const msg = await client.messages.create({
-    model: MODEL, max_tokens: 256,
-    system: buildSystem(ctx),
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const text = msg.content[0].type === 'text' ? msg.content[0].text : '{}'
+  const text = await generate(ai, buildSystem(ctx), prompt, 256)
   let parsed: Record<string, unknown> = { description: '', priority: 'medium', estimatedHours: null, subtasks: [] }
   try {
     const m = text.match(/\{[\s\S]*\}/)
@@ -255,14 +260,12 @@ subtasks: tối đa 4 items, chỉ khi cần thiết (task đủ phức tạp)`
 // ── Note: Summarize ───────────────────────────────────────────────────────────
 
 async function handleSummarizeNote(body: Record<string, unknown>): Promise<Response> {
-  const client  = getClient()
+  const ai      = getClient()
   const title   = (body.title   as string) ?? ''
   const content = (body.content as string) ?? ''
   const ctx     = (body.context as Record<string, unknown>) ?? {}
 
-  // Strip base64 images before sending to AI
   const safeContent = content.replace(/!\[[^\]]*\]\(data:[^)]+\)/g, '[ảnh]')
-
   const prompt = `Ghi chú: "${title}"
 
 ${safeContent}
@@ -270,13 +273,7 @@ ${safeContent}
 ---
 Tóm tắt ghi chú trên thành 3-5 bullet points ngắn gọn, súc tích. Chỉ trả về bullet list, không thêm gì khác.`
 
-  const msg = await client.messages.create({
-    model: MODEL, max_tokens: 300,
-    system: buildSystem(ctx),
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const summary = msg.content[0].type === 'text' ? msg.content[0].text : ''
+  const summary = await generate(ai, buildSystem(ctx), prompt, 300)
   return new Response(JSON.stringify({ summary }), {
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   })
@@ -285,13 +282,12 @@ Tóm tắt ghi chú trên thành 3-5 bullet points ngắn gọn, súc tích. Ch�
 // ── Note: Extract Tasks ───────────────────────────────────────────────────────
 
 async function handleExtractTasks(body: Record<string, unknown>): Promise<Response> {
-  const client  = getClient()
+  const ai      = getClient()
   const title   = (body.title   as string) ?? ''
   const content = (body.content as string) ?? ''
   const ctx     = (body.context as Record<string, unknown>) ?? {}
 
   const safeContent = content.replace(/!\[[^\]]*\]\(data:[^)]+\)/g, '[ảnh]')
-
   const prompt = `Ghi chú: "${title}"
 
 ${safeContent}
@@ -306,13 +302,7 @@ Trả về JSON hợp lệ (không markdown):
 }
 Tối đa 8 tasks. Chỉ lấy việc rõ ràng cần làm, không lấy thông tin thuần túy.`
 
-  const msg = await client.messages.create({
-    model: MODEL, max_tokens: 400,
-    system: buildSystem(ctx),
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const text = msg.content[0].type === 'text' ? msg.content[0].text : '{}'
+  const text = await generate(ai, buildSystem(ctx), prompt, 400)
   let parsed: { tasks: Array<{ title: string; priority: string; dueDate: string | null }> } = { tasks: [] }
   try {
     const m = text.match(/\{[\s\S]*\}/)
@@ -327,13 +317,12 @@ Tối đa 8 tasks. Chỉ lấy việc rõ ràng cần làm, không lấy thông 
 // ── Note: Expand / Rewrite ────────────────────────────────────────────────────
 
 async function handleExpandNote(body: Record<string, unknown>): Promise<Response> {
-  const client  = getClient()
+  const ai      = getClient()
   const title   = (body.title   as string) ?? ''
   const content = (body.content as string) ?? ''
   const ctx     = (body.context as Record<string, unknown>) ?? {}
 
   const safeContent = content.replace(/!\[[^\]]*\]\(data:[^)]+\)/g, '[ảnh]')
-
   const prompt = `Ghi chú gốc: "${title}"
 
 ${safeContent}
@@ -341,13 +330,7 @@ ${safeContent}
 ---
 Dựa trên ý tưởng/ghi chú trên, viết mở rộng thành văn bản đầy đủ, có cấu trúc dùng markdown (tiêu đề, bullet, in đậm khi cần). Giữ nguyên ý chính, phát triển thêm chi tiết thực tế. Không thêm lời mở đầu hay kết luận chung chung.`
 
-  const msg = await client.messages.create({
-    model: MODEL, max_tokens: 800,
-    system: buildSystem(ctx),
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const expanded = msg.content[0].type === 'text' ? msg.content[0].text : ''
+  const expanded = await generate(ai, buildSystem(ctx), prompt, 800)
   return new Response(JSON.stringify({ expanded }), {
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   })
@@ -359,8 +342,8 @@ export default async (req: Request) => {
   if (req.method === 'OPTIONS') return optionsResponse()
   if (req.method !== 'POST')   return new Response('Method Not Allowed', { status: 405, headers: CORS_HEADERS })
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), {
+  if (!process.env.GEMINI_API_KEY) {
+    return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured' }), {
       status: 503, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
     })
   }
