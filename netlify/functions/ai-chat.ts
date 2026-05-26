@@ -28,68 +28,97 @@ function buildSystem(ctx: Record<string, unknown>): string {
   const finalIds = new Set((ctx?.finalStatusIds as string[] | undefined) ?? ['done'])
 
   const statusLabel: Record<string, string> = {}
-  for (const s of statuses) {
-    statusLabel[s.id as string] = s.name as string || s.id as string
-  }
+  for (const s of statuses) statusLabel[s.id as string] = s.name as string || s.id as string
 
   // ── Tasks ──────────────────────────────────────────────────────────────────
-  const taskLines = tasks.map(t => {
-    const done    = t.isDone === true || finalIds.has(t.status as string)
-    const label   = done ? '✅ Hoàn thành' : ((t.statusLabel as string) || statusLabel[t.status as string] || t.status as string)
-    const overdue = !done && t.dueDate && (t.dueDate as string) < today ? ' ⚠️ QUÁ HẠN' : ''
-    const time    = t.dueTime ? ` ${t.dueTime}` : ''
-    const est     = t.estimatedHours ? ` (~${t.estimatedHours}h)` : ''
+  const activeTasks = tasks.filter(t => !(t.isDone === true || finalIds.has(t.status as string)))
+  const doneTasks   = tasks.filter(t =>   t.isDone === true || finalIds.has(t.status as string))
 
-    const lines: string[] = [
-      `- [${label}|${t.priority}] ${t.title}${t.dueDate ? ` (hạn ${t.dueDate}${time}${overdue})` : ''}${t.projectName ? ` / ${t.projectName}` : ''}${est}`,
+  function formatTask(t: Record<string, unknown>): string {
+    const done    = t.isDone === true || finalIds.has(t.status as string)
+    const label   = done ? 'HOÀN THÀNH' : ((t.statusLabel as string) || statusLabel[t.status as string] || t.status as string)
+    const overdue = !done && t.dueDate && (t.dueDate as string) < today ? ' [QUÁ HẠN]' : ''
+    const time    = t.dueTime ? ` lúc ${t.dueTime}` : ''
+    const est     = t.estimatedHours ? ` ước ${t.estimatedHours}h` : ''
+    const proj    = t.projectName ? ` | Dự án: ${t.projectName}` : ''
+
+    const lines = [
+      `• Tên: ${t.title as string}`,
+      `  Trạng thái: ${label}${overdue} | Ưu tiên: ${t.priority as string}${est}`,
     ]
-    if (t.description) lines.push(`  📝 ${t.description as string}`)
+    if (t.dueDate) lines.push(`  Deadline: ${t.dueDate as string}${time}`)
+    if (proj) lines.push(`  ${proj.trim()}`)
+    if (t.description) lines.push(`  Mô tả: ${t.description as string}`)
     if (Array.isArray(t.subtasks) && t.subtasks.length > 0) {
+      lines.push(`  Subtasks:`)
       for (const s of t.subtasks as Array<{ title: string; done: boolean }>) {
-        lines.push(`  ${s.done ? '  ☑' : '  ☐'} ${s.title}`)
+        lines.push(`    ${s.done ? '[x]' : '[ ]'} ${s.title}`)
       }
     }
     if (Array.isArray(t.comments) && t.comments.length > 0) {
+      lines.push(`  Bình luận gần nhất:`)
       for (const c of t.comments as Array<{ text: string; at: string }>) {
-        lines.push(`  💬 [${c.at}] ${c.text}`)
+        lines.push(`    [${c.at}] ${c.text}`)
       }
     }
     return lines.join('\n')
-  }).join('\n') || '(chưa có task)'
+  }
 
-  const statusInfo = statuses.length > 0
-    ? `\nCÁC TRẠNG THÁI: ${statuses.map(s => `${s.name as string}${s.isFinal ? ' [hoàn thành]' : ''}`).join(', ')}`
+  const activeSection = activeTasks.length > 0
+    ? activeTasks.map(formatTask).join('\n\n')
+    : '  (không có task đang chạy)'
+
+  const doneSection = doneTasks.length > 0
+    ? doneTasks.map(t => `• [XONG] ${t.title as string}${t.projectName ? ` | ${t.projectName}` : ''}`).join('\n')
     : ''
+
+  const statusList = statuses.map(s =>
+    `${s.name as string}${s.isFinal ? ' (trạng thái hoàn thành)' : ''}`
+  ).join(', ')
 
   // ── Notes ──────────────────────────────────────────────────────────────────
   const noteBlocks = notes.map((n, i) => {
-    const pin    = n.pinned ? '📌 ' : ''
-    const folder = n.folder ? ` [${n.folder as string}]` : ''
-    const header = `[Ghi chú ${i + 1}] ${pin}${n.title as string}${folder} · ${n.updatedAt as string}`
+    const pin    = n.pinned ? '[GHI CHÚ ĐÃ GHIM] ' : ''
+    const folder = n.folder ? ` | Thư mục: ${n.folder as string}` : ''
     const body   = (n.content as string).trim() || '(trống)'
-    return `${header}\n${body}`
-  }).join('\n\n---\n\n')
+    return [
+      `--- Ghi chú ${i + 1}: "${n.title as string}"${folder} | Cập nhật: ${n.updatedAt as string} ${pin}`,
+      body,
+    ].join('\n')
+  }).join('\n\n')
 
   const noteSection = notes.length > 0
-    ? `\n\n== GHI CHÚ (${notes.length}) ==\n${noteBlocks}`
-    : ''
+    ? `\n\n============================\nGHI CHÚ CỦA NGƯỜI DÙNG (${notes.length} ghi chú)\n============================\n${noteBlocks}`
+    : '\n\nGHI CHÚ: (chưa có ghi chú nào)'
 
-  return `Bạn là trợ lý AI tích hợp trong ứng dụng quản lý công việc TaskPro. Trả lời bằng ${lang}, ngắn gọn và thực tế.
+  return `Bạn là Gemini AI trợ lý được nhúng vào ứng dụng quản lý công việc TaskPro.
+Ngôn ngữ trả lời: ${lang}.
 
-NGÀY HÔM NAY: ${today}${statusInfo}
-DỰ ÁN: ${projs.map(p => p.name).join(', ') || '(chưa có)'}
+QUAN TRỌNG: Dữ liệu thực tế của người dùng được cung cấp đầy đủ bên dưới. Hãy đọc kỹ và tham chiếu CHÍNH XÁC tên task, dự án, ghi chú khi trả lời. KHÔNG được bịa đặt thông tin.
 
-== TASKS (${tasks.length}) ==
-${taskLines}${noteSection}
+============================
+DỮ LIỆU THỰC TẾ CỦA NGƯỜI DÙNG
+============================
+Ngày hôm nay: ${today}
+Dự án: ${projs.map(p => p.name).join(', ') || '(chưa có dự án)'}
+Các trạng thái: ${statusList || '(mặc định)'}
 
-NGUYÊN TẮC:
-- Task "✅ Hoàn thành" là đã xong — KHÔNG tính là đang làm hay cần làm
-- Task "⚠️ QUÁ HẠN" là trễ deadline, ưu tiên xử lý cao
-- Tham chiếu chính xác tên task/dự án/ghi chú từ dữ liệu trên
-- Có thể trích dẫn nội dung subtask, comment, ghi chú khi người dùng hỏi
-- Gợi ý ưu tiên dựa trên deadline và mức ưu tiên thực tế
-- Dùng markdown (bold, bullet) cho câu trả lời dài
-- Giữ giọng thân thiện, chuyên nghiệp`
+============================
+CÔNG VIỆC ĐANG TIẾN HÀNH (${activeTasks.length} tasks)
+============================
+${activeSection}
+${doneSection ? `\n============================\nCÔNG VIỆC ĐÃ HOÀN THÀNH (${doneTasks.length} tasks)\n============================\n${doneSection}` : ''}${noteSection}
+
+============================
+QUY TẮC TRẢ LỜI
+============================
+- Task có trạng thái "HOÀN THÀNH" là đã xong — KHÔNG kể vào danh sách cần làm
+- Task "[QUÁ HẠN]" là trễ deadline — ưu tiên nhắc nhở cao nhất
+- Chỉ tham chiếu task/ghi chú/dự án có trong dữ liệu trên, không bịa thêm
+- Khi hỏi về ghi chú, đọc và trích dẫn nội dung ghi chú từ phần "GHI CHÚ" phía trên
+- Khi hỏi về subtask hay comment, trích dẫn chính xác từ dữ liệu task
+- Dùng markdown (in đậm, bullet list) cho câu trả lời có cấu trúc
+- Giọng văn thân thiện, thực tế, không dài dòng`
 }
 
 // ── Shared helper for non-streaming requests ──────────────────────────────
@@ -105,7 +134,11 @@ async function generate(
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     config: { systemInstruction: system, maxOutputTokens },
   })
-  return response.text ?? ''
+  const text = response.text
+    ?? response.candidates?.[0]?.content?.parts?.[0]?.text
+    ?? ''
+  if (!text) console.warn('[ai-chat] empty response from model', JSON.stringify(response).slice(0, 300))
+  return text
 }
 
 // ── Streaming chat ────────────────────────────────────────────────────────────
@@ -121,7 +154,7 @@ async function handleChat(body: Record<string, unknown>): Promise<Response> {
   const stream = await ai.models.generateContentStream({
     model: MODEL,
     contents,
-    config: { systemInstruction: system, maxOutputTokens: 1024 },
+    config: { systemInstruction: system, maxOutputTokens: 2048 },
   })
 
   const enc = new TextEncoder()
@@ -129,7 +162,7 @@ async function handleChat(body: Record<string, unknown>): Promise<Response> {
     async start(ctrl) {
       try {
         for await (const chunk of stream) {
-          const text = chunk.text
+          const text = chunk.text ?? chunk.candidates?.[0]?.content?.parts?.[0]?.text
           if (text) ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ text })}\n\n`))
         }
         ctrl.enqueue(enc.encode('data: [DONE]\n\n'))

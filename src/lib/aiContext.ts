@@ -6,7 +6,6 @@
 import type { AppState } from '../types'
 import { todayLocalISO } from './dateLocal'
 
-// Human-readable names for builtin status IDs (match what the UI shows via i18n)
 const BUILTIN_NAME: Record<string, { vi: string; en: string }> = {
   todo:        { vi: 'Cần làm',        en: 'To Do' },
   in_progress: { vi: 'Đang làm',       en: 'In Progress' },
@@ -18,7 +17,6 @@ const PRIORITY_ORDER: Record<string, number> = {
   urgent: 0, high: 1, medium: 2, low: 3,
 }
 
-/** Return the display name for a status, in the user's language. */
 export function statusDisplayName(
   s: { id: string; name: string },
   language: string,
@@ -29,12 +27,12 @@ export function statusDisplayName(
   return s.id
 }
 
-/** Strip base64 image blobs from note/description text — keep alt text as [ảnh]. */
+/** Remove base64 image blobs; keep readable alt text. */
 function stripBase64(text: string): string {
   return text.replace(/!\[([^\]]*)\]\(data:[^)]+\)/g, (_, alt) => `[ảnh${alt ? ': ' + alt : ''}]`)
 }
 
-/** Build the full context object to send to /api/ai-chat. */
+/** Build the context object sent to /api/ai-chat. */
 export function buildAIContext(
   state: AppState,
   finalStatusIds: ReadonlySet<string>,
@@ -45,7 +43,6 @@ export function buildAIContext(
   const folderMap  = Object.fromEntries(state.noteFolders.map(f => [f.id, f.name]))
   const lang       = state.language
 
-  // Sort: active (overdue → high-prio → rest) first, then done tasks
   const active = state.tasks
     .filter(t => !finalStatusIds.has(t.status))
     .sort((a, b) => {
@@ -68,15 +65,17 @@ export function buildAIContext(
     dueDate:     t.dueDate ?? null,
     dueTime:     t.dueTime ?? null,
     projectName: projMap[t.projectId] ?? '',
-    // Full description (images stripped); omit field if empty
-    description: t.description ? stripBase64(t.description) : undefined,
-    // All subtasks with completion status
-    subtasks:    t.subtasks.length > 0
+    // Description: full text, images stripped, max 400 chars
+    description: t.description
+      ? stripBase64(t.description).slice(0, 400)
+      : undefined,
+    // All subtasks (usually short)
+    subtasks: t.subtasks.length > 0
       ? t.subtasks.map(s => ({ title: s.title, done: s.done }))
       : undefined,
-    // Last 5 comments
-    comments:    t.comments.length > 0
-      ? t.comments.slice(-5).map(c => ({ text: c.text, at: c.createdAt.slice(0, 10) }))
+    // Last 3 comments
+    comments: t.comments.length > 0
+      ? t.comments.slice(-3).map(c => ({ text: c.text, at: c.createdAt.slice(0, 10) }))
       : undefined,
     estimatedHours: t.estimatedHours ?? undefined,
   }))
@@ -87,14 +86,15 @@ export function buildAIContext(
     isFinal: Boolean(s.isFinal),
   }))
 
-  // Pinned first, then by most recently updated — full content, images stripped
+  // Max 20 notes, pinned first, full content limited to 3000 chars each
   const notes = [...state.notes]
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 20)
     .map(n => ({
       title:     n.title,
       folder:    folderMap[n.folderId] ?? '',
       pinned:    n.pinned,
-      content:   stripBase64(n.content),   // full content, no length truncation
+      content:   stripBase64(n.content).slice(0, 3000),
       updatedAt: n.updatedAt.slice(0, 10),
       createdAt: n.createdAt.slice(0, 10),
     }))
