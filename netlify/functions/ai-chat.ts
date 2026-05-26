@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai'
 import type { Config } from '@netlify/functions'
 import { CORS_HEADERS, optionsResponse } from '../lib/utils'
 
-const MODEL = 'gemini-2.5-flash'
+const MODEL = 'gemini-3.5-flash'
 
 function getClient() {
   const key = process.env.GEMINI_API_KEY
