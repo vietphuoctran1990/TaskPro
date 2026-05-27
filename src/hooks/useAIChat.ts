@@ -43,6 +43,8 @@ export function useAIChat() {
       let full   = ''
       let buffer = ''
 
+      let streamErr: string | null = null
+
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -53,7 +55,11 @@ export function useAIChat() {
           if (!line.startsWith('data: ')) continue
           const data = line.slice(6)
           if (data === '[DONE]') break
-          try { full += (JSON.parse(data) as { text: string }).text } catch { /* ignore */ }
+          try {
+            const parsed = JSON.parse(data) as { text?: string; error?: string }
+            if (parsed.error) streamErr = parsed.error
+            else if (parsed.text) full += parsed.text
+          } catch { /* ignore */ }
         }
         setMessages(prev => {
           const copy = [...prev]
@@ -64,7 +70,9 @@ export function useAIChat() {
 
       setMessages(prev => {
         const copy = [...prev]
-        copy[copy.length - 1] = { role: 'assistant', content: full || '…', streaming: false }
+        copy[copy.length - 1] = streamErr
+          ? { role: 'assistant', content: 'Lỗi từ AI: ' + streamErr, error: true }
+          : { role: 'assistant', content: full || '…', streaming: false }
         return copy
       })
     } catch (err: unknown) {

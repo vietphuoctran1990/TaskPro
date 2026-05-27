@@ -166,6 +166,9 @@ async function handleChat(body: Record<string, unknown>): Promise<Response> {
           if (text) ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ text })}\n\n`))
         }
         ctrl.enqueue(enc.encode('data: [DONE]\n\n'))
+      } catch (err) {
+        console.error('[ai-chat] stream error', err)
+        ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ error: String(err) })}\n\n`))
       } finally {
         ctrl.close()
       }

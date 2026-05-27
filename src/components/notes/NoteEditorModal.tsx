@@ -373,7 +373,8 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
       } else {
         setAiPanel({ type: 'expand', loading: false, result: json.expanded as string || '(không có kết quả)', tasks: null })
       }
-    } catch {
+    } catch (err) {
+      console.error('[NoteAI]', err)
       setAiPanel(prev => prev ? { ...prev, loading: false, result: 'Lỗi kết nối. Kiểm tra API key.' } : null)
     }
   }
@@ -381,12 +382,17 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
   function addExtractedTasks() {
     if (!aiPanel?.tasks) return
     const projectId = state.activeProjectId ?? state.projects[0]?.id ?? ''
+    const validPriorities: Priority[] = ['low', 'medium', 'high', 'urgent']
+    const firstStatus = state.statuses.find(s => !s.isFinal)?.id ?? state.statuses[0]?.id ?? 'todo'
     for (const t of aiPanel.tasks.filter(t => t.selected)) {
+      const priority: Priority = validPriorities.includes(t.priority as Priority)
+        ? (t.priority as Priority)
+        : 'medium'
       dispatch({
         type: 'ADD_TASK',
         payload: {
-          title: t.title, description: '', status: 'todo',
-          priority: (t.priority as Priority) ?? 'medium',
+          title: t.title, description: '', status: firstStatus,
+          priority,
           labels: [], subtasks: [], comments: [],
           dueDate: t.dueDate ?? null, dueTime: null,
           slaHours: null, estimatedHours: null, recurrence: null,

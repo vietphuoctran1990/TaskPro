@@ -70,11 +70,11 @@ export function buildAIContext(
       ? stripBase64(t.description).slice(0, 400)
       : undefined,
     // All subtasks (usually short)
-    subtasks: t.subtasks.length > 0
+    subtasks: t.subtasks && t.subtasks.length > 0
       ? t.subtasks.map(s => ({ title: s.title, done: s.done }))
       : undefined,
     // Last 3 comments
-    comments: t.comments.length > 0
+    comments: t.comments && t.comments.length > 0
       ? t.comments.slice(-3).map(c => ({ text: c.text, at: c.createdAt.slice(0, 10) }))
       : undefined,
     estimatedHours: t.estimatedHours ?? undefined,
