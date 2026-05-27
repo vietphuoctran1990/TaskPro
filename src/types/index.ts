@@ -87,6 +87,18 @@ export interface Note {
 
 export type DateFilter = 'all' | 'today' | 'tomorrow' | 'upcoming'
 
+export interface TaskTemplate {
+  id: string
+  name: string
+  description: string
+  priority: Priority
+  estimatedHours: number | null
+  slaHours: number | null
+  labels: string[]
+  subtasks: string[]
+  isBuiltin?: boolean
+}
+
 export interface DeletedIds {
   tasks:       Record<string, number>
   projects:    Record<string, number>
@@ -119,6 +131,7 @@ export interface AppState {
   density: Density
   language: 'en' | 'vi'
   notifBefore: number[]
+  templates: TaskTemplate[]
   _deletedIds?: DeletedIds
 }
 

@@ -37,6 +37,36 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
     URL.revokeObjectURL(url)
   }
 
+  // ── Export CSV ───────────────────────────────────────────────────────────
+  const handleExportCSV = () => {
+    const projectMap = new Map(state.projects.map(p => [p.id, p.name]))
+    const labelMap   = new Map(state.labels.map(l => [l.id, l.name]))
+    const headers = ['ID','Title','Status','Priority','Project','Labels','Due Date','Due Time','Estimated Hours','SLA Window','Created','Updated','Description']
+    const rows = state.tasks.map(t => [
+      t.id,
+      `"${t.title.replace(/"/g, '""')}"`,
+      t.status,
+      t.priority,
+      projectMap.get(t.projectId ?? '') ?? '',
+      t.labels.map(id => labelMap.get(id) ?? id).join(';'),
+      t.dueDate ?? '',
+      t.dueTime ?? '',
+      t.estimatedHours ?? '',
+      t.slaHours != null ? `${t.slaHours}h` : '',
+      t.createdAt.slice(0, 10),
+      t.updatedAt.slice(0, 10),
+      `"${(t.description ?? '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+    ])
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `taskpro-tasks-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // ── Import ────────────────────────────────────────────────────────────────
   const handleFile = (file: File) => {
     const reader = new FileReader()
@@ -124,14 +154,25 @@ export default function SyncModal({ open, onClose }: SyncModalProps) {
             <Button variant="primary" onClick={handleExport} className="w-full justify-center">
               <Download size={14} /> {t.sync.exportBtn}
             </Button>
-            <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Xuất lịch (.ics)</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                Nhập vào Google Calendar, Apple Calendar, Outlook — các task có deadline sẽ xuất hiện trên lịch.
-              </p>
-              <Button variant="secondary" onClick={() => downloadICS(state.tasks, state.projects)} className="w-full justify-center">
-                <CalendarDays size={14} /> Tải file .ics
-              </Button>
+            <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4 space-y-3">
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Xuất CSV (Excel)</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                  Xuất tất cả công việc dưới dạng bảng tính — có thể mở trong Excel, Google Sheets, Numbers.
+                </p>
+                <Button variant="secondary" onClick={handleExportCSV} className="w-full justify-center">
+                  <Download size={14} /> Tải file .csv
+                </Button>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Xuất lịch (.ics)</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                  Nhập vào Google Calendar, Apple Calendar, Outlook — các task có deadline sẽ xuất hiện trên lịch.
+                </p>
+                <Button variant="secondary" onClick={() => downloadICS(state.tasks, state.projects)} className="w-full justify-center">
+                  <CalendarDays size={14} /> Tải file .ics
+                </Button>
+              </div>
             </div>
           </div>
         )}

@@ -372,6 +372,48 @@ Dựa trên ý tưởng/ghi chú trên, viết mở rộng thành văn bản đ�
   })
 }
 
+// ── Weekly Review ─────────────────────────────────────────────────────────────
+
+async function handleWeeklyReview(body: Record<string, unknown>): Promise<Response> {
+  const ai       = getClient()
+  const ctx      = (body.context as Record<string, unknown>) ?? {}
+  const today    = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
+  const finalIds = new Set((ctx.finalStatusIds as string[] | undefined) ?? ['done'])
+  const tasks    = (ctx.tasks as Record<string, unknown>[]) ?? []
+
+  const weekAgo = new Date(today)
+  weekAgo.setDate(weekAgo.getDate() - 7)
+  const weekAgoStr = weekAgo.toISOString().slice(0, 10)
+
+  const isTaskDone   = (t: Record<string, unknown>) => t.isDone === true || finalIds.has(t.status as string)
+  const completedThisWeek = tasks.filter(t => isTaskDone(t) && (t.updatedAt as string)?.slice(0, 10) >= weekAgoStr)
+  const active            = tasks.filter(t => !isTaskDone(t))
+  const overdueActive     = active.filter(t => t.dueDate && (t.dueDate as string) < today)
+  const dueNextWeek       = active.filter(t => t.dueDate && (t.dueDate as string) >= today && (t.dueDate as string) <= new Date(new Date(today).getTime() + 7*86400000).toISOString().slice(0, 10))
+  const urgentActive      = active.filter(t => t.priority === 'urgent' || t.priority === 'high')
+
+  const prompt = `Hôm nay: ${today}. Tuần bắt đầu từ ${weekAgoStr}.
+
+Đã hoàn thành trong tuần (${completedThisWeek.length}): ${completedThisWeek.slice(0, 10).map(t => t.title).join(', ') || 'không có'}
+Đang còn active (${active.length}): ${active.slice(0, 8).map(t => `${t.title} [${t.statusLabel ?? t.status}]`).join(', ') || 'không có'}
+Quá hạn (${overdueActive.length}): ${overdueActive.slice(0, 5).map(t => t.title).join(', ') || 'không có'}
+Deadline 7 ngày tới (${dueNextWeek.length}): ${dueNextWeek.slice(0, 6).map(t => `${t.title} (${t.dueDate})`).join(', ') || 'không có'}
+Ưu tiên cao/khẩn (${urgentActive.length}): ${urgentActive.slice(0, 5).map(t => t.title).join(', ') || 'không có'}
+
+Viết Weekly Review (~180 từ) gồm:
+1. **Tóm tắt tuần** — thành tựu nổi bật, số task hoàn thành
+2. **Điểm cần chú ý** — quá hạn, rủi ro, task bị trì hoãn
+3. **Ưu tiên tuần tới** — top 3 việc cần tập trung, có lý do
+4. **Nhận xét** — 1 câu động viên/gợi ý cải thiện
+
+Dùng markdown, xưng "bạn", thân thiện chuyên nghiệp.`
+
+  const content = await generate(ai, buildSystem(ctx), prompt, 600)
+  return new Response(JSON.stringify({ content }), {
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+  })
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default async (req: Request) => {
@@ -395,6 +437,7 @@ export default async (req: Request) => {
     if (type === 'summarize-note') return handleSummarizeNote(body)
     if (type === 'extract-tasks')  return handleExtractTasks(body)
     if (type === 'expand-note')    return handleExpandNote(body)
+    if (type === 'weekly-review')  return handleWeeklyReview(body)
 
     return new Response('Unknown type', { status: 400, headers: CORS_HEADERS })
   } catch (err) {

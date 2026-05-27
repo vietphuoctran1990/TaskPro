@@ -238,6 +238,37 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
       }
     >
       <div className="px-6 py-5 space-y-4">
+        {/* Template picker — only for new tasks */}
+        {!task && state.templates && state.templates.length > 0 && (
+          <div className="flex items-center gap-2">
+            <select
+              className="flex-1 h-8 pl-3 pr-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 appearance-none"
+              defaultValue=""
+              onChange={e => {
+                const tpl = state.templates.find(tp => tp.id === e.target.value)
+                if (!tpl) return
+                setForm(prev => ({
+                  ...prev,
+                  description: prev.description || tpl.description,
+                  priority: tpl.priority,
+                  estimatedHours: tpl.estimatedHours != null ? String(tpl.estimatedHours) : prev.estimatedHours,
+                  slaHours: tpl.slaHours != null ? String(tpl.slaHours) : prev.slaHours,
+                  labels: [...new Set([...prev.labels, ...tpl.labels])],
+                  subtasks: prev.subtasks.length === 0
+                    ? tpl.subtasks.map(title => ({ id: crypto.randomUUID(), title, done: false }))
+                    : prev.subtasks,
+                }))
+                if (tpl.slaHours != null) setSlaPreset(String(tpl.slaHours))
+                e.target.value = ''
+              }}
+            >
+              <option value="">{state.language === 'vi' ? '📋 Dùng mẫu…' : '📋 Use template…'}</option>
+              {state.templates.map(tpl => (
+                <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <Input
             label={t.form.title} id="task-title" placeholder={t.form.titlePlaceholder}

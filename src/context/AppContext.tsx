@@ -8,9 +8,9 @@ import {
 } from 'react'
 import type {
   AppState, Task, Project, Label, Note, NoteFolder, Priority, Status, ViewMode,
-  SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode, StatusDef, DeletedIds,
+  SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode, StatusDef, DeletedIds, TaskTemplate,
 } from '../types'
-import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS, DEFAULT_STATUSES } from '../data/defaults'
+import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS, DEFAULT_STATUSES, DEFAULT_TEMPLATES } from '../data/defaults'
 import {
   generateId, getSLAStatus, PRIORITY_ORDER, SLA_ORDER,
   getDeadline, createNextRecurringTask, buildStatusOrder,
@@ -59,6 +59,9 @@ type Action =
   | { type: 'UPDATE_NOTE_FOLDER'; payload: NoteFolder }
   | { type: 'DELETE_NOTE_FOLDER'; payload: string }
   | { type: 'SET_ACTIVE_NOTE_FOLDER'; payload: string | null }
+  | { type: 'ADD_TEMPLATE';    payload: Omit<TaskTemplate, 'id'> }
+  | { type: 'UPDATE_TEMPLATE'; payload: TaskTemplate }
+  | { type: 'DELETE_TEMPLATE'; payload: string }
 
 const STORAGE_KEY = 'taskpro_v2_state'
 const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -135,6 +138,7 @@ function getInitialState(): AppState {
         density:      parsed.density      ?? 'comfortable',
         language:     parsed.language     ?? 'vi',
         notifBefore:  parsed.notifBefore  ?? [15, 30, 60],
+        templates:    parsed.templates    ?? DEFAULT_TEMPLATES,
         _deletedIds:  pruneTombstones(parsed._deletedIds),
       }
     }
@@ -162,6 +166,7 @@ function getInitialState(): AppState {
     density: 'comfortable',
     language: 'vi',
     notifBefore: [15, 30, 60],
+    templates: DEFAULT_TEMPLATES,
   }
 }
 
@@ -309,6 +314,12 @@ function reducer(state: AppState, action: Action): AppState {
       }
     case 'SET_ACTIVE_NOTE_FOLDER':
       return { ...state, activeNoteFolderId: action.payload }
+    case 'ADD_TEMPLATE':
+      return { ...state, templates: [...(state.templates ?? []), { ...action.payload, id: generateId() }] }
+    case 'UPDATE_TEMPLATE':
+      return { ...state, templates: (state.templates ?? []).map(tp => tp.id === action.payload.id ? action.payload : tp) }
+    case 'DELETE_TEMPLATE':
+      return { ...state, templates: (state.templates ?? []).filter(tp => tp.id !== action.payload) }
     case 'IMPORT_STATE': {
       const { data, mode } = action.payload
       if (mode === 'replace') {

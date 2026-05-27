@@ -12,6 +12,7 @@ import Button from '../ui/Button'
 import WeatherWidget from '../weather/WeatherWidget'
 import DailyBriefing from '../ai/DailyBriefing'
 import PriorityInsights from '../ai/PriorityInsights'
+import WeeklyReview from '../ai/WeeklyReview'
 
 interface DashboardViewProps {
   onViewTask: (task: Task) => void
@@ -129,6 +130,104 @@ const PriorityBreakdown = memo(function PriorityBreakdown({ tasks, finalStatusId
           </div>
         )
       })}
+    </div>
+  )
+})
+
+const ActivityHeatmap = memo(function ActivityHeatmap({ tasks, finalStatusIds, language }: { tasks: Task[]; finalStatusIds: ReadonlySet<string>; language: string }) {
+  const WEEKS = 15
+  const today = new Date()
+  const isVi = language === 'vi'
+
+  const cells = useMemo(() => {
+    const map: Record<string, number> = {}
+    tasks.forEach(t => {
+      if (finalStatusIds.has(t.status)) {
+        const day = t.updatedAt.slice(0, 10)
+        map[day] = (map[day] ?? 0) + 1
+      }
+    })
+    const result: { date: string; count: number; month: string; isToday: boolean }[] = []
+    const startDay = new Date(today)
+    startDay.setDate(startDay.getDate() - WEEKS * 7 + 1)
+    for (let i = 0; i < WEEKS * 7; i++) {
+      const d = new Date(startDay)
+      d.setDate(startDay.getDate() + i)
+      const dateStr = localISO(d)
+      const month = d.toLocaleDateString(isVi ? 'vi-VN' : 'en-US', { month: 'short' })
+      result.push({ date: dateStr, count: map[dateStr] ?? 0, month, isToday: dateStr === localISO(today) })
+    }
+    return result
+  }, [tasks, finalStatusIds]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const maxCount = Math.max(...cells.map(c => c.count), 1)
+  const getLevel = (count: number) => count === 0 ? 0 : Math.min(4, Math.ceil((count / maxCount) * 4))
+
+  const monthLabels = useMemo(() => {
+    const labels: { label: string; col: number }[] = []
+    let lastMonth = ''
+    cells.forEach((c, i) => {
+      if (c.month !== lastMonth) { labels.push({ label: c.month, col: Math.floor(i / 7) }); lastMonth = c.month }
+    })
+    return labels
+  }, [cells])
+
+  const dayLabels = isVi ? ['T2','','T4','','T6','','CN'] : ['Mon','','Wed','','Fri','','Sun']
+
+  const totalDone = cells.reduce((s, c) => s + c.count, 0)
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          {isVi ? 'Hoạt động hoàn thành' : 'Completion activity'}
+        </h3>
+        <span className="text-xs text-slate-400 dark:text-slate-500">
+          {isVi ? `${totalDone} task trong ${WEEKS} tuần` : `${totalDone} tasks in ${WEEKS} weeks`}
+        </span>
+      </div>
+      <div className="flex gap-2">
+        <div className="flex flex-col gap-0.5 justify-around pt-5 shrink-0">
+          {dayLabels.map((d, i) => (
+            <span key={i} className="text-[9px] text-slate-400 dark:text-slate-500 leading-none h-[11px] flex items-center">{d}</span>
+          ))}
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <div className="flex gap-0.5 mb-1">
+            {monthLabels.map(({ label, col }) => (
+              <div key={label + col} className="text-[9px] text-slate-400 dark:text-slate-500" style={{ marginLeft: col > 0 ? `${col * 13 - 2}px` : 0, position: col > 0 ? 'relative' : 'static' }}>
+                {label}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-0.5">
+            {Array.from({ length: WEEKS }, (_, w) => (
+              <div key={w} className="flex flex-col gap-0.5">
+                {Array.from({ length: 7 }, (_, d) => {
+                  const cell = cells[w * 7 + d]
+                  if (!cell) return <div key={d} className="w-[11px] h-[11px]" />
+                  const level = getLevel(cell.count)
+                  return (
+                    <div
+                      key={d}
+                      title={`${cell.date}: ${cell.count} ${isVi ? 'hoàn thành' : 'completed'}`}
+                      className={cn('w-[11px] h-[11px] rounded-[2px] transition-opacity hover:opacity-80', cell.isToday && 'ring-1 ring-indigo-400')}
+                      style={{ backgroundColor: `var(--heatmap-${level})` }}
+                    />
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-1 mt-2">
+        <span className="text-[9px] text-slate-400">{isVi ? 'Ít' : 'Less'}</span>
+        {[0,1,2,3,4].map(l => (
+          <div key={l} className="w-[10px] h-[10px] rounded-[2px]" style={{ backgroundColor: `var(--heatmap-${l})` }} />
+        ))}
+        <span className="text-[9px] text-slate-400">{isVi ? 'Nhiều' : 'More'}</span>
+      </div>
     </div>
   )
 })
@@ -444,6 +543,9 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onVie
           )}
         </div>
       </div>
+      {/* ── Activity Heatmap ── */}
+      <ActivityHeatmap tasks={state.tasks} finalStatusIds={finalStatusIds} language={state.language} />
+
       {/* ── Reports ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* 4-week trend */}
@@ -457,6 +559,9 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onVie
           <PriorityBreakdown tasks={filteredTasks} finalStatusIds={finalStatusIds} />
         </div>
       </div>
+
+      {/* ── AI Weekly Review ── */}
+      <WeeklyReview />
     </div>
   )
 })

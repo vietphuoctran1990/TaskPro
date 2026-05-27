@@ -39,6 +39,22 @@
   ::selection { background-color: rgba(99, 102, 241, 0.15); }
   ::-moz-selection { background-color: rgba(99, 102, 241, 0.15); }
 
+  /* Heatmap CSS variables */
+  html {
+    --heatmap-0: #f1f5f9;
+    --heatmap-1: #bbf7d0;
+    --heatmap-2: #4ade80;
+    --heatmap-3: #16a34a;
+    --heatmap-4: #14532d;
+  }
+  html.dark {
+    --heatmap-0: #1e293b;
+    --heatmap-1: #14532d;
+    --heatmap-2: #166534;
+    --heatmap-3: #15803d;
+    --heatmap-4: #4ade80;
+  }
+
   /* Dark mode overrides */
   html.dark body { background: #080c15; color: #f1f5f9; }
   html.dark { color-scheme: dark; }

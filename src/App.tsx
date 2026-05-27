@@ -35,7 +35,7 @@ import { usePWA } from './hooks/usePWA'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { Plus, RefreshCw } from 'lucide-react'
 import { cn } from './lib/utils'
-import type { Status, Task, Project, Note } from './types'
+import type { Status, Task, Project, Note, ViewMode } from './types'
 
 function ViewSpinner() {
   return (
@@ -138,6 +138,21 @@ function AppShell() {
     setEditingTask(null)
     setFormOpen(true)
   }, [])
+
+  // Additional shortcuts: n=new task, /=search, 1-6=views
+  useEffect(() => {
+    const VIEW_KEYS: Record<string, ViewMode> = { '1': 'dashboard', '2': 'kanban', '3': 'list', '4': 'calendar', '5': 'timeline', '6': 'notes' }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const tag = (document.activeElement as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (e.key === 'n') { e.preventDefault(); handleAddTask(); return }
+      if (e.key === '/') { e.preventDefault(); document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(); return }
+      if (VIEW_KEYS[e.key]) { e.preventDefault(); dispatch({ type: 'SET_VIEW_MODE', payload: VIEW_KEYS[e.key] }); return }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [handleAddTask, dispatch])
 
   const handleEditTask = useCallback((task: Task) => {
     setEditingTask(task)
