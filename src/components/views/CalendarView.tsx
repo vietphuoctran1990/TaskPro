@@ -43,7 +43,8 @@ function LunarPanel({
   onAddTask:  (d: string) => void
   onClose:    () => void
 }) {
-  const { finalStatusIds } = useApp()
+  const { state, finalStatusIds } = useApp()
+  const isVi = state.language === 'vi'
   const dateKey = localISO(date)
   const dowLabel = DOW_VI[date.getDay()]
   const solarLabel = `${dowLabel}, ${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
@@ -152,7 +153,7 @@ function LunarPanel({
       {tasks.length > 0 && (
         <div className="px-5 pb-4">
           <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-            Công việc hôm nay ({tasks.length})
+            {isVi ? `Công việc ngày này (${tasks.length})` : `Tasks (${tasks.length})`}
           </p>
           <div className="space-y-1.5 max-h-32 overflow-y-auto">
             {tasks.map(task => (
@@ -175,7 +176,7 @@ function LunarPanel({
       {/* Footer */}
       <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 flex justify-end">
         <Button size="sm" variant="primary" onClick={() => { onAddTask(dateKey); onClose() }}>
-          <Plus size={13} /> Thêm công việc ngày này
+          <Plus size={13} /> {isVi ? 'Thêm công việc' : 'Add task'}
         </Button>
       </div>
     </div>
@@ -353,7 +354,7 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
                     <button
                       onClick={e => { e.stopPropagation(); onAddTask(key) }}
                       className="opacity-0 hover:opacity-100 text-slate-300 hover:text-indigo-500 transition-opacity"
-                      aria-label="Thêm công việc"
+                      aria-label={state.language === 'vi' ? 'Thêm công việc' : 'Add task'}
                     >
                       <Plus size={12} />
                     </button>

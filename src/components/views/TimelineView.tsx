@@ -54,7 +54,7 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
         </svg>
         <div className="text-center">
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">{t.timeline.noTasks}</p>
-          <p className="text-slate-400 dark:text-slate-500 text-xs">Thêm deadline cho công việc để hiển thị</p>
+          <p className="text-slate-400 dark:text-slate-500 text-xs">{state.language === 'vi' ? 'Thêm deadline cho công việc để hiển thị' : 'Add a deadline to tasks to see them here'}</p>
         </div>
         <button
           onClick={onAddTask}

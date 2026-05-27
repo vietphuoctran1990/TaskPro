@@ -243,7 +243,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
               {isNotesMode ? (
                 <>
                   <StickyNote size={15} className="text-indigo-500 shrink-0" />
-                  <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">Ghi chú</h1>
+                  <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{t.views.notes}</h1>
                 </>
               ) : (
                 <>
@@ -316,7 +316,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             <div className="hidden sm:block">
               {isNotesMode ? (
                 <Button variant="primary" size="sm" onClick={onAddNote}>
-                  <Plus size={14} /> <span>Tạo ghi chú</span>
+                  <Plus size={14} /> <span>{state.language === 'vi' ? 'Tạo ghi chú' : 'New note'}</span>
                 </Button>
               ) : (
                 <Button variant="primary" size="sm" onClick={onAddTask}>

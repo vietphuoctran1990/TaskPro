@@ -233,10 +233,10 @@ export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
           <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
             <StickyNote size={32} className="text-indigo-400" />
           </div>
-          <p className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-1">Chưa có ghi chú nào</p>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mb-5">Bắt đầu ghi lại ý tưởng, suy nghĩ của bạn</p>
+          <p className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-1">{state.language === 'vi' ? 'Chưa có ghi chú nào' : 'No notes yet'}</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mb-5">{state.language === 'vi' ? 'Bắt đầu ghi lại ý tưởng, suy nghĩ của bạn' : 'Start capturing your ideas and thoughts'}</p>
           <Button variant="primary" size="sm" onClick={onAddNote}>
-            <Plus size={14} /> Tạo ghi chú đầu tiên
+            <Plus size={14} /> {state.language === 'vi' ? 'Tạo ghi chú đầu tiên' : 'Create first note'}
           </Button>
         </div>
       ) : viewType === 'grid' ? (

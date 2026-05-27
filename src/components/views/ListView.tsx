@@ -229,7 +229,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
         </svg>
         <div className="text-center">
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">{t.list.noTasks}</p>
-          <p className="text-slate-400 dark:text-slate-500 text-xs">Tạo công việc đầu tiên để bắt đầu</p>
+          <p className="text-slate-400 dark:text-slate-500 text-xs">{isVi ? 'Tạo công việc đầu tiên để bắt đầu' : 'Create your first task to get started'}</p>
         </div>
         <Button variant="primary" size="sm" onClick={onAddTask}>+ {t.header.newTask}</Button>
       </div>
