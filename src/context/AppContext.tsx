@@ -21,6 +21,8 @@ type Action =
   | { type: 'ADD_TASK';        payload: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> }
   | { type: 'UPDATE_TASK';     payload: Partial<Task> & { id: string } }
   | { type: 'DELETE_TASK';     payload: string }
+  | { type: 'RESTORE_TASK';    payload: Task }
+  | { type: 'RESTORE_NOTE';    payload: Note }
   | { type: 'MOVE_TASK';       payload: { id: string; status: Status } }
   | { type: 'REORDER_TASKS';   payload: Task[] }
   | { type: 'ADD_COMMENT';     payload: { taskId: string; comment: Omit<Comment, 'id' | 'createdAt'> } }
@@ -35,6 +37,7 @@ type Action =
   | { type: 'SET_FILTER_PRIORITY'; payload: Priority | 'all' }
   | { type: 'SET_FILTER_STATUS';   payload: Status | 'all' }
   | { type: 'SET_FILTER_SLA';      payload: SLAStatus | 'all' }
+  | { type: 'SET_FILTER_LABEL';    payload: string | 'all' }
   | { type: 'SET_DATE_FILTER';     payload: DateFilter }
   | { type: 'SET_VIEW_MODE';   payload: ViewMode }
   | { type: 'SET_SORT';        payload: { field: SortField; dir: SortDir } }
@@ -117,6 +120,7 @@ function getInitialState(): AppState {
         noteFolders:        parsed.noteFolders        ?? [],
         activeNoteFolderId: parsed.activeNoteFolderId ?? null,
         filterSLA:    parsed.filterSLA    ?? 'all',
+        filterLabel:  parsed.filterLabel  ?? 'all',
         dateFilter:   parsed.dateFilter   ?? 'all',
         viewMode:     parsed.viewMode     ?? 'kanban',
         // Migrate old default (createdAt desc) → new default (dueDate asc)
@@ -148,6 +152,7 @@ function getInitialState(): AppState {
     filterPriority: 'all',
     filterStatus: 'all',
     filterSLA: 'all',
+    filterLabel: 'all',
     dateFilter: 'all',
     viewMode: 'kanban',
     sortField: 'dueDate',
@@ -177,6 +182,10 @@ function reducer(state: AppState, action: Action): AppState {
       }
     case 'DELETE_TASK':
       return { ...state, tasks: state.tasks.filter(t => t.id !== action.payload), _deletedIds: tombstone(state._deletedIds, 'tasks', action.payload) }
+    case 'RESTORE_TASK':
+      return { ...state, tasks: [...state.tasks, action.payload] }
+    case 'RESTORE_NOTE':
+      return { ...state, notes: [...state.notes, action.payload] }
     case 'MOVE_TASK': {
       const task = state.tasks.find(t => t.id === action.payload.id)
       const targetDef = state.statuses.find(s => s.id === action.payload.status)
@@ -229,6 +238,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_FILTER_PRIORITY': return { ...state, filterPriority: action.payload }
     case 'SET_FILTER_STATUS':   return { ...state, filterStatus: action.payload }
     case 'SET_FILTER_SLA':      return { ...state, filterSLA: action.payload }
+    case 'SET_FILTER_LABEL':    return { ...state, filterLabel: action.payload }
     case 'SET_DATE_FILTER':     return { ...state, dateFilter: action.payload }
     case 'SET_VIEW_MODE':       return { ...state, viewMode: action.payload }
     case 'SET_SORT':            return { ...state, sortField: action.payload.field, sortDir: action.payload.dir }
@@ -371,11 +381,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (state.activeProjectId)      tasks = tasks.filter(t => t.projectId === state.activeProjectId)
     if (state.searchQuery.trim()) {
       const q = state.searchQuery.toLowerCase()
-      tasks = tasks.filter(t => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q))
+      const labelById = new Map(state.labels.map(l => [l.id, l.name.toLowerCase()]))
+      tasks = tasks.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        t.description.toLowerCase().includes(q) ||
+        t.subtasks.some(s => s.title.toLowerCase().includes(q)) ||
+        t.comments.some(c => c.text.toLowerCase().includes(q)) ||
+        t.labels.some(lid => (labelById.get(lid) ?? '').includes(q))
+      )
     }
     if (state.filterPriority !== 'all') tasks = tasks.filter(t => t.priority === state.filterPriority)
     if (state.filterStatus   !== 'all') tasks = tasks.filter(t => t.status   === state.filterStatus)
     if (state.filterSLA      !== 'all') tasks = tasks.filter(t => getSLAStatus(t, finalStatusIds) === state.filterSLA)
+    if (state.filterLabel    !== 'all') tasks = tasks.filter(t => t.labels.includes(state.filterLabel))
     if (state.dateFilter     !== 'all') {
       const todayStr = todayLocalISO()
       const tomorrowStr = tomorrowLocalISO()
@@ -411,8 +429,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     })
   }, [state.tasks, state.activeProjectId, state.searchQuery,
-      state.filterPriority, state.filterStatus, state.filterSLA, state.dateFilter,
-      state.sortField, state.sortDir, finalStatusIds, statusOrder])
+      state.filterPriority, state.filterStatus, state.filterSLA, state.filterLabel,
+      state.dateFilter, state.sortField, state.sortDir, state.labels,
+      finalStatusIds, statusOrder])
 
   return (
     <AppContext.Provider value={{ state, dispatch, filteredTasks, finalStatusIds }}>

@@ -194,12 +194,13 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
   ).length
   const hasFilters =
     state.filterPriority !== 'all' || state.filterStatus !== 'all' ||
-    state.filterSLA !== 'all' || localSearch.trim() !== ''
+    state.filterSLA !== 'all' || state.filterLabel !== 'all' || localSearch.trim() !== ''
 
   const clearAllFilters = () => {
     dispatch({ type: 'SET_FILTER_PRIORITY', payload: 'all' })
     dispatch({ type: 'SET_FILTER_STATUS',   payload: 'all' })
     dispatch({ type: 'SET_FILTER_SLA',      payload: 'all' })
+    dispatch({ type: 'SET_FILTER_LABEL',    payload: 'all' })
     setLocalSearch('')
   }
 
@@ -401,6 +402,16 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             <option value="on_track">🟢 {t.sla.on_track}</option>
             <option value="none">— {t.sla.none}</option>
           </select>
+          {state.labels.length > 0 && (
+            <select value={state.filterLabel}
+              onChange={e => dispatch({ type: 'SET_FILTER_LABEL', payload: e.target.value })}
+              className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+              <option value="all">{state.language === 'vi' ? 'Tất cả nhãn' : 'All labels'}</option>
+              {state.labels.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          )}
           {hasFilters && (
             <Button variant="ghost" size="sm" className="text-red-500 hover:bg-red-50" onClick={clearAllFilters}>
               {t.header.clear}
@@ -457,6 +468,16 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
                 <option value="on_track">🟢 {t.sla.on_track}</option>
                 <option value="none">— {t.sla.none}</option>
               </select>
+              {state.labels.length > 0 && (
+                <select value={state.filterLabel}
+                  onChange={e => dispatch({ type: 'SET_FILTER_LABEL', payload: e.target.value })}
+                  className="h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer w-full">
+                  <option value="all">{state.language === 'vi' ? 'Tất cả nhãn' : 'All labels'}</option>
+                  {state.labels.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
             {/* Sheet footer actions */}
             <div className="flex gap-2 px-4 pt-2" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}>

@@ -1,13 +1,14 @@
 import { memo, useState, useRef, useMemo } from 'react'
 import {
   ChevronDown, ChevronUp, ChevronsUpDown,
-  MoreHorizontal, Pencil, Pin, PinOff, Timer, Trash2, CheckSquare, Calendar, Rows3,
+  MoreHorizontal, Pencil, Pin, PinOff, Timer, Trash2, CheckSquare, Calendar, Rows3, X, Check,
 } from 'lucide-react'
 import { cn, formatDateTime, getDeadline } from '../../lib/utils'
 import { PriorityBadge } from '../ui/Badge'
 import SLABadge from '../sla/SLABadge'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
+import { useToast } from '../../context/ToastContext'
 import { useT } from '../../i18n'
 import type { SortField, Task, Density } from '../../types'
 
@@ -138,7 +139,12 @@ function TaskMenu({ onEdit, onDelete, onPin, onFocus, pinned }: { onEdit: () => 
 
 const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onFocusTask }: ListViewProps) {
   const { state, dispatch, filteredTasks, finalStatusIds } = useApp()
+  const { toast } = useToast()
   const t = useT()
+  const isVi = state.language === 'vi'
+
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const statusMap = useMemo(() => new Map(state.statuses.map(s => [s.id, s])), [state.statuses])
   const finalStatus  = useMemo(() => state.statuses.find(s => s.isFinal)?.id  ?? 'done', [state.statuses])
@@ -158,6 +164,58 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
   const toggleDone = (task: Task, e: React.MouseEvent) => {
     e.stopPropagation()
     dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalStatusIds.has(task.status) ? firstStatus : finalStatus } })
+  }
+
+  const toggleSelect = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  const enterSelectMode = (id?: string) => {
+    setSelectMode(true)
+    if (id) setSelectedIds(new Set([id]))
+  }
+
+  const exitSelectMode = () => {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+  }
+
+  const allVisibleSelected = filteredTasks.length > 0 && filteredTasks.every(t => selectedIds.has(t.id))
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allVisibleSelected ? new Set() : new Set(filteredTasks.map(t => t.id)))
+  }
+
+  const bulkDelete = () => {
+    const snapshots = state.tasks.filter(t => selectedIds.has(t.id))
+    selectedIds.forEach(id => dispatch({ type: 'DELETE_TASK', payload: id }))
+    const n = snapshots.length
+    exitSelectMode()
+    if (n > 0) toast({
+      message: isVi ? `Đã xóa ${n} công việc` : `Deleted ${n} tasks`,
+      type:    'info',
+      action:  {
+        label:   isVi ? 'Hoàn tác' : 'Undo',
+        onClick: () => snapshots.forEach(t => dispatch({ type: 'RESTORE_TASK', payload: t })),
+      },
+    })
+  }
+
+  const bulkMarkDone = () => {
+    selectedIds.forEach(id => dispatch({ type: 'MOVE_TASK', payload: { id, status: finalStatus } }))
+    const n = selectedIds.size
+    exitSelectMode()
+    toast({ message: isVi ? `Đã hoàn thành ${n} công việc` : `Marked ${n} tasks done`, type: 'success' })
+  }
+
+  const bulkChangeStatus = (statusId: string) => {
+    selectedIds.forEach(id => dispatch({ type: 'MOVE_TASK', payload: { id, status: statusId } }))
+    exitSelectMode()
   }
 
   if (filteredTasks.length === 0) {
@@ -184,10 +242,55 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/60 dark:bg-slate-800/40">
-        <span className="text-xs text-slate-500 dark:text-slate-400">{t.list.tasks(filteredTasks.length)}</span>
-        <DensityToggle />
-      </div>
+      {selectMode ? (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={exitSelectMode} aria-label="Cancel">
+              <X size={15} />
+            </Button>
+            <button onClick={toggleSelectAll}
+              className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:underline">
+              {allVisibleSelected
+                ? (isVi ? 'Bỏ chọn tất cả' : 'Deselect all')
+                : (isVi ? 'Chọn tất cả' : 'Select all')}
+            </button>
+            <span className="text-xs text-indigo-700/70 dark:text-indigo-300/70">
+              {isVi ? `${selectedIds.size} đã chọn` : `${selectedIds.size} selected`}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <select
+              onChange={e => { if (e.target.value) { bulkChangeStatus(e.target.value); e.target.value = '' } }}
+              disabled={selectedIds.size === 0}
+              className="h-7 px-2 rounded-md border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 cursor-pointer disabled:opacity-50"
+              defaultValue=""
+            >
+              <option value="">{isVi ? 'Đổi trạng thái…' : 'Move to…'}</option>
+              {[...state.statuses].sort((a, b) => a.order - b.order).map(s => (
+                <option key={s.id} value={s.id}>{s.name || i18nStatus[s.id] || s.id}</option>
+              ))}
+            </select>
+            <Button variant="ghost" size="sm" onClick={bulkMarkDone} disabled={selectedIds.size === 0}
+              className="text-emerald-700 dark:text-emerald-300">
+              <Check size={13} /> {isVi ? 'Hoàn thành' : 'Done'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={bulkDelete} disabled={selectedIds.size === 0}
+              className="text-red-600 dark:text-red-400">
+              <Trash2 size={13} /> {isVi ? 'Xóa' : 'Delete'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/60 dark:bg-slate-800/40">
+          <span className="text-xs text-slate-500 dark:text-slate-400">{t.list.tasks(filteredTasks.length)}</span>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => enterSelectMode()}>
+              <CheckSquare size={13} /> <span className="hidden sm:inline">{isVi ? 'Chọn' : 'Select'}</span>
+            </Button>
+            <DensityToggle />
+          </div>
+        </div>
+      )}
 
       {/* ── MOBILE CARD LIST (hidden on md+) ─────────────────────────── */}
       <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -198,11 +301,25 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
           return (
             <div
               key={task.id}
-              className={cn(dpad.card, 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer')}
-              onClick={() => onViewTask(task)}
+              className={cn(
+                dpad.card, 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer',
+                selectMode && selectedIds.has(task.id) && 'bg-indigo-50/60 dark:bg-indigo-900/20',
+              )}
+              onClick={() => selectMode ? toggleSelect(task.id) : onViewTask(task)}
             >
               {/* Row 1: checkbox + title + menu */}
               <div className="flex items-center gap-2.5">
+                {selectMode ? (
+                  <button
+                    className={cn(
+                      'shrink-0 w-5 h-5 rounded border-2 transition-colors flex items-center justify-center',
+                      selectedIds.has(task.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600'
+                    )}
+                    onClick={e => toggleSelect(task.id, e)}
+                  >
+                    {selectedIds.has(task.id) && <Check size={12} className="text-white" strokeWidth={3} />}
+                  </button>
+                ) : (
                 <button
                   className={cn(
                     'shrink-0 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
@@ -216,6 +333,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                     </svg>
                   )}
                 </button>
+                )}
                 <p className={cn(
                   'flex-1 text-sm font-medium text-slate-800 dark:text-slate-200 truncate',
                   done && 'line-through text-slate-400'
@@ -224,7 +342,11 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                 </p>
                 <TaskMenu
                   onEdit={() => onEditTask(task)}
-                  onDelete={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+                  onDelete={() => {
+                    const snapshot = task
+                    dispatch({ type: 'DELETE_TASK', payload: task.id })
+                    toast({ message: isVi ? 'Đã xóa công việc' : 'Task deleted', type: 'info', action: { label: isVi ? 'Hoàn tác' : 'Undo', onClick: () => dispatch({ type: 'RESTORE_TASK', payload: snapshot }) } })
+                  }}
                   onPin={() => dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id })}
                   pinned={task.pinned}
                   onFocus={!finalStatusIds.has(task.status) && onFocusTask ? () => onFocusTask(task) : undefined}
@@ -271,7 +393,20 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
         <table className="w-full min-w-[800px]">
           <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
             <tr>
-              <SortHeader field="title"    label={t.list.task}     currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} className="pl-5 w-80" />
+              {selectMode && (
+                <th className="pl-4 py-3 w-8">
+                  <button
+                    className={cn(
+                      'w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
+                      allVisibleSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-400 dark:border-slate-500'
+                    )}
+                    onClick={toggleSelectAll}
+                  >
+                    {allVisibleSelected && <Check size={10} className="text-white" strokeWidth={3} />}
+                  </button>
+                </th>
+              )}
+              <SortHeader field="title"    label={t.list.task}     currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} className={selectMode ? 'w-80' : 'pl-5 w-80'} />
               <SortHeader field="status"   label={t.list.status}   currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
               <SortHeader field="priority" label={t.list.priority} currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
               <SortHeader field="sla"      label={t.list.sla}      currentField={state.sortField} currentDir={state.sortDir} onSort={handleSort} />
@@ -285,27 +420,46 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
               const project = state.projects.find(p => p.id === task.projectId)
               const deadline = getDeadline(task)
               const done = finalStatusIds.has(task.status)
+              const selected = selectedIds.has(task.id)
               return (
                 <tr
                   key={task.id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group"
-                  onClick={() => onViewTask(task)}
+                  className={cn(
+                    'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group',
+                    selectMode && selected && 'bg-indigo-50/60 dark:bg-indigo-900/20'
+                  )}
+                  onClick={() => selectMode ? toggleSelect(task.id) : onViewTask(task)}
                 >
-                  <td className={cn('pl-5', dpad.cell)}>
-                    <div className="flex items-start gap-2.5">
+                  {selectMode && (
+                    <td className="pl-4" onClick={e => e.stopPropagation()}>
                       <button
                         className={cn(
-                          'mt-0.5 shrink-0 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
-                          done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400'
+                          'w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
+                          selected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600'
                         )}
-                        onClick={e => toggleDone(task, e)}
+                        onClick={e => toggleSelect(task.id, e)}
                       >
-                        {done && (
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
+                        {selected && <Check size={10} className="text-white" strokeWidth={3} />}
                       </button>
+                    </td>
+                  )}
+                  <td className={cn(selectMode ? '' : 'pl-5', dpad.cell)}>
+                    <div className="flex items-start gap-2.5">
+                      {!selectMode && (
+                        <button
+                          className={cn(
+                            'mt-0.5 shrink-0 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
+                            done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400'
+                          )}
+                          onClick={e => toggleDone(task, e)}
+                        >
+                          {done && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
                       <div className="min-w-0">
                         <p className={cn('text-sm font-medium text-slate-800 dark:text-slate-200 truncate max-w-[280px]', done && 'line-through text-slate-400')}>
                           {task.title}
@@ -346,7 +500,11 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
                   <td className={cn('px-3', dpad.cell)} onClick={e => e.stopPropagation()}>
                     <TaskMenu
                       onEdit={() => onEditTask(task)}
-                      onDelete={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+                      onDelete={() => {
+                        const snapshot = task
+                        dispatch({ type: 'DELETE_TASK', payload: task.id })
+                        toast({ message: isVi ? 'Đã xóa công việc' : 'Task deleted', type: 'info', action: { label: isVi ? 'Hoàn tác' : 'Undo', onClick: () => dispatch({ type: 'RESTORE_TASK', payload: snapshot }) } })
+                      }}
                       onPin={() => dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id })}
                       pinned={task.pinned}
                       onFocus={!finalStatusIds.has(task.status) && onFocusTask ? () => onFocusTask(task) : undefined}
@@ -363,7 +521,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
       <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-400 dark:text-slate-500">
         {t.list.tasks(filteredTasks.length)}
         {' · '}
-        {t.list.completed(filteredTasks.filter(tk => tk.status === 'done').length)}
+        {t.list.completed(filteredTasks.filter(tk => finalStatusIds.has(tk.status)).length)}
       </div>
     </div>
   )

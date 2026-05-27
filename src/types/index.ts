@@ -109,6 +109,7 @@ export interface AppState {
   filterPriority: Priority | 'all'
   filterStatus: Status | 'all'
   filterSLA: SLAStatus | 'all'
+  filterLabel: string | 'all'
   dateFilter: DateFilter
   viewMode: ViewMode
   sortField: SortField

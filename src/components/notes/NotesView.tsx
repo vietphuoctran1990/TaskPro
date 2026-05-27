@@ -2,6 +2,7 @@ import { useState, useMemo, memo } from 'react'
 import { StickyNote, Pin, Pencil, Trash2, Plus, LayoutGrid, List, CheckSquare, Square, FileDown, Trash, ImageIcon } from 'lucide-react'
 import { cn, formatRelativeTime } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
+import { useToast } from '../../context/ToastContext'
 import Button from '../ui/Button'
 import type { Note } from '../../types'
 
@@ -32,6 +33,7 @@ function previewFromContent(content: string): { text: string; firstImage: string
 
 export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
   const { state, dispatch } = useApp()
+  const { toast } = useToast()
   const [viewType, setViewType] = useState<'grid' | 'list'>('grid')
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -83,8 +85,19 @@ export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
   }
 
   const handleBulkDelete = () => {
+    const snapshots = state.notes.filter(n => selectedIds.has(n.id))
     selectedIds.forEach(id => dispatch({ type: 'DELETE_NOTE', payload: id }))
     exitSelectMode()
+    if (snapshots.length > 0) {
+      toast({
+        message: state.language === 'vi' ? `Đã xóa ${snapshots.length} ghi chú` : `Deleted ${snapshots.length} notes`,
+        type:    'info',
+        action:  {
+          label:   state.language === 'vi' ? 'Hoàn tác' : 'Undo',
+          onClick: () => snapshots.forEach(n => dispatch({ type: 'RESTORE_NOTE', payload: n })),
+        },
+      })
+    }
   }
 
   const handleBulkExport = () => {
@@ -110,7 +123,18 @@ export default function NotesView({ onAddNote, onEditNote }: NotesViewProps) {
       folderName: folder?.name ?? '',
       folderColor: folder?.color ?? '',
       onEdit: () => onEditNote(note),
-      onDelete: () => dispatch({ type: 'DELETE_NOTE', payload: note.id }),
+      onDelete: () => {
+        const snapshot = note
+        dispatch({ type: 'DELETE_NOTE', payload: note.id })
+        toast({
+          message: state.language === 'vi' ? 'Đã xóa ghi chú' : 'Note deleted',
+          type:    'info',
+          action:  {
+            label:   state.language === 'vi' ? 'Hoàn tác' : 'Undo',
+            onClick: () => dispatch({ type: 'RESTORE_NOTE', payload: snapshot }),
+          },
+        })
+      },
       onTogglePin: () => dispatch({ type: 'UPDATE_NOTE', payload: { id: note.id, pinned: !note.pinned } }),
       selectMode,
       selected: selectedIds.has(note.id),
