@@ -414,6 +414,91 @@ Dùng markdown, xưng "bạn", thân thiện chuyên nghiệp.`
   })
 }
 
+// ── Suggest Deadline ──────────────────────────────────────────────────────────
+
+async function handleSuggestDeadline(body: Record<string, unknown>): Promise<Response> {
+  const ai       = getClient()
+  const today    = new Date().toISOString().slice(0, 10)
+  const title    = (body.title as string) ?? ''
+  const priority = (body.priority as string) ?? 'medium'
+  const estHours = (body.estimatedHours as number | null) ?? null
+  const tasks    = (body.activeTasks as { dueDate?: string; title: string }[]) ?? []
+
+  const busyDays: Record<string, number> = {}
+  tasks.forEach(t => { if (t.dueDate) busyDays[t.dueDate] = (busyDays[t.dueDate] ?? 0) + 1 })
+  const busySummary = Object.entries(busyDays).sort(([a], [b]) => a.localeCompare(b)).slice(0, 7)
+    .map(([d, n]) => `${d}: ${n} task`).join(', ') || 'không có task'
+
+  const prompt = `Hôm nay: ${today}
+Task cần xác định deadline: "${title}"
+Mức ưu tiên: ${priority}
+Giờ ước tính: ${estHours ?? 'chưa xác định'}
+Các ngày đang bận: ${busySummary}
+
+Đề xuất deadline hợp lý cho task này, cân nhắc:
+- Độ ưu tiên (urgent=1-2 ngày, high=3-5 ngày, medium=1-2 tuần, low=2-4 tuần)
+- Thời gian ước tính
+- Tải công việc hiện tại
+
+Trả về JSON hợp lệ (không markdown):
+{"date": "YYYY-MM-DD", "reason": "Lý do ngắn gọn (1 câu)"}`
+
+  const content = await generate(ai, '', prompt, 256)
+  try {
+    const clean = content.replace(/```json\n?|\n?```/g, '').trim()
+    const parsed = JSON.parse(clean)
+    return new Response(JSON.stringify(parsed), {
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+  } catch {
+    const match = content.match(/\d{4}-\d{2}-\d{2}/)
+    return new Response(JSON.stringify({ date: match?.[0] ?? null, reason: content.slice(0, 100) }), {
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+  }
+}
+
+// ── Decompose Project ─────────────────────────────────────────────────────────
+
+async function handleDecomposeProject(body: Record<string, unknown>): Promise<Response> {
+  const ai    = getClient()
+  const goal  = (body.goal as string) ?? ''
+  const today = new Date().toISOString().slice(0, 10)
+
+  const prompt = `Hôm nay: ${today}
+Mục tiêu dự án: "${goal}"
+
+Phân tích và tạo kế hoạch thực hiện dự án. Trả về JSON hợp lệ (không markdown):
+{
+  "projectName": "Tên dự án ngắn gọn",
+  "description": "Mô tả 1-2 câu",
+  "tasks": [
+    {
+      "title": "Tiêu đề công việc",
+      "description": "Mô tả ngắn",
+      "priority": "low|medium|high|urgent",
+      "estimatedHours": số,
+      "daysFromNow": số ngày từ hôm nay để làm deadline
+    }
+  ]
+}
+
+Tạo 5-10 task thực tế, có thứ tự logic, ưu tiên phù hợp. Tasks phải cụ thể, có thể thực hiện được.`
+
+  const content = await generate(ai, '', prompt, 1200)
+  try {
+    const clean = content.replace(/```json\n?|\n?```/g, '').trim()
+    const parsed = JSON.parse(clean)
+    return new Response(JSON.stringify(parsed), {
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+  } catch {
+    return new Response(JSON.stringify({ error: 'Could not parse AI response', raw: content }), {
+      status: 422, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+  }
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default async (req: Request) => {
@@ -437,7 +522,9 @@ export default async (req: Request) => {
     if (type === 'summarize-note') return handleSummarizeNote(body)
     if (type === 'extract-tasks')  return handleExtractTasks(body)
     if (type === 'expand-note')    return handleExpandNote(body)
-    if (type === 'weekly-review')  return handleWeeklyReview(body)
+    if (type === 'weekly-review')        return handleWeeklyReview(body)
+    if (type === 'suggest-deadline')     return handleSuggestDeadline(body)
+    if (type === 'decompose-project')    return handleDecomposeProject(body)
 
     return new Response('Unknown type', { status: 400, headers: CORS_HEADERS })
   } catch (err) {

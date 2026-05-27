@@ -21,7 +21,8 @@ const NoteEditorModal = lazy(() => import('./components/notes/NoteEditorModal'))
 const ManageModal     = lazy(() => import('./components/settings/ManageModal'))
 const SyncModal       = lazy(() => import('./components/sync/SyncModal'))
 const PomodoroModal   = lazy(() => import('./components/focus/PomodoroModal'))
-const CommandPalette  = lazy(() => import('./components/ui/CommandPalette'))
+const CommandPalette      = lazy(() => import('./components/ui/CommandPalette'))
+const ProjectDecomposer   = lazy(() => import('./components/ai/ProjectDecomposer'))
 import OnboardingTour from './components/onboarding/OnboardingTour'
 import AuthModal from './components/auth/AuthModal'
 import ProjectNotesModal from './components/notes/ProjectNotesModal'
@@ -68,6 +69,7 @@ function AppShell() {
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('taskpro-onboarded'))
   const [commandOpen, setCommandOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [decomposeOpen, setDecomposeOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
 
@@ -177,7 +179,7 @@ function AppShell() {
     <div className="flex h-[100dvh] bg-[#f1f5f9] dark:bg-[#080c15] overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex h-full">
-        <Sidebar onSync={() => setSyncOpen(true)} onManage={handleManage} onNotes={setNotesProject} />
+        <Sidebar onSync={() => setSyncOpen(true)} onManage={handleManage} onNotes={setNotesProject} onDecompose={() => setDecomposeOpen(true)} />
       </div>
 
       {/* Mobile sidebar overlay */}
@@ -188,7 +190,8 @@ function AppShell() {
             <Sidebar mobile onClose={() => setSidebarOpen(false)}
               onSync={() => { setSidebarOpen(false); setSyncOpen(true) }}
               onManage={handleManage}
-              onNotes={p => { setSidebarOpen(false); setNotesProject(p) }} />
+              onNotes={p => { setSidebarOpen(false); setNotesProject(p) }}
+              onDecompose={() => { setSidebarOpen(false); setDecomposeOpen(true) }} />
           </div>
         </>
       )}
@@ -328,6 +331,9 @@ function AppShell() {
         />
       </Suspense>
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <Suspense fallback={null}>
+        <ProjectDecomposer open={decomposeOpen} onClose={() => setDecomposeOpen(false)} />
+      </Suspense>
 
       {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
 

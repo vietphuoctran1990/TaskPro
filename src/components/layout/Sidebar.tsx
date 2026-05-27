@@ -10,9 +10,9 @@ import type { Project } from '../../types'
 
 const PROJECT_COLORS = ['#6366f1','#0ea5e9','#f59e0b','#22c55e','#ec4899','#ef4444','#8b5cf6','#14b8a6','#f97316','#06b6d4']
 
-interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void; onManage?: (tab: 'projects' | 'labels' | 'statuses') => void; onNotes?: (project: Project) => void }
+interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void; onManage?: (tab: 'projects' | 'labels' | 'statuses') => void; onNotes?: (project: Project) => void; onDecompose?: () => void }
 
-export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: SidebarProps) {
+export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes, onDecompose }: SidebarProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [projectsOpen, setProjectsOpen] = useState(true)
@@ -110,6 +110,13 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
               <span className="flex-1 text-left">{t.sidebar.projects}</span>
               <ChevronDown size={12} className={cn('transition-transform', !projectsOpen && '-rotate-90')} />
             </button>
+            {onDecompose && (
+              <button onClick={() => { onDecompose(); onClose?.() }}
+                className="p-1 rounded text-slate-300 dark:text-slate-600 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors"
+                title={state.language === 'vi' ? 'AI phân tích dự án' : 'AI Project Decomposer'}>
+                <Zap size={12} />
+              </button>
+            )}
             {onManage && (
               <button onClick={() => onManage('projects')}
                 className="p-1 mr-1 rounded text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
