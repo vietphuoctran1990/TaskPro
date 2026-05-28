@@ -3,12 +3,11 @@ import { Send, Square, Trash2, X, ChevronDown } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useAIChat } from '../../hooks/useAIChat'
 
-// ── Gemini star icon (matches Google Gemini's 4-pointed star logo) ────────────
-
-function GeminiStar({ size = 24, className }: { size?: number; className?: string }) {
+function AISparkle({ size = 24, className }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M12 2C12 7.52 7.52 12 2 12C7.52 12 12 16.48 12 22C12 16.48 16.48 12 22 12C16.48 12 12 7.52 12 2Z" />
+      <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" />
+      <path d="M19 16L19.75 18.25L22 19L19.75 19.75L19 22L18.25 19.75L16 19L18.25 18.25L19 16Z" opacity="0.7" />
     </svg>
   )
 }
@@ -54,7 +53,7 @@ function MessageBubble({ msg }: { msg: ReturnType<typeof useAIChat>['messages'][
     <div className={cn('flex gap-2 items-end', isUser && 'flex-row-reverse')}>
       {!isUser && (
         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 mb-0.5">
-          <GeminiStar size={13} className="text-white" />
+          <AISparkle size={13} className="text-white" />
         </div>
       )}
       <div className={cn(
@@ -148,11 +147,11 @@ export default function AIChatPanel() {
           {/* Header */}
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100 dark:border-slate-700 shrink-0">
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <GeminiStar size={14} className="text-white" />
+              <AISparkle size={14} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-none">Gemini</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">gemini-3.5-flash · TaskPro</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-none">AI Trợ lý</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">llama-3.3-70b · TaskPro</p>
             </div>
             <div className="flex items-center gap-1">
               {messages.length > 0 && (
@@ -174,9 +173,9 @@ export default function AIChatPanel() {
               <div className="py-4 space-y-3">
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center mx-auto mb-2">
-                    <GeminiStar size={22} className="text-blue-500" />
+                    <AISparkle size={22} className="text-blue-500" />
                   </div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Xin chào! Gemini có thể giúp gì?</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Xin chào! AI có thể giúp gì?</p>
                   <p className="text-xs text-slate-400 mt-0.5">Hỏi về tasks, deadline, hoặc lời khuyên năng suất</p>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -240,7 +239,7 @@ export default function AIChatPanel() {
       >
         {open
           ? <X size={22} className="text-white" />
-          : <GeminiStar size={22} className="text-white" />
+          : <AISparkle size={22} className="text-white" />
         }
         {messages.length > 0 && !open && (
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 text-[9px] font-bold text-white flex items-center justify-center">

@@ -1,21 +1,13 @@
-import { GoogleGenAI } from '@google/genai'
 import type { Config } from '@netlify/functions'
 import { CORS_HEADERS, optionsResponse } from '../lib/utils'
 
-const MODEL = 'gemini-3.5-flash'
+const MODEL    = 'llama-3.3-70b-versatile'
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
-function getClient() {
-  const key = process.env.GEMINI_API_KEY
-  if (!key) throw new Error('GEMINI_API_KEY not configured')
-  return new GoogleGenAI({ apiKey: key })
-}
-
-// Convert Anthropic-style messages to Gemini contents format
-function toGeminiContents(messages: Array<{ role: string; content: string }>) {
-  return messages.map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }))
+function getApiKey(): string {
+  const key = process.env.GROQ_API_KEY
+  if (!key) throw new Error('GROQ_API_KEY not configured')
+  return key
 }
 
 function buildSystem(ctx: Record<string, unknown>): string {
@@ -91,7 +83,7 @@ function buildSystem(ctx: Record<string, unknown>): string {
     ? `\n\n============================\nGHI CHÚ CỦA NGƯỜI DÙNG (${notes.length} ghi chú)\n============================\n${noteBlocks}`
     : '\n\nGHI CHÚ: (chưa có ghi chú nào)'
 
-  return `Bạn là Gemini AI trợ lý được nhúng vào ứng dụng quản lý công việc TaskPro.
+  return `Bạn là AI trợ lý thông minh được nhúng vào ứng dụng quản lý công việc TaskPro.
 Ngôn ngữ trả lời: ${lang}.
 
 QUAN TRỌNG: Dữ liệu thực tế của người dùng được cung cấp đầy đủ bên dưới. Hãy đọc kỹ và tham chiếu CHÍNH XÁC tên task, dự án, ghi chú khi trả lời. KHÔNG được bịa đặt thông tin.
@@ -121,49 +113,87 @@ QUY TẮC TRẢ LỜI
 - Giọng văn thân thiện, thực tế, không dài dòng`
 }
 
-// ── Shared helper for non-streaming requests ──────────────────────────────
+// ── Non-streaming request helper ──────────────────────────────────────────────
 
 async function generate(
-  ai: GoogleGenAI,
   system: string,
   prompt: string,
   maxOutputTokens: number,
 ): Promise<string> {
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    config: { systemInstruction: system, maxOutputTokens },
+  const key = getApiKey()
+  const messages: Array<{ role: string; content: string }> = []
+  if (system) messages.push({ role: 'system', content: system })
+  messages.push({ role: 'user', content: prompt })
+
+  const res = await fetch(GROQ_URL, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: MODEL, messages, max_tokens: maxOutputTokens, stream: false }),
   })
-  const text = response.text
-    ?? response.candidates?.[0]?.content?.parts?.[0]?.text
-    ?? ''
-  if (!text) console.warn('[ai-chat] empty response from model', JSON.stringify(response).slice(0, 300))
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Groq API ${res.status}: ${err.slice(0, 200)}`)
+  }
+  const data = await res.json() as { choices: Array<{ message: { content: string } }> }
+  const text = data.choices?.[0]?.message?.content ?? ''
+  if (!text) console.warn('[ai-chat] empty response from model', JSON.stringify(data).slice(0, 300))
   return text
 }
 
 // ── Streaming chat ────────────────────────────────────────────────────────────
 
 async function handleChat(body: Record<string, unknown>): Promise<Response> {
-  const ai       = getClient()
+  const key      = getApiKey()
   const messages = (body.messages as Array<{ role: string; content: string }>) ?? []
   const context  = (body.context  as Record<string, unknown>) ?? {}
   const system   = buildSystem(context)
 
-  const contents = toGeminiContents(messages)
+  const groqMessages = [
+    { role: 'system', content: system },
+    ...messages.map(m => ({ role: m.role, content: m.content })),
+  ]
 
-  const stream = await ai.models.generateContentStream({
-    model: MODEL,
-    contents,
-    config: { systemInstruction: system, maxOutputTokens: 2048 },
+  const groqRes = await fetch(GROQ_URL, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: MODEL, messages: groqMessages, max_tokens: 2048, stream: true }),
   })
 
+  if (!groqRes.ok || !groqRes.body) {
+    const err = await groqRes.text()
+    return new Response(JSON.stringify({ error: `Groq error ${groqRes.status}: ${err.slice(0, 200)}` }), {
+      status: 502, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Translate Groq's OpenAI-compatible SSE to our data: {"text":"..."} format
   const enc = new TextEncoder()
   const readable = new ReadableStream({
     async start(ctrl) {
+      const reader = groqRes.body!.getReader()
+      const dec    = new TextDecoder()
+      let   buf    = ''
       try {
-        for await (const chunk of stream) {
-          const text = chunk.text ?? chunk.candidates?.[0]?.content?.parts?.[0]?.text
-          if (text) ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ text })}\n\n`))
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const raw = line.slice(6).trim()
+            if (raw === '[DONE]') {
+              ctrl.enqueue(enc.encode('data: [DONE]\n\n'))
+              ctrl.close()
+              return
+            }
+            try {
+              const chunk = JSON.parse(raw) as { choices: Array<{ delta: { content?: string } }> }
+              const text  = chunk.choices?.[0]?.delta?.content
+              if (text) ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ text })}\n\n`))
+            } catch { /* skip malformed chunks */ }
+          }
         }
         ctrl.enqueue(enc.encode('data: [DONE]\n\n'))
       } catch (err) {
@@ -188,7 +218,6 @@ async function handleChat(body: Record<string, unknown>): Promise<Response> {
 // ── Daily Briefing ────────────────────────────────────────────────────────────
 
 async function handleBriefing(body: Record<string, unknown>): Promise<Response> {
-  const ai       = getClient()
   const ctx      = (body.context as Record<string, unknown>) ?? {}
   const today    = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
   const tasks    = (ctx.tasks  as Record<string, unknown>[]) ?? []
@@ -217,7 +246,7 @@ Viết briefing buổi sáng ngắn gọn (~120 từ):
 
 Dùng markdown. Thân thiện, tích cực.`
 
-  const content = await generate(ai, buildSystem(ctx), prompt, 512)
+  const content = await generate(buildSystem(ctx), prompt, 512)
   return new Response(JSON.stringify({ content }), {
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   })
@@ -226,7 +255,6 @@ Dùng markdown. Thân thiện, tích cực.`
 // ── Priority Insights ─────────────────────────────────────────────────────────
 
 async function handlePriorities(body: Record<string, unknown>): Promise<Response> {
-  const ai       = getClient()
   const ctx      = (body.context as Record<string, unknown>) ?? {}
   const today    = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
   const finalIds = new Set((ctx.finalStatusIds as string[] | undefined) ?? ['done'])
@@ -251,7 +279,7 @@ topTasks: tối đa 5 tasks cần làm trước nhất, lý do ngắn (1 câu)
 warnings: tối đa 3 cảnh báo (quá hạn, deadline gần, tasks bị block...)
 tip: 1 mẹo productivity hôm nay`
 
-  const text = await generate(ai, buildSystem(ctx), prompt, 600)
+  const text = await generate(buildSystem(ctx), prompt, 600)
   let parsed: Record<string, unknown> = { topTasks: [], warnings: [], tip: '' }
   try {
     const m = text.match(/\{[\s\S]*\}/)
@@ -266,7 +294,6 @@ tip: 1 mẹo productivity hôm nay`
 // ── Smart Fill ────────────────────────────────────────────────────────────────
 
 async function handleSmartFill(body: Record<string, unknown>): Promise<Response> {
-  const ai    = getClient()
   const title = (body.title as string) ?? ''
   const ctx   = (body.context as Record<string, unknown>) ?? {}
 
@@ -281,7 +308,7 @@ Gợi ý thông tin cho task này. JSON hợp lệ (không markdown):
 }
 subtasks: tối đa 4 items, chỉ khi cần thiết (task đủ phức tạp)`
 
-  const text = await generate(ai, buildSystem(ctx), prompt, 256)
+  const text = await generate(buildSystem(ctx), prompt, 256)
   let parsed: Record<string, unknown> = { description: '', priority: 'medium', estimatedHours: null, subtasks: [] }
   try {
     const m = text.match(/\{[\s\S]*\}/)
@@ -296,7 +323,6 @@ subtasks: tối đa 4 items, chỉ khi cần thiết (task đủ phức tạp)`
 // ── Note: Summarize ───────────────────────────────────────────────────────────
 
 async function handleSummarizeNote(body: Record<string, unknown>): Promise<Response> {
-  const ai      = getClient()
   const title   = (body.title   as string) ?? ''
   const content = (body.content as string) ?? ''
   const ctx     = (body.context as Record<string, unknown>) ?? {}
@@ -309,7 +335,7 @@ ${safeContent}
 ---
 Tóm tắt ghi chú trên thành 3-5 bullet points ngắn gọn, súc tích. Chỉ trả về bullet list, không thêm gì khác.`
 
-  const summary = await generate(ai, buildSystem(ctx), prompt, 300)
+  const summary = await generate(buildSystem(ctx), prompt, 300)
   return new Response(JSON.stringify({ summary }), {
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   })
@@ -318,7 +344,6 @@ Tóm tắt ghi chú trên thành 3-5 bullet points ngắn gọn, súc tích. Ch�
 // ── Note: Extract Tasks ───────────────────────────────────────────────────────
 
 async function handleExtractTasks(body: Record<string, unknown>): Promise<Response> {
-  const ai      = getClient()
   const title   = (body.title   as string) ?? ''
   const content = (body.content as string) ?? ''
   const ctx     = (body.context as Record<string, unknown>) ?? {}
@@ -338,7 +363,7 @@ Trả về JSON hợp lệ (không markdown):
 }
 Tối đa 8 tasks. Chỉ lấy việc rõ ràng cần làm, không lấy thông tin thuần túy.`
 
-  const text = await generate(ai, buildSystem(ctx), prompt, 400)
+  const text = await generate(buildSystem(ctx), prompt, 400)
   let parsed: { tasks: Array<{ title: string; priority: string; dueDate: string | null }> } = { tasks: [] }
   try {
     const m = text.match(/\{[\s\S]*\}/)
@@ -353,7 +378,6 @@ Tối đa 8 tasks. Chỉ lấy việc rõ ràng cần làm, không lấy thông 
 // ── Note: Expand / Rewrite ────────────────────────────────────────────────────
 
 async function handleExpandNote(body: Record<string, unknown>): Promise<Response> {
-  const ai      = getClient()
   const title   = (body.title   as string) ?? ''
   const content = (body.content as string) ?? ''
   const ctx     = (body.context as Record<string, unknown>) ?? {}
@@ -366,7 +390,7 @@ ${safeContent}
 ---
 Dựa trên ý tưởng/ghi chú trên, viết mở rộng thành văn bản đầy đủ, có cấu trúc dùng markdown (tiêu đề, bullet, in đậm khi cần). Giữ nguyên ý chính, phát triển thêm chi tiết thực tế. Không thêm lời mở đầu hay kết luận chung chung.`
 
-  const expanded = await generate(ai, buildSystem(ctx), prompt, 800)
+  const expanded = await generate(buildSystem(ctx), prompt, 800)
   return new Response(JSON.stringify({ expanded }), {
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   })
@@ -375,7 +399,6 @@ Dựa trên ý tưởng/ghi chú trên, viết mở rộng thành văn bản đ�
 // ── Weekly Review ─────────────────────────────────────────────────────────────
 
 async function handleWeeklyReview(body: Record<string, unknown>): Promise<Response> {
-  const ai       = getClient()
   const ctx      = (body.context as Record<string, unknown>) ?? {}
   const today    = (ctx.today as string) ?? new Date().toISOString().slice(0, 10)
   const finalIds = new Set((ctx.finalStatusIds as string[] | undefined) ?? ['done'])
@@ -385,7 +408,7 @@ async function handleWeeklyReview(body: Record<string, unknown>): Promise<Respon
   weekAgo.setDate(weekAgo.getDate() - 7)
   const weekAgoStr = weekAgo.toISOString().slice(0, 10)
 
-  const isTaskDone   = (t: Record<string, unknown>) => t.isDone === true || finalIds.has(t.status as string)
+  const isTaskDone        = (t: Record<string, unknown>) => t.isDone === true || finalIds.has(t.status as string)
   const completedThisWeek = tasks.filter(t => isTaskDone(t) && (t.updatedAt as string)?.slice(0, 10) >= weekAgoStr)
   const active            = tasks.filter(t => !isTaskDone(t))
   const overdueActive     = active.filter(t => t.dueDate && (t.dueDate as string) < today)
@@ -408,7 +431,7 @@ Viết Weekly Review (~180 từ) gồm:
 
 Dùng markdown, xưng "bạn", thân thiện chuyên nghiệp.`
 
-  const content = await generate(ai, buildSystem(ctx), prompt, 600)
+  const content = await generate(buildSystem(ctx), prompt, 600)
   return new Response(JSON.stringify({ content }), {
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   })
@@ -417,7 +440,6 @@ Dùng markdown, xưng "bạn", thân thiện chuyên nghiệp.`
 // ── Suggest Deadline ──────────────────────────────────────────────────────────
 
 async function handleSuggestDeadline(body: Record<string, unknown>): Promise<Response> {
-  const ai       = getClient()
   const today    = new Date().toISOString().slice(0, 10)
   const title    = (body.title as string) ?? ''
   const priority = (body.priority as string) ?? 'medium'
@@ -443,7 +465,7 @@ Các ngày đang bận: ${busySummary}
 Trả về JSON hợp lệ (không markdown):
 {"date": "YYYY-MM-DD", "reason": "Lý do ngắn gọn (1 câu)"}`
 
-  const content = await generate(ai, '', prompt, 256)
+  const content = await generate('', prompt, 256)
   try {
     const clean = content.replace(/```json\n?|\n?```/g, '').trim()
     const parsed = JSON.parse(clean)
@@ -461,7 +483,6 @@ Trả về JSON hợp lệ (không markdown):
 // ── Decompose Project ─────────────────────────────────────────────────────────
 
 async function handleDecomposeProject(body: Record<string, unknown>): Promise<Response> {
-  const ai    = getClient()
   const goal  = (body.goal as string) ?? ''
   const today = new Date().toISOString().slice(0, 10)
 
@@ -485,7 +506,7 @@ Phân tích và tạo kế hoạch thực hiện dự án. Trả về JSON hợp
 
 Tạo 5-10 task thực tế, có thứ tự logic, ưu tiên phù hợp. Tasks phải cụ thể, có thể thực hiện được.`
 
-  const content = await generate(ai, '', prompt, 1200)
+  const content = await generate('', prompt, 1200)
   try {
     const clean = content.replace(/```json\n?|\n?```/g, '').trim()
     const parsed = JSON.parse(clean)
@@ -505,8 +526,8 @@ export default async (req: Request) => {
   if (req.method === 'OPTIONS') return optionsResponse()
   if (req.method !== 'POST')   return new Response('Method Not Allowed', { status: 405, headers: CORS_HEADERS })
 
-  if (!process.env.GEMINI_API_KEY) {
-    return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured' }), {
+  if (!process.env.GROQ_API_KEY) {
+    return new Response(JSON.stringify({ error: 'GROQ_API_KEY not configured' }), {
       status: 503, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
     })
   }
@@ -515,16 +536,16 @@ export default async (req: Request) => {
     const body = await req.json() as Record<string, unknown>
     const type = body.type as string
 
-    if (type === 'chat')           return handleChat(body)
-    if (type === 'briefing')       return handleBriefing(body)
-    if (type === 'priorities')     return handlePriorities(body)
-    if (type === 'smartfill')      return handleSmartFill(body)
-    if (type === 'summarize-note') return handleSummarizeNote(body)
-    if (type === 'extract-tasks')  return handleExtractTasks(body)
-    if (type === 'expand-note')    return handleExpandNote(body)
-    if (type === 'weekly-review')        return handleWeeklyReview(body)
-    if (type === 'suggest-deadline')     return handleSuggestDeadline(body)
-    if (type === 'decompose-project')    return handleDecomposeProject(body)
+    if (type === 'chat')              return handleChat(body)
+    if (type === 'briefing')          return handleBriefing(body)
+    if (type === 'priorities')        return handlePriorities(body)
+    if (type === 'smartfill')         return handleSmartFill(body)
+    if (type === 'summarize-note')    return handleSummarizeNote(body)
+    if (type === 'extract-tasks')     return handleExtractTasks(body)
+    if (type === 'expand-note')       return handleExpandNote(body)
+    if (type === 'weekly-review')     return handleWeeklyReview(body)
+    if (type === 'suggest-deadline')  return handleSuggestDeadline(body)
+    if (type === 'decompose-project') return handleDecomposeProject(body)
 
     return new Response('Unknown type', { status: 400, headers: CORS_HEADERS })
   } catch (err) {
