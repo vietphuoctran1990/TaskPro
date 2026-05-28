@@ -163,17 +163,32 @@ self.addEventListener('push', (event: PushEvent) => {
       title: string; body: string; tag: string
       taskId: string; requireInteraction: boolean
     }
+    // Prevent local timer from firing the same notification again after the
+    // server-push already showed it (fixes double-notification on mobile when
+    // the app is in foreground or Periodic Background Sync is active).
+    fired.add(d.tag)
+    if (timers.has(d.tag)) { clearTimeout(timers.get(d.tag)); timers.delete(d.tag) }
+
     event.waitUntil(
-      self.registration.showNotification(d.title, {
-        body:                d.body,
-        icon:                '/icon-192x192.png',
-        badge:               '/icon-72x72.png',
-        tag:                 d.tag,
-        requireInteraction:  d.requireInteraction,
-        data:                { key: d.tag, taskId: d.taskId },
-        // @ts-expect-error actions is valid in SW context
-        actions:             [{ action: 'done', title: '✓ Done' }],
-      })
+      Promise.all([
+        self.registration.showNotification(d.title, {
+          body:                d.body,
+          icon:                '/icon-192x192.png',
+          badge:               '/icon-72x72.png',
+          tag:                 d.tag,
+          requireInteraction:  d.requireInteraction,
+          data:                { key: d.tag, taskId: d.taskId },
+          // @ts-expect-error actions is valid in SW context
+          actions:             [{ action: 'done', title: '✓ Done' }],
+        }),
+        // Tell any open tabs so their notifiedRef stays in sync and they don't
+        // fire a duplicate via the main-thread setTimeout path.
+        self.clients
+          .matchAll({ includeUncontrolled: true, type: 'window' })
+          .then(clients => clients.forEach(c =>
+            c.postMessage({ type: 'NOTIFIED', key: d.tag, taskId: d.taskId })
+          )),
+      ])
     )
   } catch {}
 })
