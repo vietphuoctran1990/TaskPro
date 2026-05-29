@@ -2,34 +2,13 @@ import { useState } from 'react'
 import { Target, RefreshCw, AlertTriangle, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
-import { todayLocalISO } from '../../lib/dateLocal'
+import { buildAIContext } from '../../lib/aiContext'
 
 interface TopTask  { title: string; reason: string }
 interface Insights { topTasks: TopTask[]; warnings: string[]; tip: string }
 
-function buildContext(state: ReturnType<typeof useApp>['state']) {
-  const today   = todayLocalISO()
-  const projMap = Object.fromEntries(state.projects.map(p => [p.id, p.name]))
-  return {
-    today,
-    language: state.language,
-    projects: state.projects.map(p => ({ id: p.id, name: p.name })),
-    tasks: state.tasks
-      .filter(t => t.status !== 'done')
-      .slice(0, 15)
-      .map(t => ({
-        title:       t.title,
-        status:      t.status,
-        priority:    t.priority,
-        dueDate:     t.dueDate,
-        projectName: projMap[t.projectId] ?? '',
-      })),
-  }
-}
-
-
 export default function PriorityInsights() {
-  const { state }    = useApp()
+  const { state, finalStatusIds } = useApp()
   const [data,     setData]     = useState<Insights | null>(null)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState<string | null>(null)
@@ -41,7 +20,7 @@ export default function PriorityInsights() {
       const res = await fetch('/api/ai-chat', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ type: 'priorities', context: buildContext(state) }),
+        body:    JSON.stringify({ type: 'priorities', context: buildAIContext(state, finalStatusIds) }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json() as Insights

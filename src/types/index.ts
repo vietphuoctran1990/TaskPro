@@ -11,6 +11,7 @@ export interface StatusDef {
   order: number      // Column display order (ascending)
   isFinal: boolean   // True → task counts as "done" (SLA completed, progress, recurring spawn)
   isBuiltin: boolean // True → cannot be deleted; id is stable ('todo','in_progress','in_review','done')
+  wipLimit?: number | null // Optional WIP limit; column warns when task count exceeds this
 }
 
 export interface Label {
@@ -87,6 +88,18 @@ export interface Note {
 
 export type DateFilter = 'all' | 'today' | 'tomorrow' | 'upcoming'
 
+export interface TaskTemplate {
+  id: string
+  name: string
+  description: string
+  priority: Priority
+  estimatedHours: number | null
+  slaHours: number | null
+  labels: string[]
+  subtasks: string[]
+  isBuiltin?: boolean
+}
+
 export interface DeletedIds {
   tasks:       Record<string, number>
   projects:    Record<string, number>
@@ -109,6 +122,7 @@ export interface AppState {
   filterPriority: Priority | 'all'
   filterStatus: Status | 'all'
   filterSLA: SLAStatus | 'all'
+  filterLabel: string | 'all'
   dateFilter: DateFilter
   viewMode: ViewMode
   sortField: SortField
@@ -118,6 +132,7 @@ export interface AppState {
   density: Density
   language: 'en' | 'vi'
   notifBefore: number[]
+  templates: TaskTemplate[]
   _deletedIds?: DeletedIds
 }
 

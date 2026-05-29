@@ -1,4 +1,5 @@
 import Modal from './Modal'
+import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 
 interface Props { open: boolean; onClose: () => void }
@@ -32,7 +33,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function ShortcutsModal({ open, onClose }: Props) {
+  const { state } = useApp()
   const t = useT()
+  const isVi = state.language === 'vi'
   return (
     <Modal open={open} onClose={onClose} title={t.shortcuts.title} size="sm">
       <div className="px-6 py-5">
@@ -40,6 +43,16 @@ export default function ShortcutsModal({ open, onClose }: Props) {
           <Row keys={['⌘', 'K']}   label={t.shortcuts.palette} />
           <Row keys={['?']}         label={t.shortcuts.showShortcuts} />
           <Row keys={['Esc']}       label={t.shortcuts.closeDialog} />
+          <Row keys={['N']}         label={isVi ? 'Tạo công việc mới' : 'New task'} />
+          <Row keys={['/']}         label={isVi ? 'Tìm kiếm nhanh' : 'Focus search'} />
+        </Section>
+        <Section title={isVi ? 'Chuyển chế độ xem' : 'Switch view'}>
+          <Row keys={['1']} label={isVi ? 'Tổng quan' : 'Dashboard'} />
+          <Row keys={['2']} label="Kanban" />
+          <Row keys={['3']} label={isVi ? 'Danh sách' : 'List'} />
+          <Row keys={['4']} label={isVi ? 'Lịch' : 'Calendar'} />
+          <Row keys={['5']} label="Timeline" />
+          <Row keys={['6']} label={isVi ? 'Ghi chú' : 'Notes'} />
         </Section>
         <Section title={t.shortcuts.groupView}>
           <Row keys={['↑', '↓']}   label={t.shortcuts.navigate} />

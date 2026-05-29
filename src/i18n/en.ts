@@ -30,6 +30,12 @@ export const en: Translations = {
     isFinal: 'Mark tasks as completed',
     builtin: 'Built-in',
     moveTasksTo: 'Move existing tasks to',
+    wipLimit: 'WIP limit',
+    wipNone: 'None',
+    wipHint: 'max tasks',
+  },
+  kanban: {
+    wipExceeded: (n) => `WIP limit exceeded (${n})`,
   },
   header: {
     newTask: 'New Task', search: 'Search…', allPriorities: 'All priorities',

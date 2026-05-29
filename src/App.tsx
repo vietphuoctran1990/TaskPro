@@ -1,37 +1,69 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { I18nProvider, useT } from './i18n'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
+import BottomNav from './components/layout/BottomNav'
+import AIChatPanel from './components/ai/AIChatPanel'
+// TaskBoard is the default view — eagerly loaded
 import TaskBoard from './components/tasks/TaskBoard'
-import ListView from './components/views/ListView'
-import CalendarView from './components/views/CalendarView'
-import DashboardView from './components/views/DashboardView'
-import TimelineView from './components/views/TimelineView'
+// Other views are lazy-loaded to reduce initial bundle size
+const ListView        = lazy(() => import('./components/views/ListView'))
+const CalendarView    = lazy(() => import('./components/views/CalendarView'))
+const DashboardView   = lazy(() => import('./components/views/DashboardView'))
+const TimelineView    = lazy(() => import('./components/views/TimelineView'))
+const NotesView       = lazy(() => import('./components/notes/NotesView'))
+// Heavy modals lazy-loaded on first open
+const TaskForm        = lazy(() => import('./components/tasks/TaskForm'))
+const TaskDetail      = lazy(() => import('./components/tasks/TaskDetail'))
+const NoteEditorModal = lazy(() => import('./components/notes/NoteEditorModal'))
+const ManageModal     = lazy(() => import('./components/settings/ManageModal'))
+const SyncModal       = lazy(() => import('./components/sync/SyncModal'))
+const PomodoroModal   = lazy(() => import('./components/focus/PomodoroModal'))
+const CommandPalette      = lazy(() => import('./components/ui/CommandPalette'))
+const ProjectDecomposer   = lazy(() => import('./components/ai/ProjectDecomposer'))
 import OnboardingTour from './components/onboarding/OnboardingTour'
-import TaskForm from './components/tasks/TaskForm'
-import TaskDetail from './components/tasks/TaskDetail'
-import SyncModal from './components/sync/SyncModal'
-import ManageModal from './components/settings/ManageModal'
 import AuthModal from './components/auth/AuthModal'
 import ProjectNotesModal from './components/notes/ProjectNotesModal'
-import NotesView from './components/notes/NotesView'
-import NoteEditorModal from './components/notes/NoteEditorModal'
-import PomodoroModal from './components/focus/PomodoroModal'
+import ShortcutsModal from './components/ui/ShortcutsModal'
 import InstallBanner from './components/pwa/InstallBanner'
 import UpdateBanner from './components/pwa/UpdateBanner'
 import OfflineToast from './components/pwa/OfflineToast'
-import CommandPalette from './components/ui/CommandPalette'
-import ShortcutsModal from './components/ui/ShortcutsModal'
-import AIChatPanel from './components/ai/AIChatPanel'
 import { ToastProvider } from './context/ToastContext'
 import { NotificationsProvider } from './context/NotificationsContext'
 import { usePWA } from './hooks/usePWA'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { Plus, RefreshCw } from 'lucide-react'
 import { cn } from './lib/utils'
-import type { Status, Task, Project, Note } from './types'
+import type { Status, Task, Project, Note, ViewMode } from './types'
+
+// Skeleton placeholder while a lazy view chunk loads — mirrors the board layout
+// so the transition feels instant instead of showing a bare spinner.
+function ViewSkeleton() {
+  return (
+    <div className="animate-pulse" aria-hidden="true">
+      {/* Toolbar row */}
+      <div className="flex items-center gap-3 mb-5">
+        <div className="h-7 w-40 rounded-lg bg-slate-200/70 dark:bg-slate-700/50" />
+        <div className="h-7 w-24 rounded-lg bg-slate-200/70 dark:bg-slate-700/50 ml-auto" />
+      </div>
+      {/* Column / card grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-slate-200/70 dark:border-slate-700/40 bg-white/60 dark:bg-slate-800/40 p-4 space-y-3">
+            <div className="h-4 w-3/4 rounded bg-slate-200/80 dark:bg-slate-700/60" />
+            <div className="h-3 w-1/2 rounded bg-slate-200/60 dark:bg-slate-700/40" />
+            <div className="flex gap-2 pt-1">
+              <div className="h-5 w-14 rounded-full bg-slate-200/70 dark:bg-slate-700/50" />
+              <div className="h-5 w-10 rounded-full bg-slate-200/70 dark:bg-slate-700/50" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function AppShell() {
   const { state, dispatch } = useApp()
@@ -56,6 +88,7 @@ function AppShell() {
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('taskpro-onboarded'))
   const [commandOpen, setCommandOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [decomposeOpen, setDecomposeOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
 
@@ -80,11 +113,20 @@ function AppShell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Scroll tracking for glassmorphism header
+  // Scroll tracking for glassmorphism header (rAF-throttled)
   useEffect(() => {
     const el = mainRef.current
     if (!el) return
-    const onScroll = () => setScrolled(el.scrollTop > 4)
+    let ticking = false
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setScrolled(el.scrollTop > 4)
+          ticking = false
+        })
+        ticking = true
+      }
+    }
     el.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
     return () => el.removeEventListener('scroll', onScroll)
@@ -118,6 +160,21 @@ function AppShell() {
     setFormOpen(true)
   }, [])
 
+  // Additional shortcuts: n=new task, /=search, 1-6=views
+  useEffect(() => {
+    const VIEW_KEYS: Record<string, ViewMode> = { '1': 'dashboard', '2': 'kanban', '3': 'list', '4': 'calendar', '5': 'timeline', '6': 'notes' }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const tag = (document.activeElement as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (e.key === 'n') { e.preventDefault(); handleAddTask(); return }
+      if (e.key === '/') { e.preventDefault(); document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(); return }
+      if (VIEW_KEYS[e.key]) { e.preventDefault(); dispatch({ type: 'SET_VIEW_MODE', payload: VIEW_KEYS[e.key] }); return }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [handleAddTask, dispatch])
+
   const handleEditTask = useCallback((task: Task) => {
     setEditingTask(task)
     setFormOpen(true)
@@ -141,7 +198,7 @@ function AppShell() {
     <div className="flex h-[100dvh] bg-[#f1f5f9] dark:bg-[#080c15] overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex h-full">
-        <Sidebar onSync={() => setSyncOpen(true)} onManage={handleManage} onNotes={setNotesProject} />
+        <Sidebar onSync={() => setSyncOpen(true)} onManage={handleManage} onNotes={setNotesProject} onDecompose={() => setDecomposeOpen(true)} />
       </div>
 
       {/* Mobile sidebar overlay */}
@@ -152,7 +209,8 @@ function AppShell() {
             <Sidebar mobile onClose={() => setSidebarOpen(false)}
               onSync={() => { setSidebarOpen(false); setSyncOpen(true) }}
               onManage={handleManage}
-              onNotes={p => { setSidebarOpen(false); setNotesProject(p) }} />
+              onNotes={p => { setSidebarOpen(false); setNotesProject(p) }}
+              onDecompose={() => { setSidebarOpen(false); setDecomposeOpen(true) }} />
           </div>
         </>
       )}
@@ -187,111 +245,122 @@ function AppShell() {
           </div>
         )}
 
-        <main ref={mainRef} className="flex-1 overflow-auto p-4 lg:p-6">
-          <div key={state.viewMode} className="view-fade-in">
-            {state.viewMode === 'kanban' && (
-              <TaskBoard
-                onAddTask={handleAddTask}
-                onEditTask={handleEditTask}
-                onViewTask={handleViewTask}
-                onFocusTask={handleFocusTask}
-              />
-            )}
-            {state.viewMode === 'list' && (
-              <ListView
-                onEditTask={handleEditTask}
-                onViewTask={handleViewTask}
-                onAddTask={() => handleAddTask()}
-                onFocusTask={handleFocusTask}
-              />
-            )}
-            {state.viewMode === 'calendar' && (
-              <CalendarView
-                onViewTask={handleViewTask}
-                onAddTask={(date) => handleAddTask('todo', date)}
-              />
-            )}
-            {state.viewMode === 'timeline' && (
-              <TimelineView
-                onViewTask={handleViewTask}
-                onAddTask={() => handleAddTask()}
-              />
-            )}
-            {state.viewMode === 'dashboard' && (
-              <DashboardView
-                onViewTask={handleViewTask}
-                onAddTask={() => handleAddTask()}
-                onViewNote={handleEditNote}
-              />
-            )}
-            {state.viewMode === 'notes' && (
-              <NotesView
-                onAddNote={handleAddNote}
-                onEditNote={handleEditNote}
-              />
-            )}
-          </div>
+        <main ref={mainRef} className="flex-1 overflow-auto p-4 lg:p-6 pb-20 lg:pb-6 overscroll-contain">
+          <Suspense fallback={<ViewSkeleton />}>
+            <div key={state.viewMode} className="view-fade-in">
+              {state.viewMode === 'kanban' && (
+                <TaskBoard
+                  onAddTask={handleAddTask}
+                  onEditTask={handleEditTask}
+                  onViewTask={handleViewTask}
+                  onFocusTask={handleFocusTask}
+                />
+              )}
+              {state.viewMode === 'list' && (
+                <ListView
+                  onEditTask={handleEditTask}
+                  onViewTask={handleViewTask}
+                  onAddTask={() => handleAddTask()}
+                  onFocusTask={handleFocusTask}
+                />
+              )}
+              {state.viewMode === 'calendar' && (
+                <CalendarView
+                  onViewTask={handleViewTask}
+                  onAddTask={(date) => handleAddTask('todo', date)}
+                />
+              )}
+              {state.viewMode === 'timeline' && (
+                <TimelineView
+                  onViewTask={handleViewTask}
+                  onAddTask={() => handleAddTask()}
+                />
+              )}
+              {state.viewMode === 'dashboard' && (
+                <DashboardView
+                  onViewTask={handleViewTask}
+                  onAddTask={() => handleAddTask()}
+                  onViewNote={handleEditNote}
+                />
+              )}
+              {state.viewMode === 'notes' && (
+                <NotesView
+                  onAddNote={handleAddNote}
+                  onEditNote={handleEditNote}
+                />
+              )}
+            </div>
+          </Suspense>
         </main>
       </div>
 
-      {/* Mobile FAB — offset right to avoid AI chat button */}
+      {/* Mobile FAB — above bottom nav, left of AI chat FAB */}
       <button
         onClick={() => state.viewMode === 'notes' ? handleAddNote() : handleAddTask()}
-        className="fixed bottom-6 right-24 z-30 sm:hidden w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/40 hover:shadow-2xl hover:shadow-indigo-500/50 hover:scale-105 transition-all duration-200 active:scale-95 flex items-center justify-center"
+        className="fixed bottom-24 right-20 z-30 sm:hidden w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/40 active:scale-90 transition-transform flex items-center justify-center"
         aria-label={state.viewMode === 'notes' ? 'Tạo ghi chú' : 'Thêm công việc'}
       >
         <Plus size={20} />
       </button>
 
-      {/* Modals */}
-      <NoteEditorModal
-        open={noteEditorOpen}
-        note={editingNote}
-        onClose={() => { setNoteEditorOpen(false); setEditingNote(null) }}
-        defaultFolderId={state.activeNoteFolderId ?? ''}
-      />
+      {/* Modals — wrapped in Suspense so lazy chunks load on first open */}
+      <Suspense fallback={null}>
+        <NoteEditorModal
+          open={noteEditorOpen}
+          note={editingNote}
+          onClose={() => { setNoteEditorOpen(false); setEditingNote(null) }}
+          defaultFolderId={state.activeNoteFolderId ?? ''}
+        />
+      </Suspense>
       <ProjectNotesModal project={notesProject} onClose={() => setNotesProject(null)} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
-      <ManageModal open={manageOpen} onClose={() => setManageOpen(false)} initialTab={manageTab} />
-      <SyncModal open={syncOpen} onClose={() => setSyncOpen(false)} />
-      <TaskForm
-        open={formOpen}
-        onClose={handleCloseForm}
-        task={editingTask}
-        defaultStatus={defaultStatus}
-        defaultDate={defaultDate}
-      />
-      <TaskDetail
-        task={viewingTask}
-        onClose={handleCloseDetail}
-        onEdit={task => { handleCloseDetail(); handleEditTask(task) }}
-        onFocus={handleFocusTask}
-      />
-      {focusTask && (
-        <PomodoroModal
-          task={focusTask}
-          onClose={() => setFocusTask(null)}
-          onDone={() => {
-            dispatch({ type: 'MOVE_TASK', payload: { id: focusTask.id, status: 'done' } })
-            setFocusTask(null)
-          }}
+      <Suspense fallback={null}>
+        <ManageModal open={manageOpen} onClose={() => setManageOpen(false)} initialTab={manageTab} />
+        <SyncModal open={syncOpen} onClose={() => setSyncOpen(false)} />
+        <TaskForm
+          open={formOpen}
+          onClose={handleCloseForm}
+          task={editingTask}
+          defaultStatus={defaultStatus}
+          defaultDate={defaultDate}
         />
-      )}
-
-      <CommandPalette
-        open={commandOpen}
-        onClose={() => setCommandOpen(false)}
-        onNewTask={() => handleAddTask()}
-        onNewNote={handleAddNote}
-        onViewTask={handleViewTask}
-        onEditNote={handleEditNote}
-      />
+        <TaskDetail
+          task={viewingTask}
+          onClose={handleCloseDetail}
+          onEdit={task => { handleCloseDetail(); handleEditTask(task) }}
+          onFocus={handleFocusTask}
+        />
+        {focusTask && (
+          <PomodoroModal
+            task={focusTask}
+            onClose={() => setFocusTask(null)}
+            onDone={() => {
+              dispatch({ type: 'MOVE_TASK', payload: { id: focusTask.id, status: 'done' } })
+              setFocusTask(null)
+            }}
+          />
+        )}
+        <CommandPalette
+          open={commandOpen}
+          onClose={() => setCommandOpen(false)}
+          onNewTask={() => handleAddTask()}
+          onNewNote={handleAddNote}
+          onViewTask={handleViewTask}
+          onEditNote={handleEditNote}
+        />
+      </Suspense>
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <Suspense fallback={null}>
+        <ProjectDecomposer open={decomposeOpen} onClose={() => setDecomposeOpen(false)} />
+      </Suspense>
 
       {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
 
       {/* AI floating chat */}
       <AIChatPanel />
+
+      {/* Mobile bottom navigation */}
+      <BottomNav />
 
       {/* PWA UI */}
       {needRefresh && <UpdateBanner onUpdate={() => updateServiceWorker()} />}

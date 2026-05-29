@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { CheckSquare, ChevronDown, CircleDot, FolderOpen, LayoutDashboard, Plus, Tag, X, AlertTriangle, Zap, Clock, TrendingUp, RefreshCw, Settings2, FileText, Sun, Sunset, Calendar, StickyNote } from 'lucide-react'
 import { cn, getSLAStatus } from '../../lib/utils'
 import { todayLocalISO, tomorrowLocalISO } from '../../lib/dateLocal'
@@ -10,9 +10,9 @@ import type { Project } from '../../types'
 
 const PROJECT_COLORS = ['#6366f1','#0ea5e9','#f59e0b','#22c55e','#ec4899','#ef4444','#8b5cf6','#14b8a6','#f97316','#06b6d4']
 
-interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void; onManage?: (tab: 'projects' | 'labels' | 'statuses') => void; onNotes?: (project: Project) => void }
+interface SidebarProps { onClose?: () => void; mobile?: boolean; onSync?: () => void; onManage?: (tab: 'projects' | 'labels' | 'statuses') => void; onNotes?: (project: Project) => void; onDecompose?: () => void }
 
-export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: SidebarProps) {
+export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes, onDecompose }: SidebarProps) {
   const { state, dispatch } = useApp()
   const t = useT()
   const [projectsOpen, setProjectsOpen] = useState(true)
@@ -110,6 +110,13 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
               <span className="flex-1 text-left">{t.sidebar.projects}</span>
               <ChevronDown size={12} className={cn('transition-transform', !projectsOpen && '-rotate-90')} />
             </button>
+            {onDecompose && (
+              <button onClick={() => { onDecompose(); onClose?.() }}
+                className="p-1 rounded text-slate-300 dark:text-slate-600 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors"
+                title={state.language === 'vi' ? 'AI phân tích dự án' : 'AI Project Decomposer'}>
+                <Zap size={12} />
+              </button>
+            )}
             {onManage && (
               <button onClick={() => onManage('projects')}
                 className="p-1 mr-1 rounded text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
@@ -320,7 +327,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
   )
 }
 
-function ProjectItem({ project, active, count, onClick, onNotes }: { project: Project; active: boolean; count: number; onClick: () => void; onNotes?: () => void }) {
+const ProjectItem = memo(function ProjectItem({ project, active, count, onClick, onNotes }: { project: Project; active: boolean; count: number; onClick: () => void; onNotes?: () => void }) {
   return (
     <div className={cn('relative group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150',
       active ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80')}>
@@ -342,13 +349,13 @@ function ProjectItem({ project, active, count, onClick, onNotes }: { project: Pr
       )}
     </div>
   )
-}
+})
 
-function StatChip({ icon, label, value, className }: { icon: React.ReactNode; label: string; value: number; className: string }) {
+const StatChip = memo(function StatChip({ icon, label, value, className }: { icon: React.ReactNode; label: string; value: number; className: string }) {
   return (
     <div className={cn('flex flex-col items-center gap-0.5 px-1.5 py-1.5 rounded-lg border text-center', className)}>
       <div className="flex items-center gap-0.5 font-bold text-sm">{icon}{value}</div>
       <span className="text-[10px] leading-none opacity-75">{label}</span>
     </div>
   )
-}
+})

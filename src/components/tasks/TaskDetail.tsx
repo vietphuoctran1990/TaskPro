@@ -74,8 +74,16 @@ export default function TaskDetail({ task, onClose, onEdit, onFocus }: TaskDetai
 
   const handleDelete = useCallback(() => {
     if (!task) return
+    const snapshot = task   // capture full task for restore
     dispatch({ type: 'DELETE_TASK', payload: task.id })
-    toast(state.language === 'vi' ? 'Đã xóa công việc' : 'Task deleted', 'info')
+    toast({
+      message: state.language === 'vi' ? 'Đã xóa công việc' : 'Task deleted',
+      type:    'info',
+      action:  {
+        label:   state.language === 'vi' ? 'Hoàn tác' : 'Undo',
+        onClick: () => dispatch({ type: 'RESTORE_TASK', payload: snapshot }),
+      },
+    })
     onClose()
   }, [task, dispatch, onClose, toast, state.language])
 

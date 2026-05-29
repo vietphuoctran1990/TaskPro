@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Calendar, Clock, Timer, Repeat, Plus, Check, Trash2, Sparkles, X } from 'lucide-react'
+import { Calendar, Clock, Timer, Repeat, Plus, Sparkles } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import InlineCreate from '../ui/InlineCreate'
@@ -8,6 +8,8 @@ import Select from '../ui/Select'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import { useToast } from '../../context/ToastContext'
+import { SubtaskManager } from './SubtaskManager'
+import { AISuggestionPanel, type AISuggestion } from './AISuggestionPanel'
 import type { Task, Priority, Status, Recurrence, Subtask } from '../../types'
 
 interface TaskFormProps {
@@ -77,14 +79,16 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   const [slaPreset, setSlaPreset] = useState(buildSlaPreset)
   const [addingProject, setAddingProject] = useState(false)
   const [addingLabel,   setAddingLabel]   = useState(false)
-  const [newSubtask,    setNewSubtask]    = useState('')
-  const [aiSuggestion,  setAISuggestion]  = useState<{ description: string; priority: string; estimatedHours: number | null; subtasks: string[] } | null>(null)
+  const [aiSuggestion,  setAISuggestion]  = useState<AISuggestion | null>(null)
   const [aiLoading,     setAILoading]     = useState(false)
+  const [deadlineLoading, setDeadlineLoading] = useState(false)
+  const [deadlineSuggestion, setDeadlineSuggestion] = useState<{ date: string; reason: string } | null>(null)
   const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Smart fill: debounce on title change
+  // Smart fill: debounce on title change, with AbortController to cancel stale requests
   useEffect(() => {
     if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+    const controller = new AbortController()
     if (!task && form.title.trim().length >= 8) {
       aiTimerRef.current = setTimeout(async () => {
         setAILoading(true)
@@ -93,18 +97,23 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ type: 'smartfill', title: form.title.trim() }),
+            signal: controller.signal,
           })
           if (res.ok) {
             const data = await res.json()
             setAISuggestion(data)
           }
-        } catch { /* ignore */ }
-        finally { setAILoading(false) }
+        } catch (e) {
+          if (e instanceof Error && e.name !== 'AbortError') console.error('[SmartFill]', e)
+        } finally { setAILoading(false) }
       }, 900)
     } else {
       setAISuggestion(null)
     }
-    return () => { if (aiTimerRef.current) clearTimeout(aiTimerRef.current) }
+    return () => {
+      if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+      controller.abort()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.title])
 
@@ -127,21 +136,9 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     setSlaPreset(buildSlaPreset())
     setAddingProject(false)
     setAddingLabel(false)
-    setNewSubtask('')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task])
 
-  const addSubtask = () => {
-    const title = newSubtask.trim()
-    if (!title) return
-    const sub: Subtask = { id: crypto.randomUUID(), title, done: false }
-    setForm(prev => ({ ...prev, subtasks: [...prev.subtasks, sub] }))
-    setNewSubtask('')
-  }
-  const removeSubtask = (id: string) =>
-    setForm(prev => ({ ...prev, subtasks: prev.subtasks.filter(s => s.id !== id) }))
-  const toggleSubtask = (id: string) =>
-    setForm(prev => ({ ...prev, subtasks: prev.subtasks.map(s => s.id === id ? { ...s, done: !s.done } : s) }))
 
   const set = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -172,6 +169,33 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     dispatch({ type: 'ADD_LABEL', payload: { id, name, color } })
     setForm(prev => ({ ...prev, labels: [...prev.labels, id] }))
     setAddingLabel(false)
+  }
+
+  const suggestDeadline = async () => {
+    if (!form.title.trim()) return
+    setDeadlineLoading(true)
+    try {
+      const activeTasks = state.tasks
+        .filter(t => !t.status || t.status !== 'done')
+        .slice(0, 20)
+        .map(t => ({ title: t.title, dueDate: t.dueDate }))
+      const res = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'suggest-deadline',
+          title: form.title.trim(),
+          priority: form.priority,
+          estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : null,
+          activeTasks,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json() as { date: string; reason: string }
+        setDeadlineSuggestion(data)
+      }
+    } catch (e) { console.error('[SuggestDeadline]', e) }
+    finally { setDeadlineLoading(false) }
   }
 
   const handleSubmit = () => {
@@ -232,6 +256,37 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
       }
     >
       <div className="px-6 py-5 space-y-4">
+        {/* Template picker — only for new tasks */}
+        {!task && state.templates && state.templates.length > 0 && (
+          <div className="flex items-center gap-2">
+            <select
+              className="flex-1 h-8 pl-3 pr-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 appearance-none"
+              defaultValue=""
+              onChange={e => {
+                const tpl = state.templates.find(tp => tp.id === e.target.value)
+                if (!tpl) return
+                setForm(prev => ({
+                  ...prev,
+                  description: prev.description || tpl.description,
+                  priority: tpl.priority,
+                  estimatedHours: tpl.estimatedHours != null ? String(tpl.estimatedHours) : prev.estimatedHours,
+                  slaHours: tpl.slaHours != null ? String(tpl.slaHours) : prev.slaHours,
+                  labels: [...new Set([...prev.labels, ...tpl.labels])],
+                  subtasks: prev.subtasks.length === 0
+                    ? tpl.subtasks.map(title => ({ id: crypto.randomUUID(), title, done: false }))
+                    : prev.subtasks,
+                }))
+                if (tpl.slaHours != null) setSlaPreset(String(tpl.slaHours))
+                e.target.value = ''
+              }}
+            >
+              <option value="">{state.language === 'vi' ? '📋 Dùng mẫu…' : '📋 Use template…'}</option>
+              {state.templates.map(tpl => (
+                <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <Input
             label={t.form.title} id="task-title" placeholder={t.form.titlePlaceholder}
@@ -239,94 +294,21 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             error={errors.title} autoFocus
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           />
-          {/* AI Smart Fill suggestion */}
-          {!task && (aiLoading || aiSuggestion) && (
-            <div className="mt-2 rounded-xl border border-violet-200 dark:border-violet-800/50 bg-violet-50 dark:bg-violet-900/20 px-3 py-2.5 text-xs">
-              {aiLoading ? (
-                <div className="flex items-center gap-1.5 text-violet-500 dark:text-violet-400">
-                  <Sparkles size={12} className="animate-pulse" />
-                  <span>AI đang gợi ý…</span>
-                </div>
-              ) : aiSuggestion && (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="flex items-center gap-1 font-semibold text-violet-700 dark:text-violet-300">
-                      <Sparkles size={12} /> Gợi ý từ AI
-                    </span>
-                    <button onClick={() => setAISuggestion(null)} className="text-slate-400 hover:text-slate-600">
-                      <X size={12} />
-                    </button>
-                  </div>
-                  <div className="space-y-1 text-slate-600 dark:text-slate-400">
-                    {aiSuggestion.description && (
-                      <p><span className="font-medium text-slate-700 dark:text-slate-300">Mô tả:</span> {aiSuggestion.description}</p>
-                    )}
-                    <div className="flex flex-wrap gap-2">
-                      {aiSuggestion.priority && (
-                        <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600">
-                          Ưu tiên: <strong>{aiSuggestion.priority}</strong>
-                        </span>
-                      )}
-                      {aiSuggestion.estimatedHours && (
-                        <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600">
-                          ~{aiSuggestion.estimatedHours}h
-                        </span>
-                      )}
-                    </div>
-                    {aiSuggestion.subtasks?.length > 0 && (
-                      <p><span className="font-medium text-slate-700 dark:text-slate-300">Subtasks:</span> {aiSuggestion.subtasks.join(' · ')}</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={applyAISuggestion}
-                    className="mt-2 w-full py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium transition-colors"
-                  >
-                    Áp dụng gợi ý
-                  </button>
-                </>
-              )}
-            </div>
+          {!task && (
+            <AISuggestionPanel
+              loading={aiLoading}
+              suggestion={aiSuggestion}
+              onApply={applyAISuggestion}
+              onDismiss={() => setAISuggestion(null)}
+            />
           )}
         </div>
 
         {/* Subtasks */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.detail.subtasks}</span>
-          {form.subtasks.length > 0 && (
-            <div className="space-y-1">
-              {form.subtasks.map(s => (
-                <div key={s.id} className="flex items-center gap-2 group">
-                  <button type="button" onClick={() => toggleSubtask(s.id)}
-                    className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      s.done ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 hover:border-indigo-400'
-                    }`}>
-                    {s.done && <Check size={10} className="text-white" strokeWidth={3} />}
-                  </button>
-                  <span className={`flex-1 text-sm ${s.done ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                    {s.title}
-                  </span>
-                  <button type="button" onClick={() => removeSubtask(s.id)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500 transition-all">
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <input
-              type="text" value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
-              placeholder={t.detail.addSubtask}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }}
-              className="flex-1 h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button type="button" onClick={addSubtask}
-              disabled={!newSubtask.trim()}
-              className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 transition-colors">
-              <Plus size={13} />
-            </button>
-          </div>
-        </div>
+        <SubtaskManager
+          subtasks={form.subtasks}
+          onChange={subtasks => setForm(prev => ({ ...prev, subtasks }))}
+        />
 
         <Textarea
           label={t.form.description} id="task-desc" placeholder={t.form.descPlaceholder}
@@ -393,12 +375,31 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueDate}</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueDate}</label>
+              {!form.dueDate && form.title.trim().length >= 4 && (
+                <button type="button" onClick={suggestDeadline} disabled={deadlineLoading}
+                  className="flex items-center gap-1 text-[11px] text-violet-600 dark:text-violet-400 hover:text-violet-700 disabled:opacity-50 font-medium">
+                  <Sparkles size={10} className={deadlineLoading ? 'animate-pulse' : ''} />
+                  {state.language === 'vi' ? 'AI gợi ý' : 'AI suggest'}
+                </button>
+              )}
+            </div>
             <div className="relative">
               <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)}
+              <input type="date" value={form.dueDate} onChange={e => { set('dueDate', e.target.value); setDeadlineSuggestion(null) }}
                 className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
+            {deadlineSuggestion && (
+              <div className="flex items-center justify-between rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 px-2.5 py-1.5 text-xs">
+                <span className="text-violet-700 dark:text-violet-300 font-medium">{deadlineSuggestion.date}</span>
+                <span className="text-violet-500 dark:text-violet-400 mx-2 truncate flex-1">{deadlineSuggestion.reason}</span>
+                <button type="button" onClick={() => { set('dueDate', deadlineSuggestion.date); setDeadlineSuggestion(null) }}
+                  className="px-2 py-0.5 rounded-md bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 shrink-0">
+                  {state.language === 'vi' ? 'Dùng' : 'Use'}
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueTime} <span className="text-slate-400 dark:text-slate-500 font-normal">{t.form.slaTimeHint}</span></label>

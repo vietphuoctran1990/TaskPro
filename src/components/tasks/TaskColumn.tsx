@@ -1,7 +1,7 @@
 import { memo, useState, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus, CheckCircle2 } from 'lucide-react'
+import { Plus, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import TaskCard from './TaskCard'
 import Button from '../ui/Button'
@@ -13,6 +13,7 @@ export interface ColumnDef {
   label: string
   color: string      // hex
   isFinal: boolean
+  wipLimit?: number | null
 }
 
 interface TaskColumnProps {
@@ -47,17 +48,26 @@ const TaskColumn = memo(function TaskColumn({
   }
   const cancelEdit = () => { setDraftLabel(column.label); setEditing(false) }
 
+  // WIP limit state: column over capacity when count exceeds the limit
+  const limit   = column.wipLimit ?? null
+  const overWip = limit != null && limit > 0 && tasks.length > limit
+  const atWip   = limit != null && limit > 0 && tasks.length === limit
+
   // Derive subtle tints from the column color
   const dot = { backgroundColor: column.color }
-  const badge = { backgroundColor: `${column.color}22`, color: column.color }
+  const badge = overWip
+    ? { backgroundColor: '#fee2e2', color: '#dc2626' }
+    : { backgroundColor: `${column.color}22`, color: column.color }
   const dropBg = isOver
     ? 'bg-indigo-50 dark:bg-indigo-900/20 border-2 border-dashed border-indigo-300 dark:border-indigo-700'
-    : 'bg-slate-100/60 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/40'
+    : overWip
+      ? 'bg-red-50/50 dark:bg-red-900/10 border border-red-200/70 dark:border-red-800/40'
+      : 'bg-slate-100/60 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/40'
 
   const EmptyIcon = column.isFinal ? CheckCircle2 : Plus
 
   return (
-    <div className="flex flex-col w-72 shrink-0">
+    <div className="flex flex-col w-[82vw] max-w-[20rem] sm:w-72 shrink-0 snap-start">
       {/* Column header */}
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2 min-w-0">
@@ -81,10 +91,14 @@ const TaskColumn = memo(function TaskColumn({
             </span>
           )}
           <span
-            className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold shrink-0"
+            className={cn(
+              'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold shrink-0',
+              (overWip || atWip) && 'tabular-nums'
+            )}
             style={badge}
+            title={limit != null && limit > 0 ? `WIP: ${tasks.length}/${limit}` : undefined}
           >
-            {tasks.length}
+            {limit != null && limit > 0 ? `${tasks.length}/${limit}` : tasks.length}
           </span>
         </div>
         <Button
@@ -95,6 +109,14 @@ const TaskColumn = memo(function TaskColumn({
           <Plus size={14} />
         </Button>
       </div>
+
+      {/* WIP limit warning */}
+      {overWip && (
+        <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-[11px] font-medium text-red-600 dark:text-red-400">
+          <AlertTriangle size={12} className="shrink-0" />
+          <span>{t.kanban.wipExceeded(limit!)}</span>
+        </div>
+      )}
 
       {/* Drop zone */}
       <div

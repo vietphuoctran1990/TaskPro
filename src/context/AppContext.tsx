@@ -8,9 +8,9 @@ import {
 } from 'react'
 import type {
   AppState, Task, Project, Label, Note, NoteFolder, Priority, Status, ViewMode,
-  SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode, StatusDef, DeletedIds,
+  SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode, StatusDef, DeletedIds, TaskTemplate,
 } from '../types'
-import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS, DEFAULT_STATUSES } from '../data/defaults'
+import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS, DEFAULT_STATUSES, DEFAULT_TEMPLATES } from '../data/defaults'
 import {
   generateId, getSLAStatus, PRIORITY_ORDER, SLA_ORDER,
   getDeadline, createNextRecurringTask, buildStatusOrder,
@@ -21,6 +21,8 @@ type Action =
   | { type: 'ADD_TASK';        payload: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> }
   | { type: 'UPDATE_TASK';     payload: Partial<Task> & { id: string } }
   | { type: 'DELETE_TASK';     payload: string }
+  | { type: 'RESTORE_TASK';    payload: Task }
+  | { type: 'RESTORE_NOTE';    payload: Note }
   | { type: 'MOVE_TASK';       payload: { id: string; status: Status } }
   | { type: 'REORDER_TASKS';   payload: Task[] }
   | { type: 'ADD_COMMENT';     payload: { taskId: string; comment: Omit<Comment, 'id' | 'createdAt'> } }
@@ -35,6 +37,7 @@ type Action =
   | { type: 'SET_FILTER_PRIORITY'; payload: Priority | 'all' }
   | { type: 'SET_FILTER_STATUS';   payload: Status | 'all' }
   | { type: 'SET_FILTER_SLA';      payload: SLAStatus | 'all' }
+  | { type: 'SET_FILTER_LABEL';    payload: string | 'all' }
   | { type: 'SET_DATE_FILTER';     payload: DateFilter }
   | { type: 'SET_VIEW_MODE';   payload: ViewMode }
   | { type: 'SET_SORT';        payload: { field: SortField; dir: SortDir } }
@@ -56,6 +59,9 @@ type Action =
   | { type: 'UPDATE_NOTE_FOLDER'; payload: NoteFolder }
   | { type: 'DELETE_NOTE_FOLDER'; payload: string }
   | { type: 'SET_ACTIVE_NOTE_FOLDER'; payload: string | null }
+  | { type: 'ADD_TEMPLATE';    payload: Omit<TaskTemplate, 'id'> }
+  | { type: 'UPDATE_TEMPLATE'; payload: TaskTemplate }
+  | { type: 'DELETE_TEMPLATE'; payload: string }
 
 const STORAGE_KEY = 'taskpro_v2_state'
 const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -92,9 +98,13 @@ function getInitialState(): AppState {
       // Migrate old columnLabels into StatusDef.name
       const legacyLabels: Record<string, string> = parsed.columnLabels ?? {}
       const rawStatuses: StatusDef[] = parsed.statuses ?? DEFAULT_STATUSES
+      // Migrate: ensure isFinal is always boolean — old data may lack this field.
+      // 'done' is the only builtin status that defaults to isFinal=true.
       const statuses = rawStatuses.map((s: StatusDef) => ({
         ...s,
-        name: s.name || legacyLabels[s.id] || '',
+        name:     s.name || legacyLabels[s.id] || '',
+        isFinal:  (s.isFinal != null) ? Boolean(s.isFinal) : (s.id === 'done'),
+        wipLimit: s.wipLimit ?? null,
       }))
 
       return {
@@ -114,6 +124,7 @@ function getInitialState(): AppState {
         noteFolders:        parsed.noteFolders        ?? [],
         activeNoteFolderId: parsed.activeNoteFolderId ?? null,
         filterSLA:    parsed.filterSLA    ?? 'all',
+        filterLabel:  parsed.filterLabel  ?? 'all',
         dateFilter:   parsed.dateFilter   ?? 'all',
         viewMode:     parsed.viewMode     ?? 'kanban',
         // Migrate old default (createdAt desc) → new default (dueDate asc)
@@ -128,6 +139,7 @@ function getInitialState(): AppState {
         density:      parsed.density      ?? 'comfortable',
         language:     parsed.language     ?? 'vi',
         notifBefore:  parsed.notifBefore  ?? [15, 30, 60],
+        templates:    parsed.templates    ?? DEFAULT_TEMPLATES,
         _deletedIds:  pruneTombstones(parsed._deletedIds),
       }
     }
@@ -145,6 +157,7 @@ function getInitialState(): AppState {
     filterPriority: 'all',
     filterStatus: 'all',
     filterSLA: 'all',
+    filterLabel: 'all',
     dateFilter: 'all',
     viewMode: 'kanban',
     sortField: 'dueDate',
@@ -154,6 +167,7 @@ function getInitialState(): AppState {
     density: 'comfortable',
     language: 'vi',
     notifBefore: [15, 30, 60],
+    templates: DEFAULT_TEMPLATES,
   }
 }
 
@@ -174,6 +188,10 @@ function reducer(state: AppState, action: Action): AppState {
       }
     case 'DELETE_TASK':
       return { ...state, tasks: state.tasks.filter(t => t.id !== action.payload), _deletedIds: tombstone(state._deletedIds, 'tasks', action.payload) }
+    case 'RESTORE_TASK':
+      return { ...state, tasks: [...state.tasks, action.payload] }
+    case 'RESTORE_NOTE':
+      return { ...state, notes: [...state.notes, action.payload] }
     case 'MOVE_TASK': {
       const task = state.tasks.find(t => t.id === action.payload.id)
       const targetDef = state.statuses.find(s => s.id === action.payload.status)
@@ -226,6 +244,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_FILTER_PRIORITY': return { ...state, filterPriority: action.payload }
     case 'SET_FILTER_STATUS':   return { ...state, filterStatus: action.payload }
     case 'SET_FILTER_SLA':      return { ...state, filterSLA: action.payload }
+    case 'SET_FILTER_LABEL':    return { ...state, filterLabel: action.payload }
     case 'SET_DATE_FILTER':     return { ...state, dateFilter: action.payload }
     case 'SET_VIEW_MODE':       return { ...state, viewMode: action.payload }
     case 'SET_SORT':            return { ...state, sortField: action.payload.field, sortDir: action.payload.dir }
@@ -296,6 +315,12 @@ function reducer(state: AppState, action: Action): AppState {
       }
     case 'SET_ACTIVE_NOTE_FOLDER':
       return { ...state, activeNoteFolderId: action.payload }
+    case 'ADD_TEMPLATE':
+      return { ...state, templates: [...(state.templates ?? []), { ...action.payload, id: generateId() }] }
+    case 'UPDATE_TEMPLATE':
+      return { ...state, templates: (state.templates ?? []).map(tp => tp.id === action.payload.id ? action.payload : tp) }
+    case 'DELETE_TEMPLATE':
+      return { ...state, templates: (state.templates ?? []).filter(tp => tp.id !== action.payload) }
     case 'IMPORT_STATE': {
       const { data, mode } = action.payload
       if (mode === 'replace') {
@@ -326,6 +351,10 @@ interface ContextValue {
   dispatch: React.Dispatch<Action>
   filteredTasks: Task[]
   finalStatusIds: ReadonlySet<string>
+  /** First non-final status id (column tasks start in). Falls back to 'todo'. */
+  firstStatusId: string
+  /** First final status id (where "mark done" sends a task). Falls back to 'done'. */
+  finalStatusId: string
 }
 
 const AppContext = createContext<ContextValue | null>(null)
@@ -361,35 +390,67 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.statuses]
   )
 
+  // Derived once here so views/cards don't each recompute the same find().
+  const { firstStatusId, finalStatusId } = useMemo(() => {
+    const ordered = [...state.statuses].sort((a, b) => a.order - b.order)
+    return {
+      firstStatusId: ordered.find(s => !s.isFinal)?.id ?? 'todo',
+      finalStatusId: ordered.find(s => s.isFinal)?.id ?? 'done',
+    }
+  }, [state.statuses])
+
   const statusOrder = useMemo(() => buildStatusOrder(state.statuses), [state.statuses])
 
-  const filteredTasks = useMemo(() => {
-    let tasks = state.tasks.filter(t => !t.isNote)
-    if (state.activeProjectId)      tasks = tasks.filter(t => t.projectId === state.activeProjectId)
-    if (state.searchQuery.trim()) {
-      const q = state.searchQuery.toLowerCase()
-      tasks = tasks.filter(t => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q))
-    }
+  // Stage 1: project + isNote filter (changes rarely)
+  const projectTasks = useMemo(() => {
+    const nonNote = state.tasks.filter(t => !t.isNote)
+    return state.activeProjectId
+      ? nonNote.filter(t => t.projectId === state.activeProjectId)
+      : nonNote
+  }, [state.tasks, state.activeProjectId])
+
+  // Stage 2: label map for text search
+  const labelById = useMemo(
+    () => new Map(state.labels.map(l => [l.id, l.name.toLowerCase()])),
+    [state.labels]
+  )
+
+  // Stage 3: text search (re-runs on keypress, skips stage 1)
+  const searchTasks = useMemo(() => {
+    if (!state.searchQuery.trim()) return projectTasks
+    const q = state.searchQuery.toLowerCase()
+    return projectTasks.filter(t =>
+      t.title.toLowerCase().includes(q) ||
+      t.description.toLowerCase().includes(q) ||
+      t.subtasks.some(s => s.title.toLowerCase().includes(q)) ||
+      t.comments.some(c => c.text.toLowerCase().includes(q)) ||
+      t.labels.some(lid => (labelById.get(lid) ?? '').includes(q))
+    )
+  }, [projectTasks, state.searchQuery, labelById])
+
+  // Stage 4: attribute + date filters
+  const filteredUnordered = useMemo(() => {
+    let tasks = searchTasks
     if (state.filterPriority !== 'all') tasks = tasks.filter(t => t.priority === state.filterPriority)
     if (state.filterStatus   !== 'all') tasks = tasks.filter(t => t.status   === state.filterStatus)
     if (state.filterSLA      !== 'all') tasks = tasks.filter(t => getSLAStatus(t, finalStatusIds) === state.filterSLA)
-    if (state.dateFilter     !== 'all') {
+    if (state.filterLabel    !== 'all') tasks = tasks.filter(t => t.labels.includes(state.filterLabel))
+    if (state.dateFilter !== 'all') {
       const todayStr = todayLocalISO()
       const tomorrowStr = tomorrowLocalISO()
-      if (state.dateFilter === 'today') {
-        tasks = tasks.filter(t => t.dueDate === todayStr)
-      } else if (state.dateFilter === 'tomorrow') {
-        tasks = tasks.filter(t => t.dueDate === tomorrowStr)
-      } else if (state.dateFilter === 'upcoming') {
-        tasks = tasks.filter(t => t.dueDate != null && t.dueDate > todayStr)
-      }
+      if (state.dateFilter === 'today')         tasks = tasks.filter(t => t.dueDate === todayStr)
+      else if (state.dateFilter === 'tomorrow') tasks = tasks.filter(t => t.dueDate === tomorrowStr)
+      else if (state.dateFilter === 'upcoming') tasks = tasks.filter(t => t.dueDate != null && t.dueDate > todayStr)
     }
+    return tasks
+  }, [searchTasks, state.filterPriority, state.filterStatus, state.filterSLA,
+      state.filterLabel, state.dateFilter, finalStatusIds])
 
-    return [...tasks].sort((a, b) => {
-      // Pinned tasks always appear first, regardless of sort field
+  // Stage 5: sort (re-runs only when order or filter results change)
+  const filteredTasks = useMemo(() => {
+    return [...filteredUnordered].sort((a, b) => {
       const pin = Number(!!b.pinned) - Number(!!a.pinned)
       if (pin !== 0) return pin
-      // Completed tasks always appear last
       const aDone = finalStatusIds.has(a.status) ? 1 : 0
       const bDone = finalStatusIds.has(b.status) ? 1 : 0
       if (aDone !== bDone) return aDone - bDone
@@ -407,12 +468,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         default:    return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
       }
     })
-  }, [state.tasks, state.activeProjectId, state.searchQuery,
-      state.filterPriority, state.filterStatus, state.filterSLA, state.dateFilter,
-      state.sortField, state.sortDir, finalStatusIds, statusOrder])
+  }, [filteredUnordered, state.sortField, state.sortDir, finalStatusIds, statusOrder])
 
   return (
-    <AppContext.Provider value={{ state, dispatch, filteredTasks, finalStatusIds }}>
+    <AppContext.Provider value={{ state, dispatch, filteredTasks, finalStatusIds, firstStatusId, finalStatusId }}>
       {children}
     </AppContext.Provider>
   )

@@ -38,6 +38,7 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
         label: s.name || i18nStatus[s.id] || s.id,
         color: s.color,
         isFinal: s.isFinal,
+        wipLimit: s.wipLimit ?? null,
       })),
   [state.statuses, i18nStatus])
 
@@ -129,7 +130,8 @@ export default function TaskBoard({ onAddTask, onEditTask, onViewTask, onFocusTa
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin snap-x snap-mandatory sm:snap-none scroll-px-4">
+
         {COLUMNS.map(col => (
           <TaskColumn
             key={col.id}

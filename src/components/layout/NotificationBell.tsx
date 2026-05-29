@@ -9,7 +9,7 @@ import { useNotificationsCtx } from '../../context/NotificationsContext'
 const NOTIF_OPTIONS = [15, 30, 60] as const
 
 export default function NotificationBell() {
-  const { state, dispatch, finalStatusIds } = useApp()
+  const { state, dispatch, finalStatusIds, finalStatusId } = useApp()
   const t = useT()
   const [open, setOpen] = useState(false)
   const { permission, requestPermission, getUpcomingAlerts, dismissAlert, dismissAllAlerts } = useNotificationsCtx()
@@ -232,8 +232,7 @@ export default function NotificationBell() {
                         <button
                           className="text-xs text-emerald-600 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
                           onClick={() => {
-                            const finalId = state.statuses.find(s => s.isFinal)?.id ?? 'done'
-                            dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalId } })
+                            dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalStatusId } })
                           }}
                           title={t.notifications.markDone}
                         >

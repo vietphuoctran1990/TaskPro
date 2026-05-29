@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { useApp } from '../context/AppContext'
-import { todayLocalISO } from '../lib/dateLocal'
+import { buildAIContext } from '../lib/aiContext'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -9,26 +9,8 @@ export interface ChatMessage {
   error?: boolean
 }
 
-function buildContext(state: ReturnType<typeof useApp>['state']) {
-  const today    = todayLocalISO()
-  const projMap  = Object.fromEntries(state.projects.map(p => [p.id, p.name]))
-  return {
-    today,
-    language: state.language,
-    projects: state.projects.map(p => ({ id: p.id, name: p.name })),
-    tasks: state.tasks.slice(0, 25).map(t => ({
-      id:          t.id,
-      title:       t.title,
-      status:      t.status,
-      priority:    t.priority,
-      dueDate:     t.dueDate,
-      projectName: projMap[t.projectId] ?? '',
-    })),
-  }
-}
-
 export function useAIChat() {
-  const { state }  = useApp()
+  const { state, finalStatusIds } = useApp()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading,  setLoading]  = useState(false)
   const abortRef   = useRef<AbortController | null>(null)
@@ -50,7 +32,7 @@ export function useAIChat() {
       const res = await fetch('/api/ai-chat', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ type: 'chat', messages: apiHistory, context: buildContext(state) }),
+        body:    JSON.stringify({ type: 'chat', messages: apiHistory, context: buildAIContext(state, finalStatusIds) }),
         signal:  ctrl.signal,
       })
 
@@ -60,6 +42,8 @@ export function useAIChat() {
       const decoder = new TextDecoder()
       let full   = ''
       let buffer = ''
+
+      let streamErr: string | null = null
 
       while (true) {
         const { done, value } = await reader.read()
@@ -71,7 +55,11 @@ export function useAIChat() {
           if (!line.startsWith('data: ')) continue
           const data = line.slice(6)
           if (data === '[DONE]') break
-          try { full += (JSON.parse(data) as { text: string }).text } catch { /* ignore */ }
+          try {
+            const parsed = JSON.parse(data) as { text?: string; error?: string }
+            if (parsed.error) streamErr = parsed.error
+            else if (parsed.text) full += parsed.text
+          } catch { /* ignore */ }
         }
         setMessages(prev => {
           const copy = [...prev]
@@ -82,7 +70,9 @@ export function useAIChat() {
 
       setMessages(prev => {
         const copy = [...prev]
-        copy[copy.length - 1] = { role: 'assistant', content: full || '…', streaming: false }
+        copy[copy.length - 1] = streamErr
+          ? { role: 'assistant', content: 'Lỗi từ AI: ' + streamErr, error: true }
+          : { role: 'assistant', content: full || '…', streaming: false }
         return copy
       })
     } catch (err: unknown) {
@@ -95,7 +85,7 @@ export function useAIChat() {
     } finally {
       setLoading(false)
     }
-  }, [messages, state])
+  }, [messages, state, finalStatusIds])
 
   const stop  = useCallback(() => abortRef.current?.abort(), [])
   const clear = useCallback(() => setMessages([]), [])

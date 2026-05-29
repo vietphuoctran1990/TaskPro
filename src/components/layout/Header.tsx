@@ -1,5 +1,5 @@
 import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote, Monitor } from 'lucide-react'
-import { useState, useEffect, useRef, memo, Fragment } from 'react'
+import { useState, useEffect, useRef, memo, useMemo, Fragment } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -72,6 +72,8 @@ const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
   dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar, timeline: GanttChart, notes: StickyNote,
 }
 
+const ALL_VIEWS: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes']
+
 const ViewSwitcher = memo(function ViewSwitcher({ viewMode, views, t, dispatch }: {
   viewMode: ViewMode
   views: ViewMode[]
@@ -90,6 +92,7 @@ const ViewSwitcher = memo(function ViewSwitcher({ viewMode, views, t, dispatch }
             <button
               onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
               aria-label={t.views[v]}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
                 isActive
@@ -186,20 +189,24 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
     if (state.searchQuery === '' && localSearch !== '') setLocalSearch('')
   }, [state.searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes']
   const isNotesMode = state.viewMode === 'notes'
+  const sortedStatuses = useMemo(
+    () => [...state.statuses].sort((a, b) => a.order - b.order),
+    [state.statuses]
+  )
   const project = state.projects.find(p => p.id === state.activeProjectId)
   const taskCount = state.tasks.filter(tk =>
     state.activeProjectId ? tk.projectId === state.activeProjectId : true
   ).length
   const hasFilters =
     state.filterPriority !== 'all' || state.filterStatus !== 'all' ||
-    state.filterSLA !== 'all' || localSearch.trim() !== ''
+    state.filterSLA !== 'all' || state.filterLabel !== 'all' || localSearch.trim() !== ''
 
   const clearAllFilters = () => {
     dispatch({ type: 'SET_FILTER_PRIORITY', payload: 'all' })
     dispatch({ type: 'SET_FILTER_STATUS',   payload: 'all' })
     dispatch({ type: 'SET_FILTER_SLA',      payload: 'all' })
+    dispatch({ type: 'SET_FILTER_LABEL',    payload: 'all' })
     setLocalSearch('')
   }
 
@@ -242,7 +249,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
               {isNotesMode ? (
                 <>
                   <StickyNote size={15} className="text-indigo-500 shrink-0" />
-                  <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">Ghi chú</h1>
+                  <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{t.views.notes}</h1>
                 </>
               ) : (
                 <>
@@ -256,7 +263,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             </div>
 
             {/* View switcher — desktop */}
-            <ViewSwitcher viewMode={state.viewMode} views={views} t={t} dispatch={dispatch} />
+            <ViewSwitcher viewMode={state.viewMode} views={ALL_VIEWS} t={t} dispatch={dispatch} />
 
             {/* Search — desktop only */}
             <div className="hidden md:flex relative">
@@ -315,7 +322,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             <div className="hidden sm:block">
               {isNotesMode ? (
                 <Button variant="primary" size="sm" onClick={onAddNote}>
-                  <Plus size={14} /> <span>Tạo ghi chú</span>
+                  <Plus size={14} /> <span>{state.language === 'vi' ? 'Tạo ghi chú' : 'New note'}</span>
                 </Button>
               ) : (
                 <Button variant="primary" size="sm" onClick={onAddTask}>
@@ -330,7 +337,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
       {/* Mobile view tabs */}
       <div className="sm:hidden flex items-center gap-2 mb-2">
         <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 w-fit">
-          {views.map(v => {
+          {ALL_VIEWS.map(v => {
             const Icon = VIEW_ICONS[v]
             const isNotes = v === 'notes'
             const isActive = state.viewMode === v
@@ -339,6 +346,8 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
                 {isNotes && <span className="w-px h-4 bg-slate-300 dark:bg-slate-600 self-center mx-0.5 shrink-0" />}
                 <button
                   onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
+                  aria-label={t.views[v]}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors',
                     isActive
@@ -385,7 +394,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             onChange={e => dispatch({ type: 'SET_FILTER_STATUS', payload: e.target.value })}
             className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
             <option value="all">{t.header.allStatuses}</option>
-            {[...state.statuses].sort((a, b) => a.order - b.order).map(s => (
+            {sortedStatuses.map(s => (
               <option key={s.id} value={s.id}>
                 {s.name || (t.status as Record<string, string>)[s.id] || s.id}
               </option>
@@ -401,6 +410,16 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             <option value="on_track">🟢 {t.sla.on_track}</option>
             <option value="none">— {t.sla.none}</option>
           </select>
+          {state.labels.length > 0 && (
+            <select value={state.filterLabel}
+              onChange={e => dispatch({ type: 'SET_FILTER_LABEL', payload: e.target.value })}
+              className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+              <option value="all">{state.language === 'vi' ? 'Tất cả nhãn' : 'All labels'}</option>
+              {state.labels.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          )}
           {hasFilters && (
             <Button variant="ghost" size="sm" className="text-red-500 hover:bg-red-50" onClick={clearAllFilters}>
               {t.header.clear}
@@ -441,7 +460,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
                 onChange={e => dispatch({ type: 'SET_FILTER_STATUS', payload: e.target.value })}
                 className="h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer w-full">
                 <option value="all">{t.header.allStatuses}</option>
-                {[...state.statuses].sort((a, b) => a.order - b.order).map(s => (
+                {sortedStatuses.map(s => (
                   <option key={s.id} value={s.id}>
                     {s.name || (t.status as Record<string, string>)[s.id] || s.id}
                   </option>
@@ -457,6 +476,16 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
                 <option value="on_track">🟢 {t.sla.on_track}</option>
                 <option value="none">— {t.sla.none}</option>
               </select>
+              {state.labels.length > 0 && (
+                <select value={state.filterLabel}
+                  onChange={e => dispatch({ type: 'SET_FILTER_LABEL', payload: e.target.value })}
+                  className="h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer w-full">
+                  <option value="all">{state.language === 'vi' ? 'Tất cả nhãn' : 'All labels'}</option>
+                  {state.labels.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
             {/* Sheet footer actions */}
             <div className="flex gap-2 px-4 pt-2" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}>

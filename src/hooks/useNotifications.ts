@@ -62,13 +62,17 @@ async function syncSubscriptionToServer(reg: ServiceWorkerRegistration, userId?:
     return
   }
   try {
-    // Always re-subscribe (refreshes expired subscriptions)
+    // Reuse existing subscription; only create a new one if none exists.
+    // Unsubscribing + re-subscribing causes a gap window where server-pushed
+    // notifications are lost because the old endpoint is gone before the new
+    // one is registered.
     let sub = await reg.pushManager.getSubscription()
-    if (sub) await sub.unsubscribe()
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
-    })
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
+      })
+    }
     const res = await fetch('/api/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -97,9 +101,11 @@ async function syncSchedulesToServer(schedules: ScheduleItem[], userId?: string)
   }
 }
 
-function buildSchedulesFor(
+// Builds the complete schedule without filtering already-notified keys.
+// Used for RESCHEDULE_ALL (SW) and syncSchedulesToServer so the server
+// and IDB always hold the full picture and can fire on other devices.
+function buildAllSchedulesFor(
   tasks: Task[], notifBefore: number[], t: Translations,
-  notifiedRef: { current: Set<string> },
   finalStatusIds?: ReadonlySet<string>
 ): ScheduleItem[] {
   const activeThresholds = ALL_THRESHOLDS.filter(
@@ -115,7 +121,6 @@ function buildSchedulesFor(
       const timeStr = deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       return activeThresholds.flatMap(({ key, label, minutes }) => {
         const notifKey = `${task.id}-${key}`
-        if (notifiedRef.current.has(notifKey)) return []
         const fireAt  = deadline.getTime() - minutes * 60_000
         const delayMs = fireAt - Date.now()
         if (delayMs < -PAST_GRACE_MS) return []
@@ -124,6 +129,17 @@ function buildSchedulesFor(
                   requireInteraction: key === 'due' }]
       })
     })
+}
+
+// Filtered variant: skips keys already fired locally.
+// Used only for main-thread timers to avoid double-firing on the same device.
+function buildSchedulesFor(
+  tasks: Task[], notifBefore: number[], t: Translations,
+  notifiedRef: { current: Set<string> },
+  finalStatusIds?: ReadonlySet<string>
+): ScheduleItem[] {
+  return buildAllSchedulesFor(tasks, notifBefore, t, finalStatusIds)
+    .filter(item => !notifiedRef.current.has(item.key))
 }
 
 export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, userId, finalStatusIds }: Options) {
@@ -190,8 +206,15 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
   }, [])
 
   // ── Build the schedule payload ─────────────────────────────────────────────
+  // Filtered: for main-thread setTimeout (avoids double-fire on this device)
   const buildSchedules = useCallback(
     () => buildSchedulesFor(tasks, notifBefore, t, notifiedRef, finalStatusIds),
+    [tasks, notifBefore, t, finalStatusIds]
+  )
+  // Unfiltered: for SW/server so other devices and Periodic Background Sync
+  // always have the complete picture regardless of what fired locally.
+  const buildAllSchedules = useCallback(
+    () => buildAllSchedulesFor(tasks, notifBefore, t, finalStatusIds),
     [tasks, notifBefore, t, finalStatusIds]
   )
 
@@ -202,16 +225,19 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
     const send = () => {
       const reg = swRegRef.current
       if (!reg?.active || Notification.permission !== 'granted') return
-      const schedules = buildSchedules()
-      reg.active.postMessage({ type: 'RESCHEDULE_ALL', payload: { schedules } })
-      // Sync to server so the cron job can push when the app is closed
-      syncSchedulesToServer(schedules, userId)
+      // Send full schedule to SW so IDB and Periodic Background Sync always
+      // have everything, even for notifications this device already fired.
+      const allSchedules = buildAllSchedules()
+      reg.active.postMessage({ type: 'RESCHEDULE_ALL', payload: { schedules: allSchedules } })
+      // Server also receives the full schedule so other devices (e.g. mobile)
+      // get push notifications that the desktop already triggered locally.
+      syncSchedulesToServer(allSchedules, userId)
     }
 
     send()
     const id = setInterval(send, HEARTBEAT_MS)
     return () => clearInterval(id)
-  }, [tasks, enabled, notifBefore, t, swReady, buildSchedules, userId])
+  }, [tasks, enabled, notifBefore, t, swReady, buildAllSchedules, userId])
 
   // ── Main-thread exact-time scheduling (foreground precision) ──────────────
   useEffect(() => {
