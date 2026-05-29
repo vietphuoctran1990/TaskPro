@@ -1,5 +1,5 @@
 import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote, Monitor } from 'lucide-react'
-import { useState, useEffect, useRef, memo, Fragment } from 'react'
+import { useState, useEffect, useRef, memo, useMemo, Fragment } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -71,6 +71,8 @@ function ThemeMenu() {
 const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
   dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar, timeline: GanttChart, notes: StickyNote,
 }
+
+const ALL_VIEWS: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes']
 
 const ViewSwitcher = memo(function ViewSwitcher({ viewMode, views, t, dispatch }: {
   viewMode: ViewMode
@@ -187,8 +189,11 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
     if (state.searchQuery === '' && localSearch !== '') setLocalSearch('')
   }, [state.searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes']
   const isNotesMode = state.viewMode === 'notes'
+  const sortedStatuses = useMemo(
+    () => [...state.statuses].sort((a, b) => a.order - b.order),
+    [state.statuses]
+  )
   const project = state.projects.find(p => p.id === state.activeProjectId)
   const taskCount = state.tasks.filter(tk =>
     state.activeProjectId ? tk.projectId === state.activeProjectId : true
@@ -258,7 +263,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             </div>
 
             {/* View switcher — desktop */}
-            <ViewSwitcher viewMode={state.viewMode} views={views} t={t} dispatch={dispatch} />
+            <ViewSwitcher viewMode={state.viewMode} views={ALL_VIEWS} t={t} dispatch={dispatch} />
 
             {/* Search — desktop only */}
             <div className="hidden md:flex relative">
@@ -332,7 +337,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
       {/* Mobile view tabs */}
       <div className="sm:hidden flex items-center gap-2 mb-2">
         <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 w-fit">
-          {views.map(v => {
+          {ALL_VIEWS.map(v => {
             const Icon = VIEW_ICONS[v]
             const isNotes = v === 'notes'
             const isActive = state.viewMode === v
@@ -389,7 +394,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
             onChange={e => dispatch({ type: 'SET_FILTER_STATUS', payload: e.target.value })}
             className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
             <option value="all">{t.header.allStatuses}</option>
-            {[...state.statuses].sort((a, b) => a.order - b.order).map(s => (
+            {sortedStatuses.map(s => (
               <option key={s.id} value={s.id}>
                 {s.name || (t.status as Record<string, string>)[s.id] || s.id}
               </option>
@@ -455,7 +460,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
                 onChange={e => dispatch({ type: 'SET_FILTER_STATUS', payload: e.target.value })}
                 className="h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer w-full">
                 <option value="all">{t.header.allStatuses}</option>
-                {[...state.statuses].sort((a, b) => a.order - b.order).map(s => (
+                {sortedStatuses.map(s => (
                   <option key={s.id} value={s.id}>
                     {s.name || (t.status as Record<string, string>)[s.id] || s.id}
                   </option>

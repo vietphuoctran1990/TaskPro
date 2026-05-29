@@ -401,41 +401,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const statusOrder = useMemo(() => buildStatusOrder(state.statuses), [state.statuses])
 
-  const filteredTasks = useMemo(() => {
-    let tasks = state.tasks.filter(t => !t.isNote)
-    if (state.activeProjectId)      tasks = tasks.filter(t => t.projectId === state.activeProjectId)
-    if (state.searchQuery.trim()) {
-      const q = state.searchQuery.toLowerCase()
-      const labelById = new Map(state.labels.map(l => [l.id, l.name.toLowerCase()]))
-      tasks = tasks.filter(t =>
-        t.title.toLowerCase().includes(q) ||
-        t.description.toLowerCase().includes(q) ||
-        t.subtasks.some(s => s.title.toLowerCase().includes(q)) ||
-        t.comments.some(c => c.text.toLowerCase().includes(q)) ||
-        t.labels.some(lid => (labelById.get(lid) ?? '').includes(q))
-      )
-    }
+  // Stage 1: project + isNote filter (changes rarely)
+  const projectTasks = useMemo(() => {
+    const nonNote = state.tasks.filter(t => !t.isNote)
+    return state.activeProjectId
+      ? nonNote.filter(t => t.projectId === state.activeProjectId)
+      : nonNote
+  }, [state.tasks, state.activeProjectId])
+
+  // Stage 2: label map for text search
+  const labelById = useMemo(
+    () => new Map(state.labels.map(l => [l.id, l.name.toLowerCase()])),
+    [state.labels]
+  )
+
+  // Stage 3: text search (re-runs on keypress, skips stage 1)
+  const searchTasks = useMemo(() => {
+    if (!state.searchQuery.trim()) return projectTasks
+    const q = state.searchQuery.toLowerCase()
+    return projectTasks.filter(t =>
+      t.title.toLowerCase().includes(q) ||
+      t.description.toLowerCase().includes(q) ||
+      t.subtasks.some(s => s.title.toLowerCase().includes(q)) ||
+      t.comments.some(c => c.text.toLowerCase().includes(q)) ||
+      t.labels.some(lid => (labelById.get(lid) ?? '').includes(q))
+    )
+  }, [projectTasks, state.searchQuery, labelById])
+
+  // Stage 4: attribute + date filters
+  const filteredUnordered = useMemo(() => {
+    let tasks = searchTasks
     if (state.filterPriority !== 'all') tasks = tasks.filter(t => t.priority === state.filterPriority)
     if (state.filterStatus   !== 'all') tasks = tasks.filter(t => t.status   === state.filterStatus)
     if (state.filterSLA      !== 'all') tasks = tasks.filter(t => getSLAStatus(t, finalStatusIds) === state.filterSLA)
     if (state.filterLabel    !== 'all') tasks = tasks.filter(t => t.labels.includes(state.filterLabel))
-    if (state.dateFilter     !== 'all') {
+    if (state.dateFilter !== 'all') {
       const todayStr = todayLocalISO()
       const tomorrowStr = tomorrowLocalISO()
-      if (state.dateFilter === 'today') {
-        tasks = tasks.filter(t => t.dueDate === todayStr)
-      } else if (state.dateFilter === 'tomorrow') {
-        tasks = tasks.filter(t => t.dueDate === tomorrowStr)
-      } else if (state.dateFilter === 'upcoming') {
-        tasks = tasks.filter(t => t.dueDate != null && t.dueDate > todayStr)
-      }
+      if (state.dateFilter === 'today')         tasks = tasks.filter(t => t.dueDate === todayStr)
+      else if (state.dateFilter === 'tomorrow') tasks = tasks.filter(t => t.dueDate === tomorrowStr)
+      else if (state.dateFilter === 'upcoming') tasks = tasks.filter(t => t.dueDate != null && t.dueDate > todayStr)
     }
+    return tasks
+  }, [searchTasks, state.filterPriority, state.filterStatus, state.filterSLA,
+      state.filterLabel, state.dateFilter, finalStatusIds])
 
-    return [...tasks].sort((a, b) => {
-      // Pinned tasks always appear first, regardless of sort field
+  // Stage 5: sort (re-runs only when order or filter results change)
+  const filteredTasks = useMemo(() => {
+    return [...filteredUnordered].sort((a, b) => {
       const pin = Number(!!b.pinned) - Number(!!a.pinned)
       if (pin !== 0) return pin
-      // Completed tasks always appear last
       const aDone = finalStatusIds.has(a.status) ? 1 : 0
       const bDone = finalStatusIds.has(b.status) ? 1 : 0
       if (aDone !== bDone) return aDone - bDone
@@ -453,10 +468,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         default:    return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
       }
     })
-  }, [state.tasks, state.activeProjectId, state.searchQuery,
-      state.filterPriority, state.filterStatus, state.filterSLA, state.filterLabel,
-      state.dateFilter, state.sortField, state.sortDir, state.labels,
-      finalStatusIds, statusOrder])
+  }, [filteredUnordered, state.sortField, state.sortDir, finalStatusIds, statusOrder])
 
   return (
     <AppContext.Provider value={{ state, dispatch, filteredTasks, finalStatusIds, firstStatusId, finalStatusId }}>

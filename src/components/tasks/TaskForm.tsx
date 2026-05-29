@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Calendar, Clock, Timer, Repeat, Plus, Check, Trash2, Sparkles, X } from 'lucide-react'
+import { Calendar, Clock, Timer, Repeat, Plus, Sparkles } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import InlineCreate from '../ui/InlineCreate'
@@ -8,6 +8,8 @@ import Select from '../ui/Select'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import { useToast } from '../../context/ToastContext'
+import { SubtaskManager } from './SubtaskManager'
+import { AISuggestionPanel, type AISuggestion } from './AISuggestionPanel'
 import type { Task, Priority, Status, Recurrence, Subtask } from '../../types'
 
 interface TaskFormProps {
@@ -77,8 +79,7 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   const [slaPreset, setSlaPreset] = useState(buildSlaPreset)
   const [addingProject, setAddingProject] = useState(false)
   const [addingLabel,   setAddingLabel]   = useState(false)
-  const [newSubtask,    setNewSubtask]    = useState('')
-  const [aiSuggestion,  setAISuggestion]  = useState<{ description: string; priority: string; estimatedHours: number | null; subtasks: string[] } | null>(null)
+  const [aiSuggestion,  setAISuggestion]  = useState<AISuggestion | null>(null)
   const [aiLoading,     setAILoading]     = useState(false)
   const [deadlineLoading, setDeadlineLoading] = useState(false)
   const [deadlineSuggestion, setDeadlineSuggestion] = useState<{ date: string; reason: string } | null>(null)
@@ -135,21 +136,9 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     setSlaPreset(buildSlaPreset())
     setAddingProject(false)
     setAddingLabel(false)
-    setNewSubtask('')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task])
 
-  const addSubtask = () => {
-    const title = newSubtask.trim()
-    if (!title) return
-    const sub: Subtask = { id: crypto.randomUUID(), title, done: false }
-    setForm(prev => ({ ...prev, subtasks: [...prev.subtasks, sub] }))
-    setNewSubtask('')
-  }
-  const removeSubtask = (id: string) =>
-    setForm(prev => ({ ...prev, subtasks: prev.subtasks.filter(s => s.id !== id) }))
-  const toggleSubtask = (id: string) =>
-    setForm(prev => ({ ...prev, subtasks: prev.subtasks.map(s => s.id === id ? { ...s, done: !s.done } : s) }))
 
   const set = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -305,94 +294,21 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             error={errors.title} autoFocus
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           />
-          {/* AI Smart Fill suggestion */}
-          {!task && (aiLoading || aiSuggestion) && (
-            <div className="mt-2 rounded-xl border border-violet-200 dark:border-violet-800/50 bg-violet-50 dark:bg-violet-900/20 px-3 py-2.5 text-xs">
-              {aiLoading ? (
-                <div className="flex items-center gap-1.5 text-violet-500 dark:text-violet-400">
-                  <Sparkles size={12} className="animate-pulse" />
-                  <span>AI đang gợi ý…</span>
-                </div>
-              ) : aiSuggestion && (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="flex items-center gap-1 font-semibold text-violet-700 dark:text-violet-300">
-                      <Sparkles size={12} /> Gợi ý từ AI
-                    </span>
-                    <button onClick={() => setAISuggestion(null)} className="text-slate-400 hover:text-slate-600">
-                      <X size={12} />
-                    </button>
-                  </div>
-                  <div className="space-y-1 text-slate-600 dark:text-slate-400">
-                    {aiSuggestion.description && (
-                      <p><span className="font-medium text-slate-700 dark:text-slate-300">Mô tả:</span> {aiSuggestion.description}</p>
-                    )}
-                    <div className="flex flex-wrap gap-2">
-                      {aiSuggestion.priority && (
-                        <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600">
-                          Ưu tiên: <strong>{aiSuggestion.priority}</strong>
-                        </span>
-                      )}
-                      {aiSuggestion.estimatedHours && (
-                        <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600">
-                          ~{aiSuggestion.estimatedHours}h
-                        </span>
-                      )}
-                    </div>
-                    {aiSuggestion.subtasks?.length > 0 && (
-                      <p><span className="font-medium text-slate-700 dark:text-slate-300">Subtasks:</span> {aiSuggestion.subtasks.join(' · ')}</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={applyAISuggestion}
-                    className="mt-2 w-full py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium transition-colors"
-                  >
-                    Áp dụng gợi ý
-                  </button>
-                </>
-              )}
-            </div>
+          {!task && (
+            <AISuggestionPanel
+              loading={aiLoading}
+              suggestion={aiSuggestion}
+              onApply={applyAISuggestion}
+              onDismiss={() => setAISuggestion(null)}
+            />
           )}
         </div>
 
         {/* Subtasks */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.detail.subtasks}</span>
-          {form.subtasks.length > 0 && (
-            <div className="space-y-1">
-              {form.subtasks.map(s => (
-                <div key={s.id} className="flex items-center gap-2 group">
-                  <button type="button" onClick={() => toggleSubtask(s.id)}
-                    className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      s.done ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 hover:border-indigo-400'
-                    }`}>
-                    {s.done && <Check size={10} className="text-white" strokeWidth={3} />}
-                  </button>
-                  <span className={`flex-1 text-sm ${s.done ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                    {s.title}
-                  </span>
-                  <button type="button" onClick={() => removeSubtask(s.id)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500 transition-all">
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <input
-              type="text" value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
-              placeholder={t.detail.addSubtask}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }}
-              className="flex-1 h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button type="button" onClick={addSubtask}
-              disabled={!newSubtask.trim()}
-              className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 transition-colors">
-              <Plus size={13} />
-            </button>
-          </div>
-        </div>
+        <SubtaskManager
+          subtasks={form.subtasks}
+          onChange={subtasks => setForm(prev => ({ ...prev, subtasks }))}
+        />
 
         <Textarea
           label={t.form.description} id="task-desc" placeholder={t.form.descPlaceholder}
