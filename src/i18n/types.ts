@@ -22,6 +22,12 @@ export interface Translations {
     isFinal: string       // "Mark as completed"
     builtin: string       // badge shown on non-deletable statuses
     moveTasksTo: string   // label for "move existing tasks to" selector
+    wipLimit: string      // "WIP limit" field label
+    wipNone: string       // placeholder when no limit set
+    wipHint: string       // hint text next to the WIP input
+  }
+  kanban: {
+    wipExceeded: (n: number) => string  // warning shown when a column exceeds its WIP limit
   }
   header: {
     newTask: string; search: string; allPriorities: string; allStatuses: string

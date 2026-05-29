@@ -30,6 +30,12 @@ export const vi: Translations = {
     isFinal: 'Đánh dấu công việc là hoàn thành',
     builtin: 'Mặc định',
     moveTasksTo: 'Chuyển công việc hiện tại sang',
+    wipLimit: 'Giới hạn WIP',
+    wipNone: 'Không',
+    wipHint: 'số task tối đa',
+  },
+  kanban: {
+    wipExceeded: (n) => `Vượt giới hạn WIP (${n})`,
   },
   header: {
     newTask: 'Tạo công việc', search: 'Tìm kiếm…', allPriorities: 'Tất cả mức độ',

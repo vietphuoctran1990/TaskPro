@@ -11,6 +11,7 @@ export interface StatusDef {
   order: number      // Column display order (ascending)
   isFinal: boolean   // True → task counts as "done" (SLA completed, progress, recurring spawn)
   isBuiltin: boolean // True → cannot be deleted; id is stable ('todo','in_progress','in_review','done')
+  wipLimit?: number | null // Optional WIP limit; column warns when task count exceeds this
 }
 
 export interface Label {

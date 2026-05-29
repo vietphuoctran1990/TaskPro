@@ -72,15 +72,15 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
       <div className="flex">
         {/* Frozen left: project + task names */}
-        <div className="shrink-0 w-48 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-10">
+        <div className="shrink-0 w-28 sm:w-48 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-10">
           {/* Header placeholder */}
-          <div className="h-10 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex items-center px-4">
+          <div className="h-10 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex items-center px-3 sm:px-4">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.list.task}</span>
           </div>
           {projectGroups.map(({ project, tasks }) => (
             <div key={project.id}>
               {/* Project header */}
-              <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700/50">
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700/50">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate">{project.name}</span>
               </div>
@@ -88,7 +88,7 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
               {tasks.map(task => (
                 <div
                   key={task.id}
-                  className="h-10 flex items-center gap-1 px-4 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group/row"
+                  className="h-10 flex items-center gap-1 px-3 sm:px-4 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group/row"
                   onClick={() => onViewTask(task)}
                 >
                   <span className={cn(
@@ -233,7 +233,7 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-1.5 rounded-full bg-gradient-to-r from-red-500 to-orange-400 inline-block" />
-          Quá hạn
+          {state.language === 'vi' ? 'Quá hạn' : 'Overdue'}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-1.5 rounded-full bg-slate-300 inline-block" />

@@ -276,6 +276,7 @@ function StatusRow({ def, otherStatuses }: { def: StatusDef; otherStatuses: Stat
   const [name, setName]       = useState(def.name)
   const [color, setColor]     = useState(def.color)
   const [isFinal, setIsFinal] = useState(def.isFinal)
+  const [wip, setWip]         = useState(def.wipLimit != null ? String(def.wipLimit) : '')
   const [confirm, setConfirm] = useState(false)
   const [moveTo, setMoveTo]   = useState(otherStatuses[0]?.id ?? '')
 
@@ -283,12 +284,15 @@ function StatusRow({ def, otherStatuses }: { def: StatusDef; otherStatuses: Stat
   const displayName = def.name || i18nStatus[def.id] || def.id
 
   const save = useCallback(() => {
-    dispatch({ type: 'UPDATE_STATUS', payload: { ...def, name, color, isFinal } })
+    const parsed = parseInt(wip, 10)
+    const wipLimit = Number.isFinite(parsed) && parsed > 0 ? parsed : null
+    dispatch({ type: 'UPDATE_STATUS', payload: { ...def, name, color, isFinal, wipLimit } })
     setEditing(false)
-  }, [dispatch, def, name, color, isFinal])
+  }, [dispatch, def, name, color, isFinal, wip])
 
   const cancel = useCallback(() => {
-    setName(def.name); setColor(def.color); setIsFinal(def.isFinal); setEditing(false)
+    setName(def.name); setColor(def.color); setIsFinal(def.isFinal)
+    setWip(def.wipLimit != null ? String(def.wipLimit) : ''); setEditing(false)
   }, [def])
 
   if (editing) {
@@ -309,6 +313,16 @@ function StatusRow({ def, otherStatuses }: { def: StatusDef; otherStatuses: Stat
             className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
           <span className="text-sm text-slate-700 dark:text-slate-300">{t.manage.isFinal}</span>
         </label>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-700 dark:text-slate-300 shrink-0">{t.manage.wipLimit}</span>
+          <input
+            type="number" min={0} value={wip} onChange={e => setWip(e.target.value)}
+            placeholder={t.manage.wipNone}
+            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel() }}
+            className="w-20 h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <span className="text-xs text-slate-400 dark:text-slate-500">{t.manage.wipHint}</span>
+        </div>
         <div className="flex gap-2">
           <Button size="sm" variant="primary" onClick={save}>{t.manage.save}</Button>
           <Button size="sm" variant="ghost" onClick={cancel}>{t.manage.cancel}</Button>
@@ -356,6 +370,11 @@ function StatusRow({ def, otherStatuses }: { def: StatusDef; otherStatuses: Stat
           {def.isFinal && (
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
               ✓ Final
+            </span>
+          )}
+          {def.wipLimit != null && def.wipLimit > 0 && (
+            <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+              WIP {def.wipLimit}
             </span>
           )}
           {def.isBuiltin && (
@@ -410,11 +429,14 @@ function AddStatusForm({ onDone }: { onDone: () => void }) {
   const [name, setName]     = useState('')
   const [color, setColor]   = useState(COLORS[0])
   const [isFinal, setIsFinal] = useState(false)
+  const [wip, setWip]       = useState('')
 
   const submit = () => {
     if (!name.trim()) return
-    dispatch({ type: 'ADD_STATUS', payload: { name: name.trim(), color, isFinal, order: 99 } })
-    setName(''); setColor(COLORS[0]); setIsFinal(false); onDone()
+    const parsed = parseInt(wip, 10)
+    const wipLimit = Number.isFinite(parsed) && parsed > 0 ? parsed : null
+    dispatch({ type: 'ADD_STATUS', payload: { name: name.trim(), color, isFinal, order: 99, wipLimit } })
+    setName(''); setColor(COLORS[0]); setIsFinal(false); setWip(''); onDone()
   }
 
   return (
@@ -431,6 +453,16 @@ function AddStatusForm({ onDone }: { onDone: () => void }) {
           className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
         <span className="text-sm text-slate-700 dark:text-slate-300">{t.manage.isFinal}</span>
       </label>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-slate-700 dark:text-slate-300 shrink-0">{t.manage.wipLimit}</span>
+        <input
+          type="number" min={0} value={wip} onChange={e => setWip(e.target.value)}
+          placeholder={t.manage.wipNone}
+          onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onDone() }}
+          className="w-20 h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <span className="text-xs text-slate-400 dark:text-slate-500">{t.manage.wipHint}</span>
+      </div>
       <div className="flex gap-2">
         <Button size="sm" variant="primary" onClick={submit} disabled={!name.trim()}>{t.manage.addStatus}</Button>
         <Button size="sm" variant="ghost" onClick={onDone}>{t.manage.cancel}</Button>

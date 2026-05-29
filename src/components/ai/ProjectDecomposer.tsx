@@ -26,7 +26,7 @@ interface Props {
 }
 
 export default function ProjectDecomposer({ open, onClose }: Props) {
-  const { state, dispatch } = useApp()
+  const { state, dispatch, firstStatusId } = useApp()
   const isVi = state.language === 'vi'
 
   const [goal, setGoal] = useState('')
@@ -66,7 +66,7 @@ export default function ProjectDecomposer({ open, onClose }: Props) {
     if (!result) return
     setCreating(true)
     const today = todayLocalISO()
-    const firstStatus = state.statuses.find(s => !s.isFinal)?.id ?? 'todo'
+    const firstStatus = firstStatusId
     const projectColor = ['#6366f1','#0ea5e9','#f59e0b','#22c55e','#ec4899','#8b5cf6'][Math.floor(Math.random() * 6)]
     const projectId = crypto.randomUUID()
     dispatch({ type: 'ADD_PROJECT', payload: { id: projectId, name: result.projectName, description: result.description, color: projectColor, notes: '' } })

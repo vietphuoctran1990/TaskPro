@@ -178,7 +178,7 @@ type AIPanel = {
 }
 
 export default function NoteEditorModal({ open, note, onClose, defaultFolderId = '' }: NoteEditorModalProps) {
-  const { state, dispatch, finalStatusIds } = useApp()
+  const { state, dispatch, finalStatusIds, firstStatusId } = useApp()
 
   const [title,              setTitle]             = useState('')
   const [content,            setContent]           = useState('')
@@ -383,7 +383,7 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
     if (!aiPanel?.tasks) return
     const projectId = state.activeProjectId ?? state.projects[0]?.id ?? ''
     const validPriorities: Priority[] = ['low', 'medium', 'high', 'urgent']
-    const firstStatus = state.statuses.find(s => !s.isFinal)?.id ?? state.statuses[0]?.id ?? 'todo'
+    const firstStatus = firstStatusId
     for (const t of aiPanel.tasks.filter(t => t.selected)) {
       const priority: Priority = validPriorities.includes(t.priority as Priority)
         ? (t.priority as Priority)

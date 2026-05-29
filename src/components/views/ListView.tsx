@@ -138,7 +138,7 @@ function TaskMenu({ onEdit, onDelete, onPin, onFocus, pinned }: { onEdit: () => 
 }
 
 const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onFocusTask }: ListViewProps) {
-  const { state, dispatch, filteredTasks, finalStatusIds } = useApp()
+  const { state, dispatch, filteredTasks, finalStatusIds, firstStatusId, finalStatusId } = useApp()
   const { toast } = useToast()
   const t = useT()
   const isVi = state.language === 'vi'
@@ -147,8 +147,6 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const statusMap = useMemo(() => new Map(state.statuses.map(s => [s.id, s])), [state.statuses])
-  const finalStatus  = useMemo(() => state.statuses.find(s => s.isFinal)?.id  ?? 'done', [state.statuses])
-  const firstStatus  = useMemo(() => state.statuses.find(s => !s.isFinal)?.id ?? 'todo', [state.statuses])
   const i18nStatus   = t.status as Record<string, string>
 
   const getStatusColor = (id: string) => statusMap.get(id)?.color ?? '#94a3b8'
@@ -163,7 +161,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
 
   const toggleDone = (task: Task, e: React.MouseEvent) => {
     e.stopPropagation()
-    dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalStatusIds.has(task.status) ? firstStatus : finalStatus } })
+    dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalStatusIds.has(task.status) ? firstStatusId : finalStatusId } })
   }
 
   const toggleSelect = (id: string, e?: React.MouseEvent) => {
@@ -207,7 +205,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
   }
 
   const bulkMarkDone = () => {
-    selectedIds.forEach(id => dispatch({ type: 'MOVE_TASK', payload: { id, status: finalStatus } }))
+    selectedIds.forEach(id => dispatch({ type: 'MOVE_TASK', payload: { id, status: finalStatusId } }))
     const n = selectedIds.size
     exitSelectMode()
     toast({ message: isVi ? `Đã hoàn thành ${n} công việc` : `Marked ${n} tasks done`, type: 'success' })

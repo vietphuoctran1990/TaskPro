@@ -102,8 +102,9 @@ function getInitialState(): AppState {
       // 'done' is the only builtin status that defaults to isFinal=true.
       const statuses = rawStatuses.map((s: StatusDef) => ({
         ...s,
-        name:    s.name || legacyLabels[s.id] || '',
-        isFinal: (s.isFinal != null) ? Boolean(s.isFinal) : (s.id === 'done'),
+        name:     s.name || legacyLabels[s.id] || '',
+        isFinal:  (s.isFinal != null) ? Boolean(s.isFinal) : (s.id === 'done'),
+        wipLimit: s.wipLimit ?? null,
       }))
 
       return {
@@ -350,6 +351,10 @@ interface ContextValue {
   dispatch: React.Dispatch<Action>
   filteredTasks: Task[]
   finalStatusIds: ReadonlySet<string>
+  /** First non-final status id (column tasks start in). Falls back to 'todo'. */
+  firstStatusId: string
+  /** First final status id (where "mark done" sends a task). Falls back to 'done'. */
+  finalStatusId: string
 }
 
 const AppContext = createContext<ContextValue | null>(null)
@@ -384,6 +389,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => new Set(state.statuses.filter(s => s.isFinal).map(s => s.id)),
     [state.statuses]
   )
+
+  // Derived once here so views/cards don't each recompute the same find().
+  const { firstStatusId, finalStatusId } = useMemo(() => {
+    const ordered = [...state.statuses].sort((a, b) => a.order - b.order)
+    return {
+      firstStatusId: ordered.find(s => !s.isFinal)?.id ?? 'todo',
+      finalStatusId: ordered.find(s => s.isFinal)?.id ?? 'done',
+    }
+  }, [state.statuses])
 
   const statusOrder = useMemo(() => buildStatusOrder(state.statuses), [state.statuses])
 
@@ -445,7 +459,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       finalStatusIds, statusOrder])
 
   return (
-    <AppContext.Provider value={{ state, dispatch, filteredTasks, finalStatusIds }}>
+    <AppContext.Provider value={{ state, dispatch, filteredTasks, finalStatusIds, firstStatusId, finalStatusId }}>
       {children}
     </AppContext.Provider>
   )

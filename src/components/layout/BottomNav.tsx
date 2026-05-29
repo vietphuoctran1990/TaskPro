@@ -26,8 +26,10 @@ const BottomNav = memo(function BottomNav() {
             <button
               key={mode}
               onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: mode })}
+              aria-current={active ? 'page' : undefined}
+              aria-label={isVi ? vi : en}
               className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors',
+                'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 transition-colors',
                 active
                   ? 'text-indigo-600 dark:text-indigo-400'
                   : 'text-slate-400 dark:text-slate-500'

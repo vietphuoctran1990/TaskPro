@@ -90,6 +90,7 @@ const ViewSwitcher = memo(function ViewSwitcher({ viewMode, views, t, dispatch }
             <button
               onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
               aria-label={t.views[v]}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
                 isActive
@@ -340,6 +341,8 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
                 {isNotes && <span className="w-px h-4 bg-slate-300 dark:bg-slate-600 self-center mx-0.5 shrink-0" />}
                 <button
                   onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
+                  aria-label={t.views[v]}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors',
                     isActive

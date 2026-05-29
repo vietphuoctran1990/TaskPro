@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect, useMemo } from 'react'
+import { memo, useState, useRef, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Calendar, CheckCheck, GripVertical, MessageSquare, MoreHorizontal, Pencil, Pin, PinOff, Repeat, RotateCcw, Timer, Trash2, X } from 'lucide-react'
@@ -26,7 +26,7 @@ const PRIORITY_ACCENT: Record<string, string> = {
 }
 
 const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskCardProps) {
-  const { state, dispatch, finalStatusIds } = useApp()
+  const { state, dispatch, finalStatusIds, firstStatusId, finalStatusId } = useApp()
   const t = useT()
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
@@ -36,8 +36,6 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
-  const finalStatus = useMemo(() => state.statuses.find(s => s.isFinal)?.id  ?? 'done', [state.statuses])
-  const firstStatus = useMemo(() => state.statuses.find(s => !s.isFinal)?.id ?? 'todo', [state.statuses])
   const isDone = finalStatusIds.has(task.status)
 
   const labels = state.labels.filter(l => task.labels.includes(l.id))
@@ -59,7 +57,7 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
 
   const handleQuickDone = (e: React.MouseEvent) => {
     e.stopPropagation()
-    dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalStatus } })
+    dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: finalStatusId } })
     haptic(12)
     if (task.priority === 'urgent') burstConfetti(cardRef.current)
   }
@@ -96,10 +94,10 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
           <button
             onClick={e => { e.stopPropagation(); dispatch({ type: 'TOGGLE_PIN_TASK', payload: task.id }) }}
             className={cn(
-              'w-6 h-6 flex items-center justify-center rounded-md transition-all',
+              'w-6 h-6 items-center justify-center rounded-md transition-all',
               task.pinned
-                ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
-                : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                ? 'flex text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                : 'hidden sm:flex sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
             )}
             title={task.pinned ? t.pin.unpin : t.pin.pin}
           >
@@ -116,17 +114,17 @@ const TaskCard = memo(function TaskCard({ task, onEdit, onView, onFocus }: TaskC
             </button>
           ) : (
             <button
-              onClick={e => { e.stopPropagation(); dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: firstStatus } }) }}
+              onClick={e => { e.stopPropagation(); dispatch({ type: 'MOVE_TASK', payload: { id: task.id, status: firstStatusId } }) }}
               className="w-6 h-6 flex items-center justify-center rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 active:bg-indigo-50 active:text-indigo-600 transition-all"
               title={t.status.todo}
             >
               <RotateCcw size={12} />
             </button>
           )}
-          {/* Quick: delete */}
+          {/* Quick: delete — desktop only; mobile uses the more-menu to avoid mis-taps */}
           <button
             onClick={e => { e.stopPropagation(); dispatch({ type: 'DELETE_TASK', payload: task.id }) }}
-            className="w-6 h-6 flex items-center justify-center rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-50 active:text-red-600 transition-all"
+            className="w-6 h-6 hidden sm:flex items-center justify-center rounded-md sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-50 active:text-red-600 transition-all"
             title={t.detail.delete}
           >
             <X size={13} />
