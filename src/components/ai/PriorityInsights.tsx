@@ -27,13 +27,6 @@ function buildContext(state: ReturnType<typeof useApp>['state']) {
   }
 }
 
-const PRIORITY_COLOR: Record<string, string> = {
-  urgent: 'bg-red-500',
-  high:   'bg-orange-400',
-  medium: 'bg-blue-400',
-  low:    'bg-slate-300',
-}
-const RANK_LABEL = ['1st', '2nd', '3rd', '4th', '5th']
 
 export default function PriorityInsights() {
   const { state }    = useApp()

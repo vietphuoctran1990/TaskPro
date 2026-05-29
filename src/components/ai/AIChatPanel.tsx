@@ -128,7 +128,7 @@ export default function AIChatPanel() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-none">AI Trợ lý</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">claude-haiku · TaskPro</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">gemini-2.0-flash · TaskPro</p>
             </div>
             <div className="flex items-center gap-1">
               {messages.length > 0 && (
