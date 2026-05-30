@@ -13,7 +13,6 @@ export function usePWA() {
 
   const {
     needRefresh: [needRefresh],
-    updateServiceWorker: triggerSWUpdate,
   } = useRegisterSW({
     onRegistered(r) {
       if (r) {
@@ -61,8 +60,25 @@ export function usePWA() {
     return outcome === 'accepted'
   }
 
-  // Use vite-pwa's own updateServiceWorker which has the correct internal registration ref
-  const updateServiceWorker = useCallback(() => triggerSWUpdate(true), [triggerSWUpdate])
+  // Use direct SW API instead of vite-pwa's updateServiceWorker, which can
+  // silently fail on mobile when vite-plugin-pwa@1.x and vite@8 are paired.
+  const updateServiceWorker = useCallback(async () => {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration()
+      if (reg?.waiting) {
+        let reloaded = false
+        const reload = () => { if (!reloaded) { reloaded = true; window.location.reload() } }
+        navigator.serviceWorker.addEventListener('controllerchange', reload, { once: true })
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+        // Fallback: if controllerchange never fires within 3 s, reload anyway
+        setTimeout(reload, 3000)
+      } else {
+        window.location.reload()
+      }
+    } catch {
+      window.location.reload()
+    }
+  }, [])
 
   return {
     canInstall: !!installPrompt && !isInstalled,
