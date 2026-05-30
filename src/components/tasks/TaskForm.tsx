@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { Calendar, Clock, Timer, Repeat, Plus, Sparkles } from 'lucide-react'
+import { useState, useCallback, useEffect } from 'react'
+import { Calendar, Clock, Timer, Repeat, Plus } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import InlineCreate from '../ui/InlineCreate'
@@ -9,7 +9,6 @@ import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import { useToast } from '../../context/ToastContext'
 import { SubtaskManager } from './SubtaskManager'
-import { AISuggestionPanel, type AISuggestion } from './AISuggestionPanel'
 import type { Task, Priority, Status, Recurrence, Subtask } from '../../types'
 
 interface TaskFormProps {
@@ -79,55 +78,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
   const [slaPreset, setSlaPreset] = useState(buildSlaPreset)
   const [addingProject, setAddingProject] = useState(false)
   const [addingLabel,   setAddingLabel]   = useState(false)
-  const [aiSuggestion,  setAISuggestion]  = useState<AISuggestion | null>(null)
-  const [aiLoading,     setAILoading]     = useState(false)
-  const [deadlineLoading, setDeadlineLoading] = useState(false)
-  const [deadlineSuggestion, setDeadlineSuggestion] = useState<{ date: string; reason: string } | null>(null)
-  const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Smart fill: debounce on title change, with AbortController to cancel stale requests
-  useEffect(() => {
-    if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
-    const controller = new AbortController()
-    if (!task && form.title.trim().length >= 8) {
-      aiTimerRef.current = setTimeout(async () => {
-        setAILoading(true)
-        try {
-          const res = await fetch('/api/ai-chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'smartfill', title: form.title.trim() }),
-            signal: controller.signal,
-          })
-          if (res.ok) {
-            const data = await res.json()
-            setAISuggestion(data)
-          }
-        } catch (e) {
-          if (e instanceof Error && e.name !== 'AbortError') console.error('[SmartFill]', e)
-        } finally { setAILoading(false) }
-      }, 900)
-    } else {
-      setAISuggestion(null)
-    }
-    return () => {
-      if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
-      controller.abort()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.title])
-
-  const applyAISuggestion = () => {
-    if (!aiSuggestion) return
-    if (aiSuggestion.description && !form.description) set('description', aiSuggestion.description)
-    if (aiSuggestion.priority) set('priority', aiSuggestion.priority as FormData['priority'])
-    if (aiSuggestion.estimatedHours) set('estimatedHours', String(aiSuggestion.estimatedHours))
-    if (aiSuggestion.subtasks?.length) {
-      const newSubs = aiSuggestion.subtasks.map(t => ({ id: crypto.randomUUID(), title: t, done: false }))
-      setForm(prev => ({ ...prev, subtasks: [...prev.subtasks, ...newSubs] }))
-    }
-    setAISuggestion(null)
-  }
 
   useEffect(() => {
     if (!open) return
@@ -169,33 +119,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
     dispatch({ type: 'ADD_LABEL', payload: { id, name, color } })
     setForm(prev => ({ ...prev, labels: [...prev.labels, id] }))
     setAddingLabel(false)
-  }
-
-  const suggestDeadline = async () => {
-    if (!form.title.trim()) return
-    setDeadlineLoading(true)
-    try {
-      const activeTasks = state.tasks
-        .filter(t => !t.status || t.status !== 'done')
-        .slice(0, 20)
-        .map(t => ({ title: t.title, dueDate: t.dueDate }))
-      const res = await fetch('/api/ai-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'suggest-deadline',
-          title: form.title.trim(),
-          priority: form.priority,
-          estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : null,
-          activeTasks,
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json() as { date: string; reason: string }
-        setDeadlineSuggestion(data)
-      }
-    } catch (e) { console.error('[SuggestDeadline]', e) }
-    finally { setDeadlineLoading(false) }
   }
 
   const handleSubmit = () => {
@@ -294,14 +217,6 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             error={errors.title} autoFocus
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           />
-          {!task && (
-            <AISuggestionPanel
-              loading={aiLoading}
-              suggestion={aiSuggestion}
-              onApply={applyAISuggestion}
-              onDismiss={() => setAISuggestion(null)}
-            />
-          )}
         </div>
 
         {/* Subtasks */}
@@ -375,31 +290,12 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueDate}</label>
-              {!form.dueDate && form.title.trim().length >= 4 && (
-                <button type="button" onClick={suggestDeadline} disabled={deadlineLoading}
-                  className="flex items-center gap-1 text-[11px] text-violet-600 dark:text-violet-400 hover:text-violet-700 disabled:opacity-50 font-medium">
-                  <Sparkles size={10} className={deadlineLoading ? 'animate-pulse' : ''} />
-                  {state.language === 'vi' ? 'AI gợi ý' : 'AI suggest'}
-                </button>
-              )}
-            </div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueDate}</label>
             <div className="relative">
               <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input type="date" value={form.dueDate} onChange={e => { set('dueDate', e.target.value); setDeadlineSuggestion(null) }}
+              <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)}
                 className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
-            {deadlineSuggestion && (
-              <div className="flex items-center justify-between rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 px-2.5 py-1.5 text-xs">
-                <span className="text-violet-700 dark:text-violet-300 font-medium">{deadlineSuggestion.date}</span>
-                <span className="text-violet-500 dark:text-violet-400 mx-2 truncate flex-1">{deadlineSuggestion.reason}</span>
-                <button type="button" onClick={() => { set('dueDate', deadlineSuggestion.date); setDeadlineSuggestion(null) }}
-                  className="px-2 py-0.5 rounded-md bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 shrink-0">
-                  {state.language === 'vi' ? 'Dùng' : 'Use'}
-                </button>
-              </div>
-            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueTime} <span className="text-slate-400 dark:text-slate-500 font-normal">{t.form.slaTimeHint}</span></label>

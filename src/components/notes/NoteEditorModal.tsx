@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState, useCallback, useMemo, type ReactNode } from 'react'
 import {
-  ChevronDown, Check, X, Copy, Share2,
+  ChevronDown, Check, X, Copy,
   Bold, Italic, Minus, ImagePlus, Eye, Pencil, List,
-  Sparkles, ClipboardList, Wand2, ChevronRight,
 } from 'lucide-react'
 import { cn, formatRelativeTime } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
-import { buildAIContext } from '../../lib/aiContext'
 import { renderMd } from '../../lib/markdownUtils'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
-import type { Note, Priority } from '../../types'
+import type { Note } from '../../types'
 
 // ── Image compression (canvas, max 1200px, JPEG 82%) ──────────────────────
 
@@ -49,60 +47,6 @@ function ToolbarBtn({ onClick, title, children }: { onClick: () => void; title: 
   )
 }
 
-// ── AI action dropdown ─────────────────────────────────────────────────────
-
-function AIDropdown({
-  onSelect, onClose, disabled,
-}: {
-  onSelect: (type: 'summarize-note' | 'extract-tasks' | 'expand-note') => void
-  onClose: () => void
-  disabled: boolean
-}) {
-  return (
-    <>
-      <div className="fixed inset-0 z-10" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-1 z-20 w-48 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden pop-in">
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => onSelect('summarize-note')}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          <Sparkles size={14} className="text-violet-500 shrink-0" />
-          <div className="text-left">
-            <p className="text-xs font-medium leading-none">Tóm tắt</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Rút gọn thành bullet points</p>
-          </div>
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => onSelect('extract-tasks')}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          <ClipboardList size={14} className="text-amber-500 shrink-0" />
-          <div className="text-left">
-            <p className="text-xs font-medium leading-none">Tạo tasks</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Trích xuất action items</p>
-          </div>
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => onSelect('expand-note')}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          <Wand2 size={14} className="text-indigo-500 shrink-0" />
-          <div className="text-left">
-            <p className="text-xs font-medium leading-none">Viết mở rộng</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Phát triển ý tưởng thành văn</p>
-          </div>
-        </button>
-      </div>
-    </>
-  )
-}
-
 // ── Main component ─────────────────────────────────────────────────────────
 
 interface NoteEditorModalProps {
@@ -112,15 +56,8 @@ interface NoteEditorModalProps {
   defaultFolderId?: string
 }
 
-type AIPanel = {
-  type: 'summary' | 'tasks' | 'expand'
-  loading: boolean
-  result: string | null
-  tasks: Array<{ title: string; priority: string; dueDate: string | null; selected: boolean }> | null
-}
-
 export default function NoteEditorModal({ open, note, onClose, defaultFolderId = '' }: NoteEditorModalProps) {
-  const { state, dispatch, finalStatusIds, firstStatusId } = useApp()
+  const { state, dispatch } = useApp()
 
   const [title,              setTitle]             = useState('')
   const [content,            setContent]           = useState('')
@@ -130,8 +67,6 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
   const [copied,             setCopied]            = useState(false)
   const [previewMode,        setPreviewMode]       = useState(false)
   const [isDragOver,         setIsDragOver]        = useState(false)
-  const [aiMenuOpen,         setAiMenuOpen]        = useState(false)
-  const [aiPanel,            setAiPanel]           = useState<AIPanel | null>(null)
 
   const editingIdRef  = useRef<string | null>(null)
   const saveTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -279,71 +214,7 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
   const copyToClipboard = async (text: string) => {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {}
   }
-  const handleShare      = () => copyToClipboard(`${title}\n\n${content}`)
-  const handleExportForAI = () => {
-    const folder = currentFolderName !== 'Không có thư mục' ? currentFolderName : null
-    const date   = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const parts  = [
-      `# ${title || 'Ghi chú không tiêu đề'}`,
-      folder ? `Thư mục: ${folder}` : null,
-      `Ngày: ${date}`,
-      '',
-      content || '(trống)',
-    ].filter(Boolean)
-    copyToClipboard((parts as string[]).join('\n'))
-  }
-
-  // ── AI note actions ──────────────────────────────────────────────────────
-
-  async function runNoteAI(type: 'summarize-note' | 'extract-tasks' | 'expand-note') {
-    const panelType = type === 'summarize-note' ? 'summary' : type === 'extract-tasks' ? 'tasks' : 'expand'
-    setAiMenuOpen(false)
-    setAiPanel({ type: panelType, loading: true, result: null, tasks: null })
-    try {
-      const res = await fetch('/api/ai-chat', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ type, title, content, context: buildAIContext(state, finalStatusIds) }),
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json() as Record<string, unknown>
-      if (type === 'summarize-note') {
-        setAiPanel({ type: 'summary', loading: false, result: json.summary as string || '(không có kết quả)', tasks: null })
-      } else if (type === 'extract-tasks') {
-        const raw = (json.tasks as Array<{ title: string; priority: string; dueDate: string | null }>) ?? []
-        setAiPanel({ type: 'tasks', loading: false, result: null, tasks: raw.map(t => ({ ...t, selected: true })) })
-      } else {
-        setAiPanel({ type: 'expand', loading: false, result: json.expanded as string || '(không có kết quả)', tasks: null })
-      }
-    } catch (err) {
-      console.error('[NoteAI]', err)
-      setAiPanel(prev => prev ? { ...prev, loading: false, result: 'Lỗi kết nối. Kiểm tra API key.' } : null)
-    }
-  }
-
-  function addExtractedTasks() {
-    if (!aiPanel?.tasks) return
-    const projectId = state.activeProjectId ?? state.projects[0]?.id ?? ''
-    const validPriorities: Priority[] = ['low', 'medium', 'high', 'urgent']
-    const firstStatus = firstStatusId
-    for (const t of aiPanel.tasks.filter(t => t.selected)) {
-      const priority: Priority = validPriorities.includes(t.priority as Priority)
-        ? (t.priority as Priority)
-        : 'medium'
-      dispatch({
-        type: 'ADD_TASK',
-        payload: {
-          title: t.title, description: '', status: firstStatus,
-          priority,
-          labels: [], subtasks: [], comments: [],
-          dueDate: t.dueDate ?? null, dueTime: null,
-          slaHours: null, estimatedHours: null, recurrence: null,
-          projectId, isNote: false,
-        },
-      })
-    }
-    setAiPanel(null)
-  }
+  const handleShare = () => copyToClipboard(`${title}\n\n${content}`)
 
   // ── Footer ───────────────────────────────────────────────────────────────
 
@@ -363,11 +234,6 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
           {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
           {copied ? 'Đã sao chép' : 'Sao chép'}
-        </button>
-        <button type="button" onClick={handleExportForAI} title="Xuất để dán vào AI"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors">
-          <Share2 size={13} />
-          Xuất cho AI
         </button>
         <Button variant="ghost" size="sm" onClick={onClose}><X size={14} /> Đóng</Button>
       </div>
@@ -450,18 +316,8 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
         {/* Formatting toolbar */}
         <div className="flex items-center justify-between px-4 py-1 border-b border-slate-100 dark:border-slate-700/60 shrink-0 min-h-[36px]">
           {previewMode ? (
-            // Preview mode: only show Edit button + AI menu
+            // Preview mode: only show Edit button
             <div className="flex items-center gap-1.5 w-full justify-end">
-              {/* AI menu */}
-              <div className="relative">
-                <button type="button" onClick={() => setAiMenuOpen(v => !v)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors">
-                  <Sparkles size={12} />
-                  AI
-                  <ChevronRight size={10} className={cn('transition-transform', aiMenuOpen && 'rotate-90')} />
-                </button>
-                {aiMenuOpen && <AIDropdown onSelect={runNoteAI} onClose={() => setAiMenuOpen(false)} disabled={!content.trim()} />}
-              </div>
               <button
                 type="button"
                 onMouseDown={e => { e.preventDefault(); setPreviewMode(false) }}
@@ -513,93 +369,10 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
                   <Eye size={12} />
                   Xem trước
                 </button>
-                <div className="w-px h-4 bg-slate-200 dark:bg-slate-600 mx-0.5" />
-                {/* AI menu */}
-                <div className="relative">
-                  <button type="button" onClick={() => setAiMenuOpen(v => !v)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors">
-                    <Sparkles size={12} />
-                    AI
-                    <ChevronRight size={10} className={cn('transition-transform', aiMenuOpen && 'rotate-90')} />
-                  </button>
-                  {aiMenuOpen && <AIDropdown onSelect={runNoteAI} onClose={() => setAiMenuOpen(false)} disabled={!content.trim()} />}
-                </div>
               </div>
             </>
           )}
         </div>
-
-        {/* AI result panel */}
-        {aiPanel && (
-          <div className="mx-4 mb-2 rounded-xl border border-violet-200 dark:border-violet-800/50 bg-violet-50/80 dark:bg-violet-900/10 overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-violet-100 dark:border-violet-800/40">
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-violet-700 dark:text-violet-300">
-                <Sparkles size={11} />
-                {aiPanel.type === 'summary' ? 'Tóm tắt AI' : aiPanel.type === 'tasks' ? 'Tasks được trích xuất' : 'Viết mở rộng'}
-              </span>
-              <div className="flex items-center gap-2">
-                {aiPanel.type === 'expand' && !aiPanel.loading && aiPanel.result && (
-                  <>
-                    <button onClick={() => { handleContentChange(aiPanel.result!); setAiPanel(null) }}
-                      className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
-                      Thay thế nội dung
-                    </button>
-                    <button onClick={() => { handleContentChange(content + '\n\n---\n\n' + aiPanel.result!); setAiPanel(null) }}
-                      className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
-                      Thêm vào cuối
-                    </button>
-                  </>
-                )}
-                {aiPanel.type === 'tasks' && !aiPanel.loading && aiPanel.tasks && aiPanel.tasks.some(t => t.selected) && (
-                  <button onClick={addExtractedTasks}
-                    className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white transition-colors">
-                    Thêm tasks đã chọn
-                  </button>
-                )}
-                <button onClick={() => setAiPanel(null)}
-                  className="p-0.5 rounded text-violet-400 hover:text-violet-600 dark:hover:text-violet-300 transition-colors">
-                  <X size={13} />
-                </button>
-              </div>
-            </div>
-            <div className="px-3 py-2.5 max-h-44 overflow-y-auto">
-              {aiPanel.loading ? (
-                <div className="space-y-1.5 animate-pulse">
-                  {[80, 65, 75, 55].map(w => (
-                    <div key={w} className="h-2.5 rounded-full bg-violet-200/60 dark:bg-violet-800/40" style={{ width: `${w}%` }} />
-                  ))}
-                </div>
-              ) : aiPanel.type === 'tasks' && aiPanel.tasks ? (
-                <div className="space-y-1.5">
-                  {aiPanel.tasks.length === 0 ? (
-                    <p className="text-xs text-slate-500 italic">Không tìm thấy action items trong ghi chú này.</p>
-                  ) : aiPanel.tasks.map((t, i) => (
-                    <label key={i} className="flex items-start gap-2 cursor-pointer group">
-                      <input type="checkbox" checked={t.selected} onChange={() =>
-                        setAiPanel(prev => prev ? {
-                          ...prev,
-                          tasks: prev.tasks!.map((x, j) => j === i ? { ...x, selected: !x.selected } : x),
-                        } : null)
-                      } className="mt-0.5 accent-amber-500 shrink-0" />
-                      <div className="min-w-0">
-                        <span className="text-xs text-slate-700 dark:text-slate-300">{t.title}</span>
-                        <span className={cn('ml-1.5 text-[10px] px-1 py-0.5 rounded font-medium',
-                          t.priority === 'urgent' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-                          t.priority === 'high'   ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
-                          t.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                          'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                        )}>{t.priority}</span>
-                        {t.dueDate && <span className="ml-1 text-[10px] text-slate-400">• {t.dueDate}</span>}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{aiPanel.result}</p>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Editor / Preview area */}
         <div
