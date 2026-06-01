@@ -380,7 +380,7 @@ export default function Header({ onAddTask, onAddNote, onOpenSidebar, onOpenAuth
 
       {/* Filter bar — desktop inline */}
       {!isNotesMode && filtersOpen && (
-        <div className="hidden sm:flex flex-wrap items-center gap-2 pb-3">
+        <div className="hidden sm:flex flex-wrap items-center gap-2 pb-3 filter-bar-in">
           <select value={state.filterPriority}
             onChange={e => dispatch({ type: 'SET_FILTER_PRIORITY', payload: e.target.value as Priority | 'all' })}
             className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">

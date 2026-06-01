@@ -96,16 +96,17 @@ const WeeklyTrend = memo(function WeeklyTrend({ tasks, finalStatusIds, t }: { ta
 })
 
 const PRIORITY_META = [
-  { key: 'urgent', label: 'Urgent', color: '#ef4444' },
-  { key: 'high',   label: 'High',   color: '#f97316' },
-  { key: 'medium', label: 'Medium', color: '#3b82f6' },
-  { key: 'low',    label: 'Low',    color: '#94a3b8' },
+  { key: 'urgent', color: '#ef4444' },
+  { key: 'high',   color: '#f97316' },
+  { key: 'medium', color: '#3b82f6' },
+  { key: 'low',    color: '#94a3b8' },
 ] as const
 
-const PriorityBreakdown = memo(function PriorityBreakdown({ tasks, finalStatusIds }: { tasks: Task[]; finalStatusIds: ReadonlySet<string> }) {
+const PriorityBreakdown = memo(function PriorityBreakdown({ tasks, finalStatusIds, t }: { tasks: Task[]; finalStatusIds: ReadonlySet<string>; t: Translations }) {
   return (
     <div className="space-y-3">
-      {PRIORITY_META.map(({ key, label, color }) => {
+      {PRIORITY_META.map(({ key, color }) => {
+        const label = t.priority[key]
         const all  = tasks.filter(t => t.priority === key)
         const done = all.filter(t => finalStatusIds.has(t.status)).length
         const pct  = all.length ? Math.round((done / all.length) * 100) : 0
@@ -562,7 +563,7 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onVie
         {/* Priority breakdown */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">{t.dashboard.byPriority}</h3>
-          <PriorityBreakdown tasks={filteredTasks} finalStatusIds={finalStatusIds} />
+          <PriorityBreakdown tasks={filteredTasks} finalStatusIds={finalStatusIds} t={t} />
         </div>
       </div>
 

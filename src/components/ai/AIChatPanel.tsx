@@ -121,8 +121,8 @@ export default function AIChatPanel() {
       {/* Panel */}
       {open && (
         <div className={cn(
-          'fixed bottom-40 right-4 z-50',
-          'sm:bottom-40 sm:right-6',
+          'fixed bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] right-4 z-50',
+          'sm:right-6',
           'lg:bottom-24 lg:right-6',
           'w-[calc(100vw-2rem)] sm:w-[380px]',
           'max-h-[55dvh] sm:max-h-[60dvh] lg:max-h-[75dvh]',
@@ -211,7 +211,7 @@ export default function AIChatPanel() {
         onClick={() => setOpen(v => !v)}
         title="AI Trợ lý"
         className={cn(
-          'fixed bottom-24 right-4 z-50',
+          'fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-50',
           'lg:bottom-6 lg:right-6',
           'w-14 h-14 rounded-full flex items-center justify-center shadow-xl',
           'transition-all duration-200 active:scale-90',
