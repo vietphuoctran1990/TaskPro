@@ -211,19 +211,24 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
     return cells
   }, [year, month])
 
+  // Project-scoped task list, computed once and shared by the date map + SLA stats.
+  const projectTasks = useMemo(() =>
+    state.activeProjectId
+      ? state.tasks.filter(tk => tk.projectId === state.activeProjectId)
+      : state.tasks,
+    [state.tasks, state.activeProjectId])
+
   const tasksByDate = useMemo(() => {
     const map = new Map<string, Task[]>()
-    const source = state.activeProjectId
-      ? state.tasks.filter(tk => tk.projectId === state.activeProjectId)
-      : state.tasks
-    source.forEach(task => {
+    projectTasks.forEach(task => {
       if (task.dueDate) {
-        const existing = map.get(task.dueDate) ?? []
-        map.set(task.dueDate, [...existing, task])
+        const existing = map.get(task.dueDate)
+        if (existing) existing.push(task)
+        else map.set(task.dueDate, [task])
       }
     })
     return map
-  }, [state.tasks, state.activeProjectId])
+  }, [projectTasks])
 
   const isToday = (d: Date) =>
     d.getFullYear() === today.getFullYear() &&
@@ -241,15 +246,16 @@ const CalendarView = memo(function CalendarView({ onViewTask, onAddTask }: Calen
   const monthLabel = `${t.calendar.months[month]} ${year}`
 
   const slaStats = useMemo(() => {
-    const tasks = state.activeProjectId
-      ? state.tasks.filter(tk => tk.projectId === state.activeProjectId)
-      : state.tasks
-    return {
-      breached: tasks.filter(tk => getSLAStatus(tk, finalStatusIds) === 'breached').length,
-      critical: tasks.filter(tk => getSLAStatus(tk, finalStatusIds) === 'critical').length,
-      at_risk:  tasks.filter(tk => getSLAStatus(tk, finalStatusIds) === 'at_risk').length,
+    let breached = 0, critical = 0, at_risk = 0
+    for (const tk of projectTasks) {
+      switch (getSLAStatus(tk, finalStatusIds)) {
+        case 'breached': breached++; break
+        case 'critical': critical++; break
+        case 'at_risk':  at_risk++; break
+      }
     }
-  }, [state.tasks, state.activeProjectId, finalStatusIds])
+    return { breached, critical, at_risk }
+  }, [projectTasks, finalStatusIds])
 
   const selectedLunar = selectedDate
     ? days.find(c => isSelected(c.date))?.lunar ?? getLunarInfo(selectedDate)

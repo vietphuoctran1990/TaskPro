@@ -19,7 +19,7 @@ const DENSITY_ROW_PAD: Record<Density, { card: string; cell: string }> = {
   spacious:    { card: 'px-4 py-4',   cell: 'px-4 py-5'    },
 }
 
-function DensityToggle() {
+const DensityToggle = memo(function DensityToggle() {
   const { state, dispatch } = useApp()
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -48,7 +48,7 @@ function DensityToggle() {
       )}
     </div>
   )
-}
+})
 
 interface ListViewProps {
   onEditTask: (task: Task) => void
@@ -147,6 +147,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const statusMap = useMemo(() => new Map(state.statuses.map(s => [s.id, s])), [state.statuses])
+  const projectMap = useMemo(() => new Map(state.projects.map(p => [p.id, p])), [state.projects])
   const i18nStatus   = t.status as Record<string, string>
 
   const getStatusColor = (id: string) => statusMap.get(id)?.color ?? '#94a3b8'
@@ -293,7 +294,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
       {/* ── MOBILE CARD LIST (hidden on md+) ─────────────────────────── */}
       <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
         {filteredTasks.map(task => {
-          const project = state.projects.find(p => p.id === task.projectId)
+          const project = projectMap.get(task.projectId)
           const deadline = getDeadline(task)
           const done = finalStatusIds.has(task.status)
           return (
@@ -415,7 +416,7 @@ const ListView = memo(function ListView({ onEditTask, onViewTask, onAddTask, onF
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
             {filteredTasks.map(task => {
-              const project = state.projects.find(p => p.id === task.projectId)
+              const project = projectMap.get(task.projectId)
               const deadline = getDeadline(task)
               const done = finalStatusIds.has(task.status)
               const selected = selectedIds.has(task.id)

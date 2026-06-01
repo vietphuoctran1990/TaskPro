@@ -36,12 +36,19 @@ const TimelineView = memo(function TimelineView({ onViewTask, onAddTask }: Timel
   const rangeStart = addDays(today, -DAYS_BACK)
   const days       = Array.from({ length: DAYS_TOTAL }, (_, i) => addDays(rangeStart, i))
 
-  // Group tasks by project (only tasks with dueDate)
+  // Group tasks by project (only tasks with dueDate) in a single pass — O(T)
+  // instead of O(projects × tasks).
   const projectGroups = useMemo(() => {
-    const withDate = filteredTasks.filter(t => t.dueDate)
+    const byProject = new Map<string, Task[]>()
+    for (const t of filteredTasks) {
+      if (!t.dueDate) continue
+      const arr = byProject.get(t.projectId)
+      if (arr) arr.push(t)
+      else byProject.set(t.projectId, [t])
+    }
     return state.projects
-      .map(p => ({ project: p, tasks: withDate.filter(t => t.projectId === p.id) }))
-      .filter(g => g.tasks.length > 0)
+      .filter(p => byProject.has(p.id))
+      .map(p => ({ project: p, tasks: byProject.get(p.id)! }))
   }, [filteredTasks, state.projects])
 
   if (projectGroups.length === 0) {

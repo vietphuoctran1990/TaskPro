@@ -470,8 +470,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   }, [filteredUnordered, state.sortField, state.sortDir, finalStatusIds, statusOrder])
 
+  // Memoize the context object so consumers don't re-render on every provider
+  // render — only when one of the derived values actually changes identity.
+  const value = useMemo(
+    () => ({ state, dispatch, filteredTasks, finalStatusIds, firstStatusId, finalStatusId }),
+    [state, dispatch, filteredTasks, finalStatusIds, firstStatusId, finalStatusId]
+  )
+
   return (
-    <AppContext.Provider value={{ state, dispatch, filteredTasks, finalStatusIds, firstStatusId, finalStatusId }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   )

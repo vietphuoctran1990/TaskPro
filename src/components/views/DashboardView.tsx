@@ -133,10 +133,13 @@ const PriorityBreakdown = memo(function PriorityBreakdown({ tasks, finalStatusId
 
 const ActivityHeatmap = memo(function ActivityHeatmap({ tasks, finalStatusIds, language }: { tasks: Task[]; finalStatusIds: ReadonlySet<string>; language: string }) {
   const WEEKS = 15
-  const today = new Date()
   const isVi = language === 'vi'
 
   const cells = useMemo(() => {
+    // `today` is derived inside the memo so the array stays referentially stable
+    // across re-renders that don't touch the deps below.
+    const today = new Date()
+    const todayStr = localISO(today)
     const map: Record<string, number> = {}
     tasks.forEach(t => {
       if (finalStatusIds.has(t.status)) {
@@ -152,10 +155,10 @@ const ActivityHeatmap = memo(function ActivityHeatmap({ tasks, finalStatusIds, l
       d.setDate(startDay.getDate() + i)
       const dateStr = localISO(d)
       const month = d.toLocaleDateString(isVi ? 'vi-VN' : 'en-US', { month: 'short' })
-      result.push({ date: dateStr, count: map[dateStr] ?? 0, month, isToday: dateStr === localISO(today) })
+      result.push({ date: dateStr, count: map[dateStr] ?? 0, month, isToday: dateStr === todayStr })
     }
     return result
-  }, [tasks, finalStatusIds]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tasks, finalStatusIds, isVi])
 
   const maxCount = Math.max(...cells.map(c => c.count), 1)
   const getLevel = (count: number) => count === 0 ? 0 : Math.min(4, Math.ceil((count / maxCount) * 4))
@@ -235,24 +238,36 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onVie
 
   const today = todayLocalISO()
 
-  const stats = useMemo(() => {
-    const total      = filteredTasks.length
-    const inProgress = filteredTasks.filter(t => t.status === 'in_progress').length
-    const doneTotal  = filteredTasks.filter(t => finalStatusIds.has(t.status)).length
-    const doneToday  = filteredTasks.filter(t => finalStatusIds.has(t.status) && t.updatedAt.slice(0, 10) === today).length
-    const breached   = filteredTasks.filter(t => getSLAStatus(t, finalStatusIds) === 'breached').length
-    return { total, inProgress, doneTotal, doneToday, breached }
+  // Single pass: stat cards + SLA health share one loop and compute the SLA
+  // status of each task at most once (getSLAStatus was previously called 5×/task).
+  const { stats, slaHealth } = useMemo(() => {
+    let inProgress = 0, doneTotal = 0, doneToday = 0, breachedAll = 0
+    let nonDone = 0, onTrack = 0, atRisk = 0, critical = 0, breachedOpen = 0
+    for (const t of filteredTasks) {
+      const isDone = finalStatusIds.has(t.status)
+      if (t.status === 'in_progress') inProgress++
+      if (isDone) {
+        doneTotal++
+        if (t.updatedAt.slice(0, 10) === today) doneToday++
+      } else {
+        nonDone++
+        switch (getSLAStatus(t, finalStatusIds)) {
+          case 'on_track': onTrack++; break
+          case 'at_risk':  atRisk++; break
+          case 'critical': critical++; break
+          case 'breached': breachedOpen++; breachedAll++; break
+        }
+      }
+      // breached can also apply to done tasks → count separately for the stat card
+      if (isDone && getSLAStatus(t, finalStatusIds) === 'breached') breachedAll++
+    }
+    return {
+      stats: { total: filteredTasks.length, inProgress, doneTotal, doneToday, breached: breachedAll },
+      slaHealth: nonDone === 0
+        ? { pct: 100, onTrack: 0, atRisk: 0, critical: 0, breached: 0 }
+        : { pct: Math.round((onTrack / nonDone) * 100), onTrack, atRisk, critical, breached: breachedOpen },
+    }
   }, [filteredTasks, finalStatusIds, today])
-
-  const slaHealth = useMemo(() => {
-    const nonDone = filteredTasks.filter(t => !finalStatusIds.has(t.status))
-    if (!nonDone.length) return { pct: 100, onTrack: 0, atRisk: 0, critical: 0, breached: 0 }
-    const onTrack  = nonDone.filter(t => getSLAStatus(t, finalStatusIds) === 'on_track').length
-    const atRisk   = nonDone.filter(t => getSLAStatus(t, finalStatusIds) === 'at_risk').length
-    const critical = nonDone.filter(t => getSLAStatus(t, finalStatusIds) === 'critical').length
-    const breached = nonDone.filter(t => getSLAStatus(t, finalStatusIds) === 'breached').length
-    return { pct: Math.round((onTrack / nonDone.length) * 100), onTrack, atRisk, critical, breached }
-  }, [filteredTasks, finalStatusIds])
 
   const noteStats = useMemo(() => {
     const total   = state.notes.length
@@ -535,7 +550,7 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onVie
         </div>
       </div>
       {/* ── Activity Heatmap ── */}
-      <ActivityHeatmap tasks={state.tasks} finalStatusIds={finalStatusIds} language={state.language} />
+      <ActivityHeatmap tasks={filteredTasks} finalStatusIds={finalStatusIds} language={state.language} />
 
       {/* ── Reports ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

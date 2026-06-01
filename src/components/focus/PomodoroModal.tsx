@@ -41,13 +41,16 @@ export default function PomodoroModal({ task, onClose, onDone }: Props) {
   const [running, setRunning] = useState(false)
   const [sessions, setSessions] = useState(0)
 
-  // Refs so phase-completion effect can read latest values without re-subscribing
+  // Refs so phase-completion effect can read latest values without re-subscribing.
+  // Synced in an effect (not during render) per React 19 ref rules.
   const phaseRef    = useRef(phase)
   const sessionsRef = useRef(sessions)
   const workDurRef  = useRef(workDur)
-  phaseRef.current    = phase
-  sessionsRef.current = sessions
-  workDurRef.current  = workDur
+  useEffect(() => {
+    phaseRef.current    = phase
+    sessionsRef.current = sessions
+    workDurRef.current  = workDur
+  })
 
   // Reset when task changes
   useEffect(() => {

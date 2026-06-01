@@ -210,8 +210,21 @@ export interface LunarInfo {
   tietKhi?: string
 }
 
+// Memoize results by Y-M-D — the conversion is heavy (trig-based astronomy)
+// and the calendar grid re-queries the same dates whenever months are revisited.
+const lunarCache = new Map<string, LunarInfo>()
+
 export function getLunarInfo(date: Date): LunarInfo {
   const d = date.getDate(), m = date.getMonth() + 1, y = date.getFullYear()
+  const key = `${y}-${m}-${d}`
+  const cached = lunarCache.get(key)
+  if (cached) return cached
+  const info = computeLunarInfo(d, m, y, date)
+  lunarCache.set(key, info)
+  return info
+}
+
+function computeLunarInfo(d: number, m: number, y: number, date: Date): LunarInfo {
   const [lDay, lMonth, lYear, lLeap] = solarToLunar(d, m, y)
   const jd   = jdFromDate(d, m, y)
   const than = getThan(lMonth, lDay)
