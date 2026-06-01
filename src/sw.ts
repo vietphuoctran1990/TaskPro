@@ -190,7 +190,7 @@ self.addEventListener('push', (event: PushEvent) => {
           )),
       ])
     )
-  } catch {}
+  } catch { /* ignore */ }
 })
 
 // ------- Notification click -------

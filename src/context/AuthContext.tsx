@@ -3,6 +3,7 @@ import {
 } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { logger } from '../lib/logger'
 import { useApp } from './AppContext'
 import type { AppState, DeletedIds } from '../types'
 
@@ -89,10 +90,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLastSynced(now)
         lastSyncedRef.current = now
       } else {
-        console.error('[sync] upload error:', error.message)
+        logger.error('[sync] upload error:', error.message)
       }
     } catch (err) {
-      console.error('[sync] upload failed:', err)
+      logger.error('[sync] upload failed:', err)
     }
   }, [])
 
@@ -107,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', u.id)
         .maybeSingle()
 
-      if (error) { console.error('[sync] pull error:', error.message); return false }
+      if (error) { logger.error('[sync] pull error:', error.message); return false }
       if (!data?.data) return false
 
       const cloudMs = data.updated_at ? new Date(data.updated_at).getTime() : 0
@@ -145,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lastSyncedRef.current = synced
       return true
     } catch (err) {
-      console.error('[sync] pull failed:', err)
+      logger.error('[sync] pull failed:', err)
       return false
     }
   }, [dispatch])

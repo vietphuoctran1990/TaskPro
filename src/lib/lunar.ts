@@ -120,7 +120,8 @@ function getLunarMonth11(yy: number, tz: number): number {
 
 function getLeapMonthOffset(a11: number, tz: number): number {
   const k = Math.floor((a11 - 2415021.076998695) / 29.530588853 + 0.5)
-  let i = 1, last = 0
+  let i = 1
+  let last: number
   let arc = sunSector(getNewMoonDay(k + i, tz), tz)
   do { last = arc; i++; arc = sunSector(getNewMoonDay(k + i, tz), tz) } while (arc !== last && i < 14)
   return i - 1
@@ -132,7 +133,7 @@ function solarToLunar(d: number, m: number, y: number): [number, number, number,
   const k   = Math.floor((jd - 2415021.076998695) / 29.530588853)
   let ms    = getNewMoonDay(k + 1, TZ)
   if (ms > jd) ms = getNewMoonDay(k, TZ)
-  let a11   = getLunarMonth11(y, TZ)
+  const a11 = getLunarMonth11(y, TZ)
   let b11   = a11
   if (a11 >= ms) b11 = getLunarMonth11(y - 1, TZ)
   const lDay  = jd - ms + 1

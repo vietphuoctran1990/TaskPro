@@ -143,7 +143,7 @@ function getInitialState(): AppState {
         _deletedIds:  pruneTombstones(parsed._deletedIds),
       }
     }
-  } catch {}
+  } catch { /* ignore */ }
   return {
     tasks: DEFAULT_TASKS,
     projects: DEFAULT_PROJECTS,
@@ -364,7 +364,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch { /* ignore */ }
     }, 500)
     return () => clearTimeout(timer)
   }, [state])

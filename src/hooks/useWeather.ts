@@ -40,7 +40,7 @@ function loadCache(): WeatherData | null {
 }
 
 function saveCache(data: WeatherData) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)) } catch {}
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)) } catch { /* ignore */ }
 }
 
 function getPosition(): Promise<GeolocationPosition> {

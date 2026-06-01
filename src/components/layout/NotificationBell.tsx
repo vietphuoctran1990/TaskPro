@@ -5,6 +5,7 @@ import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import { useNotificationsCtx } from '../../context/NotificationsContext'
+import { logger } from '../../lib/logger'
 
 const NOTIF_OPTIONS = [15, 30, 60] as const
 
@@ -48,12 +49,12 @@ export default function NotificationBell() {
       if (res.ok && data.ok) setTestStatus('ok')
       else {
         const errMsg = data?.error ?? data?.message ?? JSON.stringify(data)
-        console.error('[test-push] failed:', data)
+        logger.error('[test-push] failed:', data)
         alert(`Push thất bại (HTTP ${data?.statusCode ?? '?'}):\n${errMsg}`)
         setTestStatus('fail')
       }
     } catch (err) {
-      console.error('[test-push] error:', err)
+      logger.error('[test-push] error:', err)
       alert('Lỗi kết nối: ' + String(err))
       setTestStatus('fail')
     }

@@ -27,7 +27,7 @@ function playTone(freq: number) {
     gain.gain.setValueAtTime(0.35, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1)
     osc.start(); osc.stop(ctx.currentTime + 1)
-  } catch {}
+  } catch { /* ignore */ }
 }
 
 interface Props { task: Task; onClose: () => void; onDone: () => void }

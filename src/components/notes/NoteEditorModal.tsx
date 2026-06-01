@@ -212,7 +212,7 @@ export default function NoteEditorModal({ open, note, onClose, defaultFolderId =
   }, [note, state.notes, saveStatus])
 
   const copyToClipboard = async (text: string) => {
-    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {}
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* ignore */ }
   }
   const handleShare = () => copyToClipboard(`${title}\n\n${content}`)
 

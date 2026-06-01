@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import type { Task } from '../types'
 import type { Translations } from '../i18n/types'
 import { getDeadline, isIOSDevice, isInstalledPWA } from '../lib/utils'
+import { logger } from '../lib/logger'
 
 export type NotifAlert = {
   task: Task
@@ -53,12 +54,12 @@ function getDeviceId(): string {
 
 async function syncSubscriptionToServer(reg: ServiceWorkerRegistration, userId?: string) {
   if (!VAPID_PUBLIC_KEY) {
-    console.warn('[push] VITE_VAPID_PUBLIC_KEY not set — push disabled')
+    logger.warn('[push] VITE_VAPID_PUBLIC_KEY not set — push disabled')
     return
   }
   // iOS Safari only supports Web Push in standalone (installed PWA) mode
   if (isIOSDevice() && !isInstalledPWA()) {
-    console.warn('[push] iOS Safari without home screen install — push not supported')
+    logger.warn('[push] iOS Safari without home screen install — push not supported')
     return
   }
   try {
@@ -78,9 +79,9 @@ async function syncSubscriptionToServer(reg: ServiceWorkerRegistration, userId?:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscription: sub.toJSON(), deviceId: getDeviceId(), userId: userId ?? null }),
     })
-    console.log('[push] subscription synced, status:', res.status)
+    logger.log('[push] subscription synced, status:', res.status)
   } catch (err) {
-    console.error('[push] subscribe failed:', err)
+    logger.error('[push] subscribe failed:', err)
   }
 }
 
@@ -95,9 +96,9 @@ async function syncSchedulesToServer(schedules: ScheduleItem[], userId?: string)
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceId: getDeviceId(), schedules, userId: userId ?? null }),
     })
-    if (!res.ok) console.warn('[push] schedule sync failed:', res.status)
+    if (!res.ok) logger.warn('[push] schedule sync failed:', res.status)
   } catch (err) {
-    console.warn('[push] schedule sync error:', err)
+    logger.warn('[push] schedule sync error:', err)
   }
 }
 
@@ -201,7 +202,7 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
       try {
         const n = new Notification(title, { body, icon: '/icon-192x192.png', tag: notifKey })
         n.onclick = () => { window.focus(); n.close() }
-      } catch {}
+      } catch { /* ignore */ }
     }
   }, [])
 
@@ -300,11 +301,11 @@ export function useNotifications({ tasks, t, enabled, notifBefore, onMarkDone, u
         if (!deadline) return []
         const minsLeft = (deadline.getTime() - Date.now()) / 60_000
         if (minsLeft > 120 && minsLeft >= 0) return []
-        let label = ''
-        if (minsLeft < 0)        label = t.notifications.overdue
-        else if (minsLeft <= 15) label = t.notifications.dueIn15
-        else if (minsLeft <= 30) label = t.notifications.dueIn30
-        else                     label = t.notifications.dueIn60
+        const label =
+          minsLeft < 0   ? t.notifications.overdue :
+          minsLeft <= 15 ? t.notifications.dueIn15 :
+          minsLeft <= 30 ? t.notifications.dueIn30 :
+                           t.notifications.dueIn60
         return [{ task, label, minutesLeft: minsLeft }]
       })
       .sort((a, b) => a.minutesLeft - b.minutesLeft)
