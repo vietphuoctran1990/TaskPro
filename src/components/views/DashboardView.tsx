@@ -1,7 +1,8 @@
 import { memo, useMemo } from 'react'
-import { AlertTriangle, Calendar, CheckCircle2, Clock, FileText, StickyNote, TrendingUp, BarChart3 } from 'lucide-react'
+import { AlertTriangle, Calendar, CheckCircle2, Clock, FileText, StickyNote, TrendingUp, BarChart3, Target, Flame, ChevronRight } from 'lucide-react'
 import { cn, getDeadline, getSLAStatus, getTimeRemaining } from '../../lib/utils'
 import { localISO, todayLocalISO } from '../../lib/dateLocal'
+import { isHabitDueOn, isHabitDoneOn, habitStreak } from '../../lib/habits'
 import SLABadge from '../sla/SLABadge'
 import { PriorityBadge } from '../ui/Badge'
 import { useApp } from '../../context/AppContext'
@@ -234,7 +235,7 @@ const ActivityHeatmap = memo(function ActivityHeatmap({ tasks, finalStatusIds, l
 })
 
 const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onViewNote }: DashboardViewProps) {
-  const { state, filteredTasks, finalStatusIds } = useApp()
+  const { state, dispatch, filteredTasks, finalStatusIds } = useApp()
   const t = useT()
 
   const today = todayLocalISO()
@@ -283,6 +284,29 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onVie
       .slice(0, 4),
     [state.notes]
   )
+
+  const habitStats = useMemo(() => {
+    const habits = state.habits ?? []
+    const now = new Date()
+    let doneToday = 0, dueToday = 0, best = 0
+    const items = habits.map(h => {
+      const due    = isHabitDueOn(h, now)
+      const done   = isHabitDoneOn(h, today)
+      const streak = habitStreak(h, today)
+      if (due) dueToday++
+      if (done) doneToday++
+      if (streak > best) best = streak
+      return { habit: h, due, done, streak }
+    })
+    // Sort: incomplete-due first, then by streak desc — surfaces what needs attention.
+    items.sort((a, b) => {
+      const aP = a.due && !a.done ? 0 : 1
+      const bP = b.due && !b.done ? 0 : 1
+      if (aP !== bP) return aP - bP
+      return b.streak - a.streak
+    })
+    return { total: habits.length, doneToday, dueToday, best, items: items.slice(0, 4) }
+  }, [state.habits, today])
 
   const weekData = useMemo(() => {
     const locale = state.language === 'vi' ? 'vi-VN' : 'en-US'
@@ -415,6 +439,81 @@ const DashboardView = memo(function DashboardView({ onViewTask, onAddTask, onVie
           )}
         </div>
       </div>
+
+      {/* Habits overview */}
+      <button
+        onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: 'habits' })}
+        className="block w-full text-left bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-800/50 p-4 transition-colors hover:border-emerald-200 dark:hover:border-emerald-700"
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shrink-0">
+              <Target size={15} />
+            </div>
+            <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">{t.dashboard.habitsSection}</h3>
+            {habitStats.total > 0 && habitStats.dueToday > 0 && habitStats.doneToday >= habitStats.dueToday && (
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{t.dashboard.habitsAllDone}</span>
+            )}
+          </div>
+          <ChevronRight size={16} className="text-emerald-400 dark:text-emerald-600 shrink-0" />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* 3 mini-stats */}
+          <div className="grid grid-cols-3 gap-3 sm:w-56 shrink-0">
+            {[
+              { label: t.dashboard.totalHabits, value: String(habitStats.total) },
+              { label: t.dashboard.habitsToday, value: `${habitStats.doneToday}/${habitStats.dueToday}` },
+              { label: t.dashboard.bestStreak,  value: habitStats.best > 0 ? `🔥 ${habitStats.best}` : '—' },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-white/70 dark:bg-slate-800/50 rounded-xl p-2.5 text-center">
+                <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300 leading-none">{value}</p>
+                <p className="text-[10px] text-emerald-600/70 dark:text-emerald-500 mt-1 leading-tight">{label}</p>
+              </div>
+            ))}
+          </div>
+          {/* Habit list */}
+          {habitStats.items.length > 0 ? (
+            <div className="flex-1 min-w-0 space-y-1.5">
+              {habitStats.items.map(({ habit, done, due, streak }) => (
+                <div
+                  key={habit.id}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/70 dark:bg-slate-800/50"
+                >
+                  <span className="text-sm shrink-0 select-none">{habit.emoji}</span>
+                  <span className={cn(
+                    'flex-1 text-xs font-medium text-emerald-800 dark:text-emerald-300 truncate',
+                    done && 'opacity-50 line-through'
+                  )}>
+                    {habit.title}
+                  </span>
+                  {streak > 0 && (
+                    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-500 shrink-0">
+                      <Flame size={9} className="fill-amber-400" />{streak}
+                    </span>
+                  )}
+                  <span
+                    className={cn(
+                      'w-4 h-4 rounded-full flex items-center justify-center shrink-0',
+                      done ? 'text-white' : due ? 'border-2' : 'opacity-30 border-2 border-slate-300 dark:border-slate-600'
+                    )}
+                    style={
+                      done ? { backgroundColor: habit.color }
+                      : due ? { borderColor: habit.color }
+                      : undefined
+                    }
+                  >
+                    {done && <CheckCircle2 size={11} strokeWidth={3} />}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center py-3">
+              <p className="text-xs text-emerald-500/70 dark:text-emerald-600">{t.dashboard.noHabits}</p>
+            </div>
+          )}
+        </div>
+      </button>
 
       {/* Weekly activity + SLA health */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

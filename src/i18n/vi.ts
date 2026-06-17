@@ -99,6 +99,8 @@ export const vi: Translations = {
     week: (n) => `T${n}`,
     totalNotes: 'Tổng ghi chú', notesToday: 'Cập nhật hôm nay', notesFolders: 'Thư mục',
     notesSection: 'Ghi chú', recentNotes: 'Gần đây', untitledNote: '(Chưa có tiêu đề)',
+    habitsSection: 'Thói quen', totalHabits: 'Tổng', habitsToday: 'Hôm nay', bestStreak: 'Chuỗi dài nhất',
+    noHabits: 'Chưa có thói quen', habitsAllDone: 'Hoàn thành hết hôm nay 🎉',
   },
   onboarding: {
     step1Title: 'Chào mừng đến TaskPro! 👋', step1Desc: 'Quản lý công việc thông minh, theo dõi tiến độ và không bỏ lỡ deadline nào.',

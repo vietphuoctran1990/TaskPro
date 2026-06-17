@@ -97,6 +97,8 @@ export const en: Translations = {
     week: (n) => `W${n}`,
     totalNotes: 'Total Notes', notesToday: 'Updated Today', notesFolders: 'Folders',
     notesSection: 'Notes', recentNotes: 'Recent', untitledNote: '(Untitled)',
+    habitsSection: 'Habits', totalHabits: 'Total', habitsToday: 'Today', bestStreak: 'Best streak',
+    noHabits: 'No habits yet', habitsAllDone: 'All done today 🎉',
   },
   onboarding: {
     step1Title: 'Welcome to TaskPro! 👋', step1Desc: 'Smart task management, track progress and never miss a deadline.',

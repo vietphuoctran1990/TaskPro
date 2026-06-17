@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, memo, useRef } from 'react'
 import { Plus, Flame, Check, Pencil, Trash2, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { localISO, todayLocalISO } from '../../lib/dateLocal'
+import { todayLocalISO } from '../../lib/dateLocal'
+import { isHabitDueOn, habitStreak, habitLast7 } from '../../lib/habits'
 import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import type { Habit } from '../../types'
@@ -17,49 +18,17 @@ const PRESET_COLORS = [
 const DEFAULT_EMOJI = '⭐'
 const DEFAULT_COLOR = '#6366f1'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function isRequiredDay(habit: Habit, d: Date): boolean {
-  const dow = d.getDay() // 0=Sun, 6=Sat
-  switch (habit.frequency) {
-    case 'daily':    return true
-    case 'weekdays': return dow >= 1 && dow <= 5
-    case 'weekends': return dow === 0 || dow === 6
-    case 'custom':   return (habit.customDays ?? [0, 1, 2, 3, 4, 5, 6]).includes(dow)
-    default:         return true
+// Keep only the most-recently-typed emoji, preserving multi-codepoint graphemes
+// (e.g. ❤️, 🏃‍♂️) that a naive .slice() would split apart.
+function lastGrapheme(value: string): string {
+  if (!value) return ''
+  try {
+    const seg = new Intl.Segmenter()
+    const parts = [...seg.segment(value)]
+    return parts.length ? parts[parts.length - 1].segment : ''
+  } catch {
+    return [...value].slice(-2).join('')
   }
-}
-
-function computeStreak(habit: Habit, todayStr: string): number {
-  const logSet = new Set(habit.logs.map(l => l.date))
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  let streak = 0
-
-  // Count today if required and done
-  if (isRequiredDay(habit, today) && logSet.has(todayStr)) streak = 1
-
-  // Walk backward from yesterday
-  const d = new Date(today)
-  d.setDate(d.getDate() - 1)
-  for (let i = 0; i < 365; i++) {
-    if (!isRequiredDay(habit, d)) { d.setDate(d.getDate() - 1); continue }
-    if (logSet.has(localISO(d))) { streak++; d.setDate(d.getDate() - 1) }
-    else break
-  }
-  return streak
-}
-
-function getLast7(habit: Habit, todayStr: string) {
-  const logSet = new Set(habit.logs.map(l => l.date))
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today)
-    d.setDate(d.getDate() - (6 - i))
-    const ds = localISO(d)
-    return { ds, required: isRequiredDay(habit, d), done: logSet.has(ds), isToday: ds === todayStr }
-  })
 }
 
 // ── HabitForm ─────────────────────────────────────────────────────────────────
@@ -136,9 +105,8 @@ function HabitForm({ habit, nextOrder, onClose }: {
               <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{t.habits.emoji}</label>
               <input
                 value={emoji}
-                onChange={e => setEmoji(e.target.value)}
+                onChange={e => setEmoji(lastGrapheme(e.target.value))}
                 className="w-16 h-12 text-2xl text-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
-                maxLength={2}
               />
             </div>
             <div className="flex-1">
@@ -284,9 +252,9 @@ const HabitCard = memo(function HabitCard({ habit, todayStr, onEdit }: {
 }) {
   const { dispatch } = useApp()
   const isDone    = useMemo(() => habit.logs.some(l => l.date === todayStr), [habit.logs, todayStr])
-  const streak    = useMemo(() => computeStreak(habit, todayStr), [habit, todayStr])
-  const last7     = useMemo(() => getLast7(habit, todayStr), [habit, todayStr])
-  const required  = isRequiredDay(habit, new Date())
+  const streak    = useMemo(() => habitStreak(habit, todayStr), [habit, todayStr])
+  const last7     = useMemo(() => habitLast7(habit, todayStr), [habit, todayStr])
+  const required  = isHabitDueOn(habit, new Date())
 
   const toggle = useCallback(() => {
     dispatch({ type: 'TOGGLE_HABIT_LOG', payload: { id: habit.id, date: todayStr } })
@@ -330,14 +298,20 @@ const HabitCard = memo(function HabitCard({ habit, todayStr, onEdit }: {
 
         {/* 7-day dots */}
         <div className="flex items-center gap-1.5">
-          {last7.map(({ ds, required: req, done }) => (
+          {last7.map(({ ds, due, done, isToday }) => (
             <span
               key={ds}
+              title={ds}
               className={cn(
                 'w-3.5 h-3.5 rounded-full transition-all duration-300',
-                done  ? '' : req ? 'border border-current opacity-30' : 'bg-slate-100 dark:bg-slate-700/50'
+                done ? '' : due ? 'border border-current opacity-30' : 'bg-slate-100 dark:bg-slate-700/50',
+                isToday && !done && 'ring-1 ring-offset-1 ring-offset-white dark:ring-offset-slate-800'
               )}
-              style={done ? { backgroundColor: habit.color } : done ? undefined : { color: habit.color }}
+              style={
+                done   ? { backgroundColor: habit.color }
+                : due  ? { color: habit.color }
+                : undefined
+              }
             />
           ))}
         </div>

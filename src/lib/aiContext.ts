@@ -1,7 +1,11 @@
-import type { AppState, Task, Project, Label, StatusDef, Note, NoteFolder, Subtask, Comment } from '../types'
+import type { AppState, Task, Project, Label, StatusDef, Note, NoteFolder, Subtask, Comment, Habit } from '../types'
+import { todayLocalISO } from './dateLocal'
+import { habitStreak, habitLast7, isHabitDueOn, isHabitDoneOn } from './habits'
 
 export function buildAIContext(state: AppState, finalStatusIds: ReadonlySet<string>) {
-  const today = new Date().toISOString().slice(0, 10)
+  // Local-date based (matches how dueDate / habit logs are stored across the app).
+  const today = todayLocalISO()
+  const now = new Date()
 
   const labelMap = new Map(state.labels.map((l: Label) => [l.id, l.name]))
   const projectMap = new Map(state.projects.map((p: Project) => [p.id, p.name]))
@@ -66,6 +70,22 @@ export function buildAIContext(state: AppState, finalStatusIds: ReadonlySet<stri
     })),
 
     noteFolders: state.noteFolders.map((f: NoteFolder) => ({ id: f.id, name: f.name })),
+
+    habits: (state.habits ?? []).map((h: Habit) => {
+      const last7 = habitLast7(h, today)
+      return {
+        title:            h.title,
+        emoji:            h.emoji,
+        description:      h.description || undefined,
+        frequency:        h.frequency,
+        dueToday:         isHabitDueOn(h, now),
+        doneToday:        isHabitDoneOn(h, today),
+        streak:           habitStreak(h, today),
+        totalCompletions: h.logs.length,
+        last7Done:        last7.filter(d => d.done).length,
+        last7Due:         last7.filter(d => d.due).length,
+      }
+    }),
 
     finalStatusIds: [...finalStatusIds],
   }

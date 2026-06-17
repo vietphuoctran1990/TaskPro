@@ -21,6 +21,7 @@ function buildSystem(ctx: Record<string, unknown>): string {
   const labels   = (ctx?.labels   as Record<string, unknown>[]) ?? []
   const notes    = (ctx?.notes    as Record<string, unknown>[]) ?? []
   const folders  = (ctx?.noteFolders as Record<string, unknown>[]) ?? []
+  const habits   = (ctx?.habits   as Record<string, unknown>[]) ?? []
   const finalIds = new Set((ctx?.finalStatusIds as string[] | undefined) ?? ['done'])
 
   const activeTasks = tasks.filter(t => !finalIds.has(t.status as string))
@@ -84,6 +85,20 @@ function buildSystem(ctx: Record<string, unknown>): string {
     ? folders.map(f => `  • ${f.name}`).join('\n')
     : '  (chưa có thư mục)'
 
+  const FREQ_LABEL: Record<string, string> = {
+    daily: 'hàng ngày', weekdays: 'ngày thường (T2–T6)', weekends: 'cuối tuần', custom: 'tùy chọn ngày',
+  }
+  const doneHabitsToday = habits.filter(h => h.doneToday).length
+  const dueHabitsToday  = habits.filter(h => h.dueToday).length
+  const habitSection = habits.length > 0
+    ? habits.map(h => {
+        const freq   = FREQ_LABEL[h.frequency as string] ?? (h.frequency as string)
+        const status = h.dueToday ? (h.doneToday ? '✅ đã làm hôm nay' : '⬜ chưa làm hôm nay') : '— hôm nay không lên lịch'
+        const streak = (h.streak as number) > 0 ? ` | 🔥 chuỗi ${h.streak} ngày` : ''
+        return `  • ${h.emoji as string} ${h.title as string} (${freq}) — ${status}${streak} | 7 ngày: ${h.last7Done}/${h.last7Due} · tổng ${h.totalCompletions} lần`
+      }).join('\n')
+    : '  (chưa có thói quen nào)'
+
   return `Bạn là AI trợ lý thông minh tích hợp trong ứng dụng quản lý công việc TaskPro.
 Ngôn ngữ trả lời: ${lang}.
 Model: DeepSeek Chat.
@@ -119,12 +134,18 @@ GHI CHÚ (${notes.length} ghi chú)
 ${noteSection}
 
 ============================
+THÓI QUEN (${habits.length} thói quen — hôm nay ${doneHabitsToday}/${dueHabitsToday} đã hoàn thành)
+============================
+${habitSection}
+
+============================
 QUY TẮC TRẢ LỜI
 ============================
-- Tham chiếu ĐÚNG tên task/ghi chú/dự án từ dữ liệu trên
+- Tham chiếu ĐÚNG tên task/ghi chú/dự án/thói quen từ dữ liệu trên
 - Task trạng thái hoàn thành KHÔNG kể vào danh sách cần làm
 - Task ⚠️ QUÁ HẠN cần được ưu tiên nhắc nhở cao nhất
 - Khi hỏi về ghi chú: trích dẫn nội dung ghi chú từ dữ liệu trên
+- Khi hỏi về thói quen: dựa vào trạng thái hôm nay, chuỗi ngày (streak) và tỷ lệ 7 ngày để động viên hoặc nhắc nhở
 - Dùng markdown (in đậm, bullet list) cho câu trả lời có cấu trúc
 - Giọng văn thân thiện, thực tế, không dài dòng`
 }

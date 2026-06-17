@@ -82,6 +82,8 @@ export interface Translations {
     week: (n: number) => string
     totalNotes: string; notesToday: string; notesFolders: string
     notesSection: string; recentNotes: string; untitledNote: string
+    habitsSection: string; totalHabits: string; habitsToday: string; bestStreak: string
+    noHabits: string; habitsAllDone: string
   }
   onboarding: {
     step1Title: string; step1Desc: string
