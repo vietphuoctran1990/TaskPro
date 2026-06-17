@@ -32,6 +32,7 @@ function mergeTombstones(a?: Partial<DeletedIds>, b?: Partial<DeletedIds>): Dele
     notes:       merge(a?.notes,       b?.notes),
     noteFolders: merge(a?.noteFolders, b?.noteFolders),
     statuses:    merge(a?.statuses,    b?.statuses),
+    habits:      merge(a?.habits,      b?.habits),
   }
 }
 
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store everything nested inside the `data` column (matches the SQL schema)
       const { error } = await supabase.from('user_state').upsert({
         user_id:    u.id,
-        data:       { tasks: s.tasks, projects: s.projects, labels: s.labels, notes: s.notes, noteFolders: s.noteFolders, statuses: s.statuses, _deletedIds: s._deletedIds },
+        data:       { tasks: s.tasks, projects: s.projects, labels: s.labels, notes: s.notes, noteFolders: s.noteFolders, statuses: s.statuses, habits: s.habits, _deletedIds: s._deletedIds },
         updated_at: new Date().toISOString(),
       })
       if (!error) {
@@ -116,9 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!force && cloudMs <= localMs) return false // nothing newer
 
-      const { tasks = [], projects = [], labels = [], notes = [], noteFolders = [], statuses = [], _deletedIds: cloudDeleted } = data.data as {
+      const { tasks = [], projects = [], labels = [], notes = [], noteFolders = [], statuses = [], habits = [], _deletedIds: cloudDeleted } = data.data as {
         tasks?: AppState['tasks'], projects?: AppState['projects'], labels?: AppState['labels'],
         notes?: AppState['notes'], noteFolders?: AppState['noteFolders'], statuses?: AppState['statuses'],
+        habits?: AppState['habits'],
         _deletedIds?: Partial<DeletedIds>
       }
 
@@ -136,6 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             notes:       mergeByDate(cur.notes,        notes,       deleted.notes),
             noteFolders: addOnly(cur.noteFolders,      noteFolders, deleted.noteFolders),
             statuses:    addOnly(cur.statuses,         statuses,    deleted.statuses),
+            // Habits change often (toggling logs) → merge by recency like tasks/notes.
+            habits:      mergeByDate(cur.habits ?? [], habits,      deleted.habits),
             _deletedIds: deleted,
           },
           mode: 'replace',
@@ -198,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userRef.current) upload(userRef.current, stateRef.current)
     }, 3000)
     return () => { if (uploadTimerRef.current) clearTimeout(uploadTimerRef.current) }
-  }, [state.tasks, state.projects, state.labels, state.notes, state.noteFolders, upload])
+  }, [state.tasks, state.projects, state.labels, state.notes, state.noteFolders, state.statuses, state.habits, upload])
 
   // ── Poll every 30s for changes from other devices ─────────────────────────
   useEffect(() => {

@@ -62,7 +62,7 @@ type Action =
   | { type: 'ADD_TEMPLATE';    payload: Omit<TaskTemplate, 'id'> }
   | { type: 'UPDATE_TEMPLATE'; payload: TaskTemplate }
   | { type: 'DELETE_TEMPLATE'; payload: string }
-  | { type: 'ADD_HABIT';        payload: Omit<Habit, 'id' | 'createdAt'> }
+  | { type: 'ADD_HABIT';        payload: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'> }
   | { type: 'UPDATE_HABIT';     payload: Partial<Habit> & { id: string } }
   | { type: 'DELETE_HABIT';     payload: string }
   | { type: 'TOGGLE_HABIT_LOG'; payload: { id: string; date: string } }
@@ -72,17 +72,18 @@ const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
 function tombstone(ids: AppState['_deletedIds'], key: keyof DeletedIds, id: string): DeletedIds {
   const now = Date.now()
-  const base: DeletedIds = { tasks: {}, projects: {}, labels: {}, notes: {}, noteFolders: {}, statuses: {}, ...(ids ?? {}) }
+  const base: DeletedIds = { tasks: {}, projects: {}, labels: {}, notes: {}, noteFolders: {}, statuses: {}, habits: {}, ...(ids ?? {}) }
   return { ...base, [key]: { ...base[key], [id]: now } }
 }
 
 function pruneTombstones(ids: AppState['_deletedIds']): AppState['_deletedIds'] {
   if (!ids) return ids
   const cutoff = Date.now() - TOMBSTONE_TTL_MS
-  const prune = (rec: Record<string, number>) =>
-    Object.fromEntries(Object.entries(rec).filter(([, ts]) => ts > cutoff))
+  const prune = (rec?: Record<string, number>) =>
+    Object.fromEntries(Object.entries(rec ?? {}).filter(([, ts]) => ts > cutoff))
   return { tasks: prune(ids.tasks), projects: prune(ids.projects), labels: prune(ids.labels),
-           notes: prune(ids.notes), noteFolders: prune(ids.noteFolders), statuses: prune(ids.statuses) }
+           notes: prune(ids.notes), noteFolders: prune(ids.noteFolders), statuses: prune(ids.statuses),
+           habits: prune(ids.habits) }
 }
 
 function systemPrefersDark(): boolean {
@@ -144,7 +145,8 @@ function getInitialState(): AppState {
         language:     parsed.language     ?? 'vi',
         notifBefore:  parsed.notifBefore  ?? [15, 30, 60],
         templates:    parsed.templates    ?? DEFAULT_TEMPLATES,
-        habits:       parsed.habits       ?? [],
+        // Backfill updatedAt on habits saved before sync support existed.
+        habits:       (parsed.habits ?? []).map((h: Habit) => ({ ...h, updatedAt: h.updatedAt ?? h.createdAt })),
         _deletedIds:  pruneTombstones(parsed._deletedIds),
       }
     }
@@ -331,13 +333,17 @@ function reducer(state: AppState, action: Action): AppState {
       const maxOrder = (state.habits ?? []).reduce((m, h) => Math.max(m, h.order), -1)
       return {
         ...state,
-        habits: [...(state.habits ?? []), { ...action.payload, id: generateId(), createdAt: now, order: action.payload.order ?? maxOrder + 1 }],
+        habits: [...(state.habits ?? []), { ...action.payload, id: generateId(), createdAt: now, updatedAt: now, order: action.payload.order ?? maxOrder + 1 }],
       }
     }
     case 'UPDATE_HABIT':
-      return { ...state, habits: (state.habits ?? []).map(h => h.id === action.payload.id ? { ...h, ...action.payload } : h) }
+      return { ...state, habits: (state.habits ?? []).map(h => h.id === action.payload.id ? { ...h, ...action.payload, updatedAt: now } : h) }
     case 'DELETE_HABIT':
-      return { ...state, habits: (state.habits ?? []).filter(h => h.id !== action.payload) }
+      return {
+        ...state,
+        habits: (state.habits ?? []).filter(h => h.id !== action.payload),
+        _deletedIds: tombstone(state._deletedIds, 'habits', action.payload),
+      }
     case 'TOGGLE_HABIT_LOG': {
       const { id, date } = action.payload
       return {
@@ -345,7 +351,7 @@ function reducer(state: AppState, action: Action): AppState {
         habits: (state.habits ?? []).map(h => {
           if (h.id !== id) return h
           const has = h.logs.some(l => l.date === date)
-          return { ...h, logs: has ? h.logs.filter(l => l.date !== date) : [...h.logs, { date }] }
+          return { ...h, logs: has ? h.logs.filter(l => l.date !== date) : [...h.logs, { date }], updatedAt: now }
         }),
       }
     }

@@ -100,6 +100,7 @@ export interface Habit {
   customDays?: number[] // 0=Sun, 1=Mon, …, 6=Sat
   logs: HabitLog[]
   createdAt: string
+  updatedAt: string  // bumped on every mutation → drives last-write-wins cloud sync
   order: number
 }
 
@@ -124,6 +125,7 @@ export interface DeletedIds {
   notes:       Record<string, number>
   noteFolders: Record<string, number>
   statuses:    Record<string, number>
+  habits:      Record<string, number>
 }
 
 export interface AppState {
