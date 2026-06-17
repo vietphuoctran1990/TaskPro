@@ -20,7 +20,10 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const POLL_MS = 30_000
+// Polling is the fallback when Supabase Realtime isn't available; Realtime (below)
+// delivers near-instant cross-device updates when the table is in the publication.
+const POLL_MS = 15_000
+const UPLOAD_DEBOUNCE_MS = 1_500
 
 // Merge tombstones from two sources; union of both
 function mergeTombstones(a?: Partial<DeletedIds>, b?: Partial<DeletedIds>): DeletedIds {
@@ -36,10 +39,14 @@ function mergeTombstones(a?: Partial<DeletedIds>, b?: Partial<DeletedIds>): Dele
   }
 }
 
-// Merge two arrays by id; prefer newer updatedAt. Skip items present in tombstones.
+// Merge two arrays by id; prefer newer updatedAt. Drop items present in tombstones
+// — both local AND remote — so a deletion on one device propagates to the others.
 function mergeByDate<T extends { id: string }>(local: T[], remote: T[], deleted: Record<string, number> = {}, dateKey = 'updatedAt'): T[] {
   const map = new Map<string, T>()
-  for (const item of local) map.set(item.id, item)
+  for (const item of local) {
+    if (deleted[item.id]) continue
+    map.set(item.id, item)
+  }
   for (const item of remote) {
     if (deleted[item.id]) continue
     const existing = map.get(item.id)
@@ -54,10 +61,12 @@ function mergeByDate<T extends { id: string }>(local: T[], remote: T[], deleted:
   return Array.from(map.values())
 }
 
-// Add cloud items not already present locally. Skip items present in tombstones.
+// Add cloud items not already present locally. Drop tombstoned items (local + remote)
+// so deletions propagate across devices.
 function addOnly<T extends { id: string }>(local: T[], remote: T[], deleted: Record<string, number> = {}): T[] {
-  const ids = new Set(local.map(i => i.id))
-  return [...local, ...remote.filter(i => !ids.has(i.id) && !deleted[i.id])]
+  const kept = local.filter(i => !deleted[i.id])
+  const ids  = new Set(kept.map(i => i.id))
+  return [...kept, ...remote.filter(i => !ids.has(i.id) && !deleted[i.id])]
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -200,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (uploadTimerRef.current) clearTimeout(uploadTimerRef.current)
     uploadTimerRef.current = setTimeout(() => {
       if (userRef.current) upload(userRef.current, stateRef.current)
-    }, 3000)
+    }, UPLOAD_DEBOUNCE_MS)
     return () => { if (uploadTimerRef.current) clearTimeout(uploadTimerRef.current) }
   }, [state.tasks, state.projects, state.labels, state.notes, state.noteFolders, state.statuses, state.habits, upload])
 
@@ -225,6 +234,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [pullFromCloud])
+
+  // ── Realtime: pull instantly when another device writes to our cloud row ───
+  // Best-effort — if the table isn't in the Supabase realtime publication this
+  // simply never fires and the 15s poll above keeps things in sync.
+  useEffect(() => {
+    if (!supabase || !user) return
+    const channel = supabase
+      .channel(`user_state:${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_state', filter: `user_id=eq.${user.id}` },
+        () => { if (initializedRef.current) pullFromCloud(user) }
+      )
+      .subscribe()
+    return () => { supabase!.removeChannel(channel) }
+  }, [user, pullFromCloud])
 
   // ── Public API ─────────────────────────────────────────────────────────────
   const signIn = useCallback(async (email: string, password: string) => {
