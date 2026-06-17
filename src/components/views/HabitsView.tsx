@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, memo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Flame, Check, Pencil, Trash2, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { todayLocalISO } from '../../lib/dateLocal'
@@ -13,6 +14,12 @@ const PRESET_COLORS = [
   '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e',
   '#f97316', '#f59e0b', '#22c55e', '#10b981',
   '#06b6d4', '#0ea5e9',
+]
+
+const PRESET_EMOJIS = [
+  '⭐', '🏃', '💪', '📚', '💧', '🧘', '🥗', '😴',
+  '✍️', '🎯', '🧹', '💊', '🚭', '☀️', '🌙', '🎨',
+  '🎸', '💻', '🙏', '❤️',
 ]
 
 const DEFAULT_EMOJI = '⭐'
@@ -82,7 +89,10 @@ function HabitForm({ habit, nextOrder, onClose }: {
 
   const days = t.habits.days
 
-  return (
+  // Portal to body — the views render inside a `will-change: transform` container
+  // (.view-fade-in) which would otherwise become the containing block for this
+  // `position: fixed` overlay, clipping/offsetting it.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[90dvh] overflow-y-auto">
@@ -99,31 +109,55 @@ function HabitForm({ habit, nextOrder, onClose }: {
         </div>
 
         <div className="px-5 py-5 space-y-5">
-          {/* Emoji + Color */}
-          <div className="flex gap-4 items-start">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{t.habits.emoji}</label>
+          {/* Emoji picker */}
+          <div>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{t.habits.emoji}</label>
+            <div className="flex items-start gap-3">
+              {/* Live preview + custom input */}
               <input
                 value={emoji}
                 onChange={e => setEmoji(lastGrapheme(e.target.value))}
-                className="w-16 h-12 text-2xl text-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                aria-label={t.habits.emoji}
+                className="w-14 h-14 text-3xl text-center shrink-0 rounded-xl border-2 bg-slate-50 dark:bg-slate-800 focus:outline-none dark:text-white"
+                style={{ borderColor: color }}
               />
-            </div>
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{t.habits.color}</label>
-              <div className="flex flex-wrap gap-2.5">
-                {PRESET_COLORS.map(c => (
+              {/* Tap-to-pick grid */}
+              <div className="flex-1 grid grid-cols-8 sm:grid-cols-10 gap-1">
+                {PRESET_EMOJIS.map(em => (
                   <button
-                    key={c}
-                    onClick={() => setColor(c)}
+                    key={em}
+                    type="button"
+                    onClick={() => setEmoji(em)}
                     className={cn(
-                      'w-7 h-7 rounded-full transition-all',
-                      color === c ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 scale-110' : 'hover:scale-110'
+                      'aspect-square flex items-center justify-center text-lg rounded-lg transition-colors',
+                      emoji === em
+                        ? 'bg-indigo-100 dark:bg-indigo-900/40 ring-1 ring-indigo-400'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-800'
                     )}
-                    style={{ backgroundColor: c, outlineColor: c }}
-                  />
+                  >
+                    {em}
+                  </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Color */}
+          <div>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{t.habits.color}</label>
+            <div className="flex flex-wrap gap-2.5">
+              {PRESET_COLORS.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={cn(
+                    'w-7 h-7 rounded-full transition-all',
+                    color === c ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 scale-110' : 'hover:scale-110'
+                  )}
+                  style={{ backgroundColor: c, outlineColor: c }}
+                />
+              ))}
             </div>
           </div>
 
@@ -239,7 +273,8 @@ function HabitForm({ habit, nextOrder, onClose }: {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
