@@ -1,16 +1,17 @@
 import { memo } from 'react'
-import { LayoutDashboard, LayoutGrid, List, Calendar, StickyNote } from 'lucide-react'
+import { LayoutDashboard, LayoutGrid, List, Calendar, StickyNote, Target } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
 
-type NavMode = 'dashboard' | 'kanban' | 'list' | 'calendar' | 'notes'
+type NavMode = 'dashboard' | 'kanban' | 'list' | 'calendar' | 'notes' | 'habits'
 
 const NAV: { icon: React.ElementType; vi: string; en: string; mode: NavMode }[] = [
-  { icon: LayoutDashboard, vi: 'Tổng quan', en: 'Overview', mode: 'dashboard' },
-  { icon: LayoutGrid,      vi: 'Kanban',    en: 'Board',    mode: 'kanban' },
-  { icon: List,            vi: 'Danh sách', en: 'List',     mode: 'list' },
-  { icon: Calendar,        vi: 'Lịch',      en: 'Calendar', mode: 'calendar' },
-  { icon: StickyNote,      vi: 'Ghi chú',   en: 'Notes',    mode: 'notes' },
+  { icon: LayoutDashboard, vi: 'Tổng quan',  en: 'Overview', mode: 'dashboard' },
+  { icon: LayoutGrid,      vi: 'Kanban',     en: 'Board',    mode: 'kanban' },
+  { icon: List,            vi: 'Danh sách',  en: 'List',     mode: 'list' },
+  { icon: Calendar,        vi: 'Lịch',       en: 'Calendar', mode: 'calendar' },
+  { icon: StickyNote,      vi: 'Ghi chú',    en: 'Notes',    mode: 'notes' },
+  { icon: Target,          vi: 'Thói quen',  en: 'Habits',   mode: 'habits' },
 ]
 
 const BottomNav = memo(function BottomNav() {
@@ -29,18 +30,18 @@ const BottomNav = memo(function BottomNav() {
               aria-current={active ? 'page' : undefined}
               aria-label={isVi ? vi : en}
               className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 transition-colors',
+                'flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors',
                 active
                   ? 'text-indigo-600 dark:text-indigo-400'
                   : 'text-slate-400 dark:text-slate-500'
               )}
             >
               <Icon
-                size={22}
+                size={20}
                 strokeWidth={active ? 2.5 : 1.75}
                 className="transition-transform active:scale-90"
               />
-              <span className="text-[10px] font-medium leading-none">{isVi ? vi : en}</span>
+              <span className="text-[9px] font-medium leading-none">{isVi ? vi : en}</span>
             </button>
           )
         })}

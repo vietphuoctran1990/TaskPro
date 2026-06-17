@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Search, LayoutDashboard, List, Calendar, GanttChart, BarChart3, StickyNote,
+  Search, LayoutDashboard, List, Calendar, GanttChart, BarChart3, StickyNote, Target,
   Plus, Moon, Sun, Languages, RefreshCw, Pin, CheckSquare, ChevronRight, Monitor,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
@@ -30,7 +30,7 @@ interface Item {
 
 const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
   dashboard: BarChart3, kanban: LayoutDashboard, list: List,
-  calendar: Calendar, timeline: GanttChart, notes: StickyNote,
+  calendar: Calendar, timeline: GanttChart, notes: StickyNote, habits: Target,
 }
 
 export default function CommandPalette({ open, onClose, onNewTask, onNewNote, onViewTask, onEditNote }: CommandPaletteProps) {
@@ -83,7 +83,7 @@ export default function CommandPalette({ open, onClose, onNewTask, onNewNote, on
     })
 
     // Views
-    const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes']
+    const views: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes', 'habits']
     views.forEach(v => {
       out.push({
         id: `view-${v}`, group: t.command.groupViews,

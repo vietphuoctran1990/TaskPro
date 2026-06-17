@@ -1,6 +1,6 @@
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type Status = string           // 'todo' | 'in_progress' | 'in_review' | 'done' or any custom id
-export type ViewMode = 'dashboard' | 'kanban' | 'list' | 'calendar' | 'timeline' | 'notes'
+export type ViewMode = 'dashboard' | 'kanban' | 'list' | 'calendar' | 'timeline' | 'notes' | 'habits'
 export type SortField = 'title' | 'priority' | 'status' | 'dueDate' | 'sla' | 'createdAt'
 export type SortDir = 'asc' | 'desc'
 
@@ -86,6 +86,23 @@ export interface Note {
   updatedAt: string
 }
 
+export interface HabitLog {
+  date: string // 'YYYY-MM-DD'
+}
+
+export interface Habit {
+  id: string
+  title: string
+  description?: string
+  emoji: string
+  color: string
+  frequency: 'daily' | 'weekdays' | 'weekends' | 'custom'
+  customDays?: number[] // 0=Sun, 1=Mon, …, 6=Sat
+  logs: HabitLog[]
+  createdAt: string
+  order: number
+}
+
 export type DateFilter = 'all' | 'today' | 'tomorrow' | 'upcoming'
 
 export interface TaskTemplate {
@@ -133,6 +150,7 @@ export interface AppState {
   language: 'en' | 'vi'
   notifBefore: number[]
   templates: TaskTemplate[]
+  habits: Habit[]
   _deletedIds?: DeletedIds
 }
 

@@ -33,7 +33,7 @@ export interface Translations {
     newTask: string; search: string; allPriorities: string; allStatuses: string
     allSLA: string; clear: string; language: string; filters: string; tasks: string
   }
-  views: { dashboard: string; kanban: string; list: string; calendar: string; timeline: string; notes: string }
+  views: { dashboard: string; kanban: string; list: string; calendar: string; timeline: string; notes: string; habits: string }
   status: { todo: string; in_progress: string; in_review: string; done: string }
   priority: {
     low: string; medium: string; high: string; urgent: string; allPriorities: string
@@ -146,5 +146,32 @@ export interface Translations {
     groupView: string
     switchView: string
     navigate: string
+  }
+  habits: {
+    title: string
+    emptyTitle: string
+    emptyDesc: string
+    addFirst: string
+    addHabit: string
+    editHabit: string
+    name: string
+    namePlaceholder: string
+    description: string
+    descPlaceholder: string
+    emoji: string
+    color: string
+    frequency: string
+    daily: string
+    weekdays: string
+    weekends: string
+    custom: string
+    days: string[]
+    allDone: string
+    nameRequired: string
+    confirmDelete: string
+    delete: string
+    save: string
+    create: string
+    cancel: string
   }
 }

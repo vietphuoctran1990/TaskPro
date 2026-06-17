@@ -1,4 +1,4 @@
-import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote, Monitor } from 'lucide-react'
+import { Moon, Sun, SlidersHorizontal, Plus, Menu, LayoutDashboard, List, Calendar, BarChart3, User, RefreshCw, LogOut, Loader2, GanttChart, Search, X, StickyNote, Monitor, Target } from 'lucide-react'
 import { useState, useEffect, useRef, memo, useMemo, Fragment } from 'react'
 import { cn } from '../../lib/utils'
 import { useApp } from '../../context/AppContext'
@@ -69,10 +69,10 @@ function ThemeMenu() {
 }
 
 const VIEW_ICONS: Record<ViewMode, React.ElementType> = {
-  dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar, timeline: GanttChart, notes: StickyNote,
+  dashboard: BarChart3, kanban: LayoutDashboard, list: List, calendar: Calendar, timeline: GanttChart, notes: StickyNote, habits: Target,
 }
 
-const ALL_VIEWS: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes']
+const ALL_VIEWS: ViewMode[] = ['dashboard', 'kanban', 'list', 'calendar', 'timeline', 'notes', 'habits']
 
 const ViewSwitcher = memo(function ViewSwitcher({ viewMode, views, t, dispatch }: {
   viewMode: ViewMode

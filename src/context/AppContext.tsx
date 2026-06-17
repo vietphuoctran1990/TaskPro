@@ -8,7 +8,7 @@ import {
 } from 'react'
 import type {
   AppState, Task, Project, Label, Note, NoteFolder, Priority, Status, ViewMode,
-  SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode, StatusDef, DeletedIds, TaskTemplate,
+  SortField, SortDir, SLAStatus, Comment, DateFilter, Density, DarkModeMode, StatusDef, DeletedIds, TaskTemplate, Habit,
 } from '../types'
 import { DEFAULT_PROJECTS, DEFAULT_LABELS, DEFAULT_TASKS, DEFAULT_STATUSES, DEFAULT_TEMPLATES } from '../data/defaults'
 import {
@@ -62,6 +62,10 @@ type Action =
   | { type: 'ADD_TEMPLATE';    payload: Omit<TaskTemplate, 'id'> }
   | { type: 'UPDATE_TEMPLATE'; payload: TaskTemplate }
   | { type: 'DELETE_TEMPLATE'; payload: string }
+  | { type: 'ADD_HABIT';        payload: Omit<Habit, 'id' | 'createdAt'> }
+  | { type: 'UPDATE_HABIT';     payload: Partial<Habit> & { id: string } }
+  | { type: 'DELETE_HABIT';     payload: string }
+  | { type: 'TOGGLE_HABIT_LOG'; payload: { id: string; date: string } }
 
 const STORAGE_KEY = 'taskpro_v2_state'
 const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -140,6 +144,7 @@ function getInitialState(): AppState {
         language:     parsed.language     ?? 'vi',
         notifBefore:  parsed.notifBefore  ?? [15, 30, 60],
         templates:    parsed.templates    ?? DEFAULT_TEMPLATES,
+        habits:       parsed.habits       ?? [],
         _deletedIds:  pruneTombstones(parsed._deletedIds),
       }
     }
@@ -168,6 +173,7 @@ function getInitialState(): AppState {
     language: 'vi',
     notifBefore: [15, 30, 60],
     templates: DEFAULT_TEMPLATES,
+    habits: [],
   }
 }
 
@@ -321,6 +327,28 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, templates: (state.templates ?? []).map(tp => tp.id === action.payload.id ? action.payload : tp) }
     case 'DELETE_TEMPLATE':
       return { ...state, templates: (state.templates ?? []).filter(tp => tp.id !== action.payload) }
+    case 'ADD_HABIT': {
+      const maxOrder = (state.habits ?? []).reduce((m, h) => Math.max(m, h.order), -1)
+      return {
+        ...state,
+        habits: [...(state.habits ?? []), { ...action.payload, id: generateId(), createdAt: now, order: action.payload.order ?? maxOrder + 1 }],
+      }
+    }
+    case 'UPDATE_HABIT':
+      return { ...state, habits: (state.habits ?? []).map(h => h.id === action.payload.id ? { ...h, ...action.payload } : h) }
+    case 'DELETE_HABIT':
+      return { ...state, habits: (state.habits ?? []).filter(h => h.id !== action.payload) }
+    case 'TOGGLE_HABIT_LOG': {
+      const { id, date } = action.payload
+      return {
+        ...state,
+        habits: (state.habits ?? []).map(h => {
+          if (h.id !== id) return h
+          const has = h.logs.some(l => l.date === date)
+          return { ...h, logs: has ? h.logs.filter(l => l.date !== date) : [...h.logs, { date }] }
+        }),
+      }
+    }
     case 'IMPORT_STATE': {
       const { data, mode } = action.payload
       if (mode === 'replace') {
@@ -332,6 +360,7 @@ function reducer(state: AppState, action: Action): AppState {
       const existLIds = new Set(state.labels.map(l => l.id))
       const existNIds = new Set(state.notes.map(n => n.id))
       const existNFIds = new Set(state.noteFolders.map(f => f.id))
+      const existHIds = new Set((state.habits ?? []).map(h => h.id))
       return {
         ...state,
         tasks:       [...state.tasks,       ...data.tasks.filter(t => !existIds.has(t.id))],
@@ -339,6 +368,7 @@ function reducer(state: AppState, action: Action): AppState {
         labels:      [...state.labels,      ...data.labels.filter(l => !existLIds.has(l.id))],
         notes:       [...state.notes,       ...(data.notes ?? []).filter(n => !existNIds.has(n.id))],
         noteFolders: [...state.noteFolders, ...(data.noteFolders ?? []).filter(f => !existNFIds.has(f.id))],
+        habits:      [...(state.habits ?? []), ...(data.habits ?? []).filter(h => !existHIds.has(h.id))],
       }
     }
     default:

@@ -13,6 +13,7 @@ const CalendarView    = lazy(() => import('./components/views/CalendarView'))
 const DashboardView   = lazy(() => import('./components/views/DashboardView'))
 const TimelineView    = lazy(() => import('./components/views/TimelineView'))
 const NotesView       = lazy(() => import('./components/notes/NotesView'))
+const HabitsView      = lazy(() => import('./components/views/HabitsView'))
 // Heavy modals lazy-loaded on first open
 const TaskForm        = lazy(() => import('./components/tasks/TaskForm'))
 const TaskDetail      = lazy(() => import('./components/tasks/TaskDetail'))
@@ -160,7 +161,7 @@ function AppShell() {
 
   // Additional shortcuts: n=new task, /=search, 1-6=views
   useEffect(() => {
-    const VIEW_KEYS: Record<string, ViewMode> = { '1': 'dashboard', '2': 'kanban', '3': 'list', '4': 'calendar', '5': 'timeline', '6': 'notes' }
+    const VIEW_KEYS: Record<string, ViewMode> = { '1': 'dashboard', '2': 'kanban', '3': 'list', '4': 'calendar', '5': 'timeline', '6': 'notes', '7': 'habits' }
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
       const tag = (document.activeElement as HTMLElement)?.tagName
@@ -286,19 +287,22 @@ function AppShell() {
                   onEditNote={handleEditNote}
                 />
               )}
+              {state.viewMode === 'habits' && <HabitsView />}
             </div>
           </Suspense>
         </main>
       </div>
 
       {/* Mobile FAB — sits left of the AI chat FAB, clears the bottom nav + safe area */}
-      <button
-        onClick={() => state.viewMode === 'notes' ? handleAddNote() : handleAddTask()}
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-20 z-30 sm:hidden w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/40 active:scale-90 transition-transform flex items-center justify-center"
-        aria-label={state.viewMode === 'notes' ? 'Tạo ghi chú' : 'Thêm công việc'}
-      >
-        <Plus size={20} />
-      </button>
+      {state.viewMode !== 'habits' && (
+        <button
+          onClick={() => state.viewMode === 'notes' ? handleAddNote() : handleAddTask()}
+          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-20 z-30 sm:hidden w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/40 active:scale-90 transition-transform flex items-center justify-center"
+          aria-label={state.viewMode === 'notes' ? 'Tạo ghi chú' : 'Thêm công việc'}
+        >
+          <Plus size={20} />
+        </button>
+      )}
 
       {/* Modals — wrapped in Suspense so lazy chunks load on first open */}
       <Suspense fallback={null}>
