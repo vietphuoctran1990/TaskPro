@@ -149,6 +149,8 @@ export const vi: Translations = {
     notifyBefore: 'Nhắc trước', min15: '15 phút', min30: '30 phút', hour1: '1 giờ',
     iosInstall: 'Cài app để dùng thông báo',
     iosInstallDesc: 'Nhấn Chia sẻ → "Thêm vào Màn hình chính", rồi mở từ đó.',
+    morningBrief: 'Tóm tắt sáng (6:00 SA)',
+    morningBriefDesc: 'Nhận thông báo tổng quan nhiệm vụ mỗi sáng 6 giờ',
   },
   pwa: {
     installTitle: 'Cài đặt TaskPro', installDesc: 'Thêm vào màn hình chính để trải nghiệm tốt nhất.',

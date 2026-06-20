@@ -123,6 +123,7 @@ export interface Translations {
     permissionGranted: string; upcomingCount: (n: number) => string
     notifyBefore: string; min15: string; min30: string; hour1: string
     iosInstall: string; iosInstallDesc: string
+    morningBrief: string; morningBriefDesc: string
   }
   pwa: {
     installTitle: string; installDesc: string; install: string; installing: string

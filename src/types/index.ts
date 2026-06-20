@@ -153,6 +153,7 @@ export interface AppState {
   notifBefore: number[]
   templates: TaskTemplate[]
   habits: Habit[]
+  morningBriefEnabled: boolean
   _deletedIds?: DeletedIds
 }
 

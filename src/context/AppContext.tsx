@@ -66,6 +66,7 @@ type Action =
   | { type: 'UPDATE_HABIT';     payload: Partial<Habit> & { id: string } }
   | { type: 'DELETE_HABIT';     payload: string }
   | { type: 'TOGGLE_HABIT_LOG'; payload: { id: string; date: string } }
+  | { type: 'SET_MORNING_BRIEF'; payload: boolean }
 
 const STORAGE_KEY = 'taskpro_v2_state'
 const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -146,8 +147,9 @@ function getInitialState(): AppState {
         notifBefore:  parsed.notifBefore  ?? [15, 30, 60],
         templates:    parsed.templates    ?? DEFAULT_TEMPLATES,
         // Backfill updatedAt on habits saved before sync support existed.
-        habits:       (parsed.habits ?? []).map((h: Habit) => ({ ...h, updatedAt: h.updatedAt ?? h.createdAt })),
-        _deletedIds:  pruneTombstones(parsed._deletedIds),
+        habits:             (parsed.habits ?? []).map((h: Habit) => ({ ...h, updatedAt: h.updatedAt ?? h.createdAt })),
+        morningBriefEnabled: parsed.morningBriefEnabled ?? false,
+        _deletedIds:         pruneTombstones(parsed._deletedIds),
       }
     }
   } catch { /* ignore */ }
@@ -176,6 +178,7 @@ function getInitialState(): AppState {
     notifBefore: [15, 30, 60],
     templates: DEFAULT_TEMPLATES,
     habits: [],
+    morningBriefEnabled: false,
   }
 }
 
@@ -355,6 +358,8 @@ function reducer(state: AppState, action: Action): AppState {
         }),
       }
     }
+    case 'SET_MORNING_BRIEF':
+      return { ...state, morningBriefEnabled: action.payload }
     case 'IMPORT_STATE': {
       const { data, mode } = action.payload
       if (mode === 'replace') {

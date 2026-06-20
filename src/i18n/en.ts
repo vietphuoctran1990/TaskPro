@@ -147,6 +147,8 @@ export const en: Translations = {
     notifyBefore: 'Remind before', min15: '15 min', min30: '30 min', hour1: '1 hour',
     iosInstall: 'Install app to use notifications',
     iosInstallDesc: 'Tap Share → "Add to Home Screen", then open from there.',
+    morningBrief: 'Morning briefing (6:00 AM)',
+    morningBriefDesc: 'Get a daily task summary notification at 6 AM',
   },
   pwa: {
     installTitle: 'Install TaskPro', installDesc: 'Add to your home screen for the best experience.',

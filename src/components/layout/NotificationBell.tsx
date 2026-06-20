@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Bell, BellOff, CheckCircle2, X, Send, Smartphone } from 'lucide-react'
+import { Bell, BellOff, CheckCircle2, X, Send, Smartphone, Sunrise } from 'lucide-react'
 import { cn, getDeadline, getTimeRemaining, isIOSDevice, isInstalledPWA } from '../../lib/utils'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
@@ -126,6 +126,27 @@ export default function NotificationBell() {
       : [...state.notifBefore, minutes]
     dispatch({ type: 'SET_NOTIF_BEFORE', payload: next })
   }
+
+  const [briefStatus, setBriefStatus] = useState<'idle' | 'saving'>('idle')
+  const handleToggleMorningBrief = useCallback(async () => {
+    const deviceId = localStorage.getItem('taskpro-device-id')
+    if (!deviceId) return
+    const next = !state.morningBriefEnabled
+    dispatch({ type: 'SET_MORNING_BRIEF', payload: next })
+    setBriefStatus('saving')
+    try {
+      await fetch('/api/morning-brief', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId, enabled: next }),
+      })
+    } catch (err) {
+      logger.error('[morning-brief] toggle failed:', err)
+      dispatch({ type: 'SET_MORNING_BRIEF', payload: !next }) // revert on error
+    } finally {
+      setBriefStatus('idle')
+    }
+  }, [state.morningBriefEnabled, dispatch])
 
   const labelFor = (m: number) =>
     m === 15 ? t.notifications.min15 : m === 30 ? t.notifications.min30 : t.notifications.hour1
@@ -276,6 +297,38 @@ export default function NotificationBell() {
                 })}
               </div>
             </div>
+
+            {/* Morning brief toggle */}
+            {permission === 'granted' && (
+              <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/60 dark:bg-slate-800/60">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Sunrise size={14} className="shrink-0 text-amber-500" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{t.notifications.morningBrief}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{t.notifications.morningBriefDesc}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleToggleMorningBrief}
+                    disabled={briefStatus === 'saving'}
+                    className={cn(
+                      'relative shrink-0 w-9 h-5 rounded-full transition-colors focus:outline-none',
+                      state.morningBriefEnabled
+                        ? 'bg-amber-500'
+                        : 'bg-slate-200 dark:bg-slate-600',
+                      briefStatus === 'saving' && 'opacity-60 cursor-not-allowed'
+                    )}
+                    aria-label={t.notifications.morningBrief}
+                  >
+                    <span className={cn(
+                      'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform',
+                      state.morningBriefEnabled && 'translate-x-4'
+                    )} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Footer */}
             {permission === 'granted' && (
