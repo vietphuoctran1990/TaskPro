@@ -119,7 +119,7 @@ function buildAllSchedulesFor(
     .flatMap(task => {
       const deadline = getDeadline(task)
       if (!deadline) return []
-      const timeStr = deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      const timeStr = deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
       return activeThresholds.flatMap(({ key, label, minutes }) => {
         const notifKey = `${task.id}-${key}`
         const fireAt  = deadline.getTime() - minutes * 60_000

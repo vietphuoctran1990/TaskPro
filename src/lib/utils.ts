@@ -25,8 +25,8 @@ export function generateId(): string {
 
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const [y, m, d] = dateStr.split('-')
+  return `${d}/${m}/${y}`
 }
 
 export function formatDateTime(dateStr: string | null, timeStr: string | null): string {
@@ -55,7 +55,7 @@ export function formatRelativeTime(iso: string, language: 'vi' | 'en' = 'vi'): s
   if (diffHr < 24) return `${diffHr}h ago`
   if (diffDay === 1) return 'Yesterday'
   if (diffDay < 7) return `${diffDay}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export function getDeadline(task: Task): Date | null {

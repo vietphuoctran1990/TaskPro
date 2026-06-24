@@ -134,7 +134,7 @@ function UserMenu({ onOpenAuth }: { onOpenAuth: () => void }) {
   const syncLabel = syncing
     ? t.auth.syncing
     : lastSynced
-      ? t.auth.syncedAt(lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+      ? t.auth.syncedAt(lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }))
       : t.auth.notSynced
 
   return (
