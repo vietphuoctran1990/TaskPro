@@ -291,18 +291,28 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueDate}</label>
-            <div className="relative">
-              <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <div className="relative h-9 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
+              <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+              <span className="absolute left-8 top-1/2 -translate-y-1/2 text-sm pointer-events-none z-10 select-none">
+                {form.dueDate
+                  ? <span className="text-slate-900 dark:text-slate-100">{`${form.dueDate.slice(8, 10)}/${form.dueDate.slice(5, 7)}/${form.dueDate.slice(0, 4)}`}</span>
+                  : <span className="text-slate-400 dark:text-slate-500">dd/mm/yyyy</span>}
+              </span>
               <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)}
-                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueTime} <span className="text-slate-400 dark:text-slate-500 font-normal">{t.form.slaTimeHint}</span></label>
-            <div className="relative">
-              <Clock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <div className="relative h-9 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
+              <Clock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+              <span className="absolute left-8 top-1/2 -translate-y-1/2 text-sm pointer-events-none z-10 select-none">
+                {form.dueTime
+                  ? <span className="text-slate-900 dark:text-slate-100">{form.dueTime}</span>
+                  : <span className="text-slate-400 dark:text-slate-500">HH:mm</span>}
+              </span>
               <input type="time" value={form.dueTime} onChange={e => set('dueTime', e.target.value)}
-                className="h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
             </div>
           </div>
         </div>
@@ -364,8 +374,15 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
               <span className="text-sm text-slate-500 dark:text-slate-400">{recurrenceUnitLabel}</span>
               <span className="text-slate-300">·</span>
               <label className="text-sm text-slate-500 dark:text-slate-400">{t.recurrence.endDate}</label>
-              <input type="date" value={form.recurrenceEndDate} onChange={e => set('recurrenceEndDate', e.target.value)}
-                className="h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <div className="relative h-9 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none z-10 select-none">
+                  {form.recurrenceEndDate
+                    ? <span className="text-slate-900 dark:text-slate-100">{`${form.recurrenceEndDate.slice(8, 10)}/${form.recurrenceEndDate.slice(5, 7)}/${form.recurrenceEndDate.slice(0, 4)}`}</span>
+                    : <span className="text-slate-400 dark:text-slate-500">dd/mm/yyyy</span>}
+                </span>
+                <input type="date" value={form.recurrenceEndDate} onChange={e => set('recurrenceEndDate', e.target.value)}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+              </div>
             </div>
           )}
         </div>
