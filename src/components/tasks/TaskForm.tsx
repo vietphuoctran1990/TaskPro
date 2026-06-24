@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Calendar, Clock, Timer, Repeat, Plus } from 'lucide-react'
+import { Calendar, Clock, Timer, Repeat, Plus, ChevronDown } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import InlineCreate from '../ui/InlineCreate'
@@ -11,20 +11,18 @@ import { useToast } from '../../context/ToastContext'
 import { SubtaskManager } from './SubtaskManager'
 import type { Task, Priority, Status, Recurrence, Subtask } from '../../types'
 
-const INPUT_CLS = 'h-9 w-full pl-8 pr-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const FIELD_CLS ='h-9 w-full pl-8 pr-8 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
-// Auto-formats as user types: digits → DD/MM/YYYY, stores as YYYY-MM-DD
-function DateField({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
+// Text input (DD/MM/YYYY) + calendar icon button that opens native date picker
+function DateField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const pickerRef = useRef<HTMLInputElement>(null)
   const toDisplay = (iso: string) =>
     iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : ''
   const [text, setText] = useState(() => toDisplay(value))
   const prevIso = useRef(value)
 
   useEffect(() => {
-    if (value !== prevIso.current) {
-      prevIso.current = value
-      setText(toDisplay(value))
-    }
+    if (value !== prevIso.current) { prevIso.current = value; setText(toDisplay(value)) }
   }, [value])
 
   const handleChange = (raw: string) => {
@@ -37,22 +35,33 @@ function DateField({ value, onChange, className }: { value: string; onChange: (v
     if (digits.length === 8) {
       const d = digits.slice(0, 2), m = digits.slice(2, 4), y = digits.slice(4)
       const iso = `${y}-${m}-${d}`
-      if (!isNaN(new Date(`${iso}T12:00:00`).getTime())) {
-        prevIso.current = iso
-        onChange(iso)
-      }
+      if (!isNaN(new Date(`${iso}T12:00:00`).getTime())) { prevIso.current = iso; onChange(iso) }
     }
   }
 
   return (
-    <input type="text" inputMode="numeric" value={text} onChange={e => handleChange(e.target.value)}
-      onBlur={() => { if (!text) onChange('') }}
-      placeholder="dd/mm/yyyy" maxLength={10} className={className} />
+    <div className="relative">
+      <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+      <input type="text" inputMode="numeric" value={text}
+        onChange={e => handleChange(e.target.value)}
+        onBlur={() => { if (!text) onChange('') }}
+        placeholder="dd/mm/yyyy" maxLength={10} className={FIELD_CLS} />
+      <button type="button" tabIndex={-1}
+        onClick={() => pickerRef.current?.showPicker?.()}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors"
+        aria-label="Mở lịch chọn ngày">
+        <ChevronDown size={13} />
+      </button>
+      <input ref={pickerRef} type="date" value={value}
+        onChange={e => { prevIso.current = e.target.value; onChange(e.target.value) }}
+        className="sr-only" tabIndex={-1} aria-hidden="true" />
+    </div>
   )
 }
 
-// Auto-formats as user types: digits → HH:mm, stores as HH:mm (24h)
-function TimeField({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
+// Text input (HH:mm) + clock icon button that opens native time picker
+function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const pickerRef = useRef<HTMLInputElement>(null)
   const [text, setText] = useState(value)
   const prevVal = useRef(value)
 
@@ -70,16 +79,28 @@ function TimeField({ value, onChange, className }: { value: string; onChange: (v
       const h = parseInt(digits.slice(0, 2)), m = parseInt(digits.slice(2))
       if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
         const hhmm = `${digits.slice(0, 2)}:${digits.slice(2)}`
-        prevVal.current = hhmm
-        onChange(hhmm)
+        prevVal.current = hhmm; onChange(hhmm)
       }
     }
   }
 
   return (
-    <input type="text" inputMode="numeric" value={text} onChange={e => handleChange(e.target.value)}
-      onBlur={() => { if (!text) onChange('') }}
-      placeholder="HH:mm" maxLength={5} className={className} />
+    <div className="relative">
+      <Clock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+      <input type="text" inputMode="numeric" value={text}
+        onChange={e => handleChange(e.target.value)}
+        onBlur={() => { if (!text) onChange('') }}
+        placeholder="HH:mm" maxLength={5} className={FIELD_CLS} />
+      <button type="button" tabIndex={-1}
+        onClick={() => pickerRef.current?.showPicker?.()}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors"
+        aria-label="Mở đồng hồ chọn giờ">
+        <ChevronDown size={13} />
+      </button>
+      <input ref={pickerRef} type="time" value={value}
+        onChange={e => { prevVal.current = e.target.value; onChange(e.target.value) }}
+        className="sr-only" tabIndex={-1} aria-hidden="true" />
+    </div>
   )
 }
 
@@ -363,17 +384,11 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueDate}</label>
-            <div className="relative">
-              <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <DateField value={form.dueDate} onChange={v => set('dueDate', v)} className={INPUT_CLS} />
-            </div>
+            <DateField value={form.dueDate} onChange={v => set('dueDate', v)} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueTime} <span className="text-slate-400 dark:text-slate-500 font-normal">{t.form.slaTimeHint}</span></label>
-            <div className="relative">
-              <Clock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <TimeField value={form.dueTime} onChange={v => set('dueTime', v)} className={INPUT_CLS} />
-            </div>
+            <TimeField value={form.dueTime} onChange={v => set('dueTime', v)} />
           </div>
         </div>
 
@@ -434,11 +449,9 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
               <span className="text-sm text-slate-500 dark:text-slate-400">{recurrenceUnitLabel}</span>
               <span className="text-slate-300">·</span>
               <label className="text-sm text-slate-500 dark:text-slate-400">{t.recurrence.endDate}</label>
-              <DateField
-                value={form.recurrenceEndDate}
-                onChange={v => set('recurrenceEndDate', v)}
-                className="h-9 w-36 px-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <div className="w-40">
+                <DateField value={form.recurrenceEndDate} onChange={v => set('recurrenceEndDate', v)} />
+              </div>
             </div>
           )}
         </div>
