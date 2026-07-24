@@ -66,13 +66,6 @@
   html.dark ::-webkit-scrollbar-thumb { background: #2d3a4e; }
   html.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-  /* iOS safe area utilities */
-  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
-  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
-  .mb-safe { margin-bottom: env(safe-area-inset-bottom, 0px); }
-  .bottom-safe { bottom: max(1rem, env(safe-area-inset-bottom, 0px)); }
-  .top-safe { top: max(1rem, env(safe-area-inset-top, 0px)); }
-
   /* Smooth transitions for SLA timer */
   @keyframes pulse-soft {
     0%, 100% { opacity: 1; }
@@ -227,6 +220,14 @@
 }
 
 @layer utilities {
+  /* iOS safe area utilities — must live in the utilities layer so they
+     override Tailwind spacing utilities (py-0 etc.) in the cascade */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom, 0px); }
+  .bottom-safe { bottom: max(1rem, env(safe-area-inset-bottom, 0px)); }
+  .top-safe { top: max(1rem, env(safe-area-inset-top, 0px)); }
+
   .scrollbar-thin { scrollbar-width: thin; }
   .animate-in { animation: slideIn 0.2s ease-out; }
   @keyframes slideIn {
