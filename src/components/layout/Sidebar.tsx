@@ -56,7 +56,7 @@ export default function Sidebar({ onClose, mobile, onSync, onManage, onNotes }: 
   }
 
   return (
-    <aside className={cn('flex flex-col bg-white dark:bg-[#0c1220] border-r border-slate-200/80 dark:border-slate-700/60', mobile ? 'w-full h-full' : 'w-60 shrink-0 h-full')}>
+    <aside className={cn('flex flex-col bg-white dark:bg-[#0c1220] border-r border-slate-200/80 dark:border-slate-700/60', mobile ? 'w-full h-full pt-safe' : 'w-60 shrink-0 h-full')}>
       {/* Logo */}
       <div className="flex items-center justify-between px-5 h-14 border-b border-slate-200 dark:border-slate-700 shrink-0">
         <div className="flex items-center gap-2.5">
