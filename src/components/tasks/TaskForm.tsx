@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Calendar, Clock, Timer, Repeat, Plus, ChevronDown } from 'lucide-react'
+import { Calendar, Clock, Timer, Repeat, Plus, ChevronDown, X } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import InlineCreate from '../ui/InlineCreate'
@@ -9,11 +9,15 @@ import { useApp } from '../../context/AppContext'
 import { useT } from '../../i18n'
 import { useToast } from '../../context/ToastContext'
 import { SubtaskManager } from './SubtaskManager'
+import { localISO, todayLocalISO, tomorrowLocalISO } from '../../lib/dateLocal'
 import type { Task, Priority, Status, Recurrence, Subtask } from '../../types'
 
-const FIELD_CLS ='h-9 w-full pl-8 pr-8 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const FIELD_CLS = 'h-9 w-full pl-8 pr-12 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
-// Text input (DD/MM/YYYY) + calendar icon button that opens native date picker
+// Text input (DD/MM/YYYY) with smart completion + native picker + quick clear.
+// Typing partial input and leaving the field auto-completes:
+//   "15" → 15/<this month>/<this year> · "1508" → 15/08/<this year>
+//   "150826" → 15/08/2026 · "15082026" → 15/08/2026
 function DateField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const pickerRef = useRef<HTMLInputElement>(null)
   const toDisplay = (iso: string) =>
@@ -26,29 +30,57 @@ function DateField({ value, onChange }: { value: string; onChange: (v: string) =
   }, [value])
 
   const handleChange = (raw: string) => {
-    if (!raw) { setText(''); onChange(''); return }
+    if (!raw) { setText(''); return }
     const digits = raw.replace(/\D/g, '').slice(0, 8)
     let display = digits
     if (digits.length > 2) display = `${digits.slice(0, 2)}/${digits.slice(2)}`
     if (digits.length > 4) display = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
     setText(display)
-    if (digits.length === 8) {
-      const d = digits.slice(0, 2), m = digits.slice(2, 4), y = digits.slice(4)
-      const iso = `${y}-${m}-${d}`
-      if (!isNaN(new Date(`${iso}T12:00:00`).getTime())) { prevIso.current = iso; onChange(iso) }
+  }
+
+  // Smart-complete partial input on blur; revert to last valid value if nonsense
+  const commit = () => {
+    const digits = text.replace(/\D/g, '')
+    if (!digits) { prevIso.current = ''; onChange(''); setText(''); return }
+    const now = new Date()
+    let d: number, m: number, y: number
+    if (digits.length <= 2)      { d = +digits; m = now.getMonth() + 1; y = now.getFullYear() }
+    else if (digits.length <= 4) { d = +digits.slice(0, 2); m = +digits.slice(2); y = now.getFullYear() }
+    else if (digits.length <= 6) { d = +digits.slice(0, 2); m = +digits.slice(2, 4); y = 2000 + +digits.slice(4) }
+    else                         { d = +digits.slice(0, 2); m = +digits.slice(2, 4); y = +digits.slice(4) }
+    const dt = new Date(y, m - 1, d)
+    if (m >= 1 && m <= 12 && d >= 1 && dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d) {
+      const iso = localISO(dt)
+      prevIso.current = iso; onChange(iso); setText(toDisplay(iso))
+    } else {
+      setText(toDisplay(value))
     }
   }
+
+  const clear = () => { prevIso.current = ''; onChange(''); setText('') }
 
   return (
     <div className="relative">
       <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-      <input type="text" inputMode="numeric" value={text}
+      <input type="text" inputMode="numeric" autoComplete="off" value={text}
         onChange={e => handleChange(e.target.value)}
-        onBlur={() => { if (!text) onChange('') }}
+        onFocus={e => e.target.select()}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit() } }}
         placeholder="dd/mm/yyyy" maxLength={10} className={FIELD_CLS} />
+      {text && (
+        <button type="button" tabIndex={-1}
+          onMouseDown={e => e.preventDefault()}
+          onClick={clear}
+          className="absolute right-7 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-red-500 transition-colors"
+          aria-label="Xóa ngày">
+          <X size={12} />
+        </button>
+      )}
       <button type="button" tabIndex={-1}
+        onMouseDown={e => e.preventDefault()}
         onClick={() => pickerRef.current?.showPicker?.()}
-        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors"
+        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-indigo-500 transition-colors"
         aria-label="Mở lịch chọn ngày">
         <ChevronDown size={13} />
       </button>
@@ -59,7 +91,8 @@ function DateField({ value, onChange }: { value: string; onChange: (v: string) =
   )
 }
 
-// Text input (HH:mm) + clock icon button that opens native time picker
+// Text input (HH:mm, 24h) with smart completion + native picker + quick clear.
+//   "9" → 09:00 · "14" → 14:00 · "930" → 09:30 · "1430" → 14:30
 function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const pickerRef = useRef<HTMLInputElement>(null)
   const [text, setText] = useState(value)
@@ -70,30 +103,52 @@ function TimeField({ value, onChange }: { value: string; onChange: (v: string) =
   }, [value])
 
   const handleChange = (raw: string) => {
-    if (!raw) { setText(''); onChange(''); return }
+    if (!raw) { setText(''); return }
     const digits = raw.replace(/\D/g, '').slice(0, 4)
     let display = digits
     if (digits.length > 2) display = `${digits.slice(0, 2)}:${digits.slice(2)}`
     setText(display)
-    if (digits.length === 4) {
-      const h = parseInt(digits.slice(0, 2)), m = parseInt(digits.slice(2))
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-        const hhmm = `${digits.slice(0, 2)}:${digits.slice(2)}`
-        prevVal.current = hhmm; onChange(hhmm)
-      }
+  }
+
+  const commit = () => {
+    const digits = text.replace(/\D/g, '')
+    if (!digits) { prevVal.current = ''; onChange(''); setText(''); return }
+    let h: number, m: number
+    if (digits.length <= 2)      { h = +digits; m = 0 }
+    else if (digits.length === 3) { h = +digits.slice(0, 1); m = +digits.slice(1) }
+    else                          { h = +digits.slice(0, 2); m = +digits.slice(2) }
+    if (h <= 23 && m <= 59) {
+      const hhmm = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      prevVal.current = hhmm; onChange(hhmm); setText(hhmm)
+    } else {
+      setText(value)
     }
   }
+
+  const clear = () => { prevVal.current = ''; onChange(''); setText('') }
 
   return (
     <div className="relative">
       <Clock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-      <input type="text" inputMode="numeric" value={text}
+      <input type="text" inputMode="numeric" autoComplete="off" value={text}
         onChange={e => handleChange(e.target.value)}
-        onBlur={() => { if (!text) onChange('') }}
+        onFocus={e => e.target.select()}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit() } }}
         placeholder="HH:mm" maxLength={5} className={FIELD_CLS} />
+      {text && (
+        <button type="button" tabIndex={-1}
+          onMouseDown={e => e.preventDefault()}
+          onClick={clear}
+          className="absolute right-7 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-red-500 transition-colors"
+          aria-label="Xóa giờ">
+          <X size={12} />
+        </button>
+      )}
       <button type="button" tabIndex={-1}
+        onMouseDown={e => e.preventDefault()}
         onClick={() => pickerRef.current?.showPicker?.()}
-        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors"
+        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-indigo-500 transition-colors"
         aria-label="Mở đồng hồ chọn giờ">
         <ChevronDown size={13} />
       </button>
@@ -103,6 +158,12 @@ function TimeField({ value, onChange }: { value: string; onChange: (v: string) =
     </div>
   )
 }
+
+const TIME_PRESETS = ['09:00', '12:00', '18:00', '21:00'] as const
+
+const CHIP_BASE = 'px-2.5 py-1 rounded-full text-xs font-medium border transition-colors'
+const CHIP_OFF  = 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:text-indigo-600'
+const CHIP_ON   = 'bg-indigo-600 text-white border-indigo-600'
 
 interface TaskFormProps {
   open: boolean
@@ -390,6 +451,29 @@ export default function TaskForm({ open, onClose, task, defaultStatus = 'todo', 
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.form.dueTime} <span className="text-slate-400 dark:text-slate-500 font-normal">{t.form.slaTimeHint}</span></label>
             <TimeField value={form.dueTime} onChange={v => set('dueTime', v)} />
           </div>
+        </div>
+
+        {/* Quick date/time presets — tap to set, tap again to clear */}
+        <div className="flex flex-wrap items-center gap-1.5 -mt-1">
+          {([
+            [t.sidebar.today,    todayLocalISO()],
+            [t.sidebar.tomorrow, tomorrowLocalISO()],
+            [t.form.nextWeek,    localISO(new Date(Date.now() + 7 * 86_400_000))],
+          ] as const).map(([label, iso]) => (
+            <button key={iso} type="button"
+              onClick={() => set('dueDate', form.dueDate === iso ? '' : iso)}
+              className={`${CHIP_BASE} ${form.dueDate === iso ? CHIP_ON : CHIP_OFF}`}>
+              {label}
+            </button>
+          ))}
+          <span className="w-px h-4 bg-slate-200 dark:bg-slate-600 mx-0.5" />
+          {TIME_PRESETS.map(hhmm => (
+            <button key={hhmm} type="button"
+              onClick={() => set('dueTime', form.dueTime === hhmm ? '' : hhmm)}
+              className={`${CHIP_BASE} ${form.dueTime === hhmm ? CHIP_ON : CHIP_OFF}`}>
+              {hhmm}
+            </button>
+          ))}
         </div>
 
         {/* SLA window */}

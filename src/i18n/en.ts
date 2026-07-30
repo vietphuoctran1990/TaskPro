@@ -62,7 +62,7 @@ export const en: Translations = {
     descPlaceholder: 'Add more detail (optional)…', status: 'Status', priority: 'Priority',
     project: 'Project', dueDate: 'Due Date', dueTime: 'Due Time', slaTimeHint: '(SLA)',
     slaWindow: 'SLA Window', slaWindowHint: '(max resolution time from creation)',
-    estimatedHours: 'Est. hours', estPlaceholder: 'e.g. 4', hours: 'hours',
+    estimatedHours: 'Est. hours', estPlaceholder: 'e.g. 4', hours: 'hours', nextWeek: '+1 week',
     labels: 'Labels',
     cancel: 'Cancel', create: 'Create Task', save: 'Save changes',
     titleRequired: 'Title is required',

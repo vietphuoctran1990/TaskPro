@@ -62,7 +62,7 @@ export const vi: Translations = {
     descPlaceholder: 'Thêm chi tiết (tùy chọn)…', status: 'Trạng thái', priority: 'Mức độ ưu tiên',
     project: 'Dự án', dueDate: 'Ngày hết hạn', dueTime: 'Giờ hết hạn', slaTimeHint: '(SLA)',
     slaWindow: 'Khung thời gian SLA', slaWindowHint: '(thời gian xử lý tối đa từ khi tạo)',
-    estimatedHours: 'Giờ ước tính', estPlaceholder: 'vd. 4', hours: 'giờ',
+    estimatedHours: 'Giờ ước tính', estPlaceholder: 'vd. 4', hours: 'giờ', nextWeek: '+1 tuần',
     labels: 'Nhãn',
     cancel: 'Hủy', create: 'Tạo công việc', save: 'Lưu thay đổi',
     titleRequired: 'Tiêu đề là bắt buộc',

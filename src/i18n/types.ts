@@ -50,7 +50,7 @@ export interface Translations {
     description: string; descPlaceholder: string; status: string; priority: string
     project: string; dueDate: string; dueTime: string; slaTimeHint: string
     slaWindow: string; slaWindowHint: string; estimatedHours: string; estPlaceholder: string
-    hours: string; labels: string
+    hours: string; labels: string; nextWeek: string
     cancel: string; create: string; save: string; titleRequired: string
   }
   detail: {
